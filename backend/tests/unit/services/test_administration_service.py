@@ -1,7 +1,7 @@
-from app.administration.schema import ImportMembers
-from app.administration.service import AdministrationService
-from app.communities.schema import CommunityMemberRoleEnum
-from app.post.schemas import (
+from app.api.administration.schema import ImportMembers
+from app.api.administration.service import AdministrationService
+from app.api.communities.schema import CommunityMemberRoleEnum
+from app.api.post.schemas import (
     CampaignUpdate,
     ComplaintLevelEnum,
     ComplaintUpdate,

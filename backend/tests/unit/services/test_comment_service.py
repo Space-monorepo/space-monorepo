@@ -1,15 +1,15 @@
 import uuid
 
-from app.comment.model import Comment, CommentLikes
-from app.comment.schema import (
+from app.api.comment.model import Comment, CommentLikes
+from app.api.comment.schema import (
     CommentCreate,
     CommentStatusEnum,
     CommentUpdate,
 )
-from app.comment.service import CommentService
+from app.api.comment.service import CommentService
 from app.utils.schema import PaginationSearchParams
-from app.comment.exceptions import CommentSuspendedError, CommentNotFoundError, CommentLikesNotFoundError
-from app.post.exceptions import PostNotFoundError
+from app.api.comment.exceptions import CommentSuspendedError, CommentNotFoundError, CommentLikesNotFoundError
+from app.api.post.exceptions import PostNotFoundError
 
 
 def test_create_comment_service(session_sql, transaction_manager, post_on_db, user_on_db):

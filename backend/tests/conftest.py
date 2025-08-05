@@ -3,16 +3,16 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 from pymongo import MongoClient
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, StaticPool
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.communities.model import Community, CommunityMember
-from app.communities.schema import CommunityMemberRoleEnum, CommunityTypeEnum
+from app.api.communities.model import Community, CommunityMember
+from app.api.communities.schema import CommunityMemberRoleEnum, CommunityTypeEnum
 from app.core.config import settings
 from app.core.database import Base, get_db, get_mongo_db
 from app.core.transaction import TransactionManager
 from app.main import app
-from app.post.model import (
+from app.api.post.model import (
     CampaignPost,
     ComplaintPost,
     PollOptions,
@@ -21,30 +21,32 @@ from app.post.model import (
     PostFeedback,
     CampaignParticipants
 )
-from app.post.repository import PostRepository
-from app.post.schemas import (
+from app.api.post.repository import PostRepository
+from app.api.post.schemas import (
     CampaignStatusEnum,
     PostTypeEnum,
 )
-from app.users.schema import UserCreate
-from app.users.service import UserService
-from app.badges.model import Badge as BadgeModel
-from app.badges.model import MemberBadge as MemberBadgeModel
-from app.rating.model import Rating
-from app.comment.model import Comment, CommentLikes
-from app.comment.schema import CommentStatusEnum
-
-
-@pytest.fixture(scope='session', autouse=True)
-def test_mode():
-    settings.TEST_MODE = True
-    yield
-    settings.TEST_MODE = False
+from app.api.users.schema import UserCreate
+from app.api.users.service import UserService
+from app.api.badges.model import Badge as BadgeModel
+from app.api.badges.model import MemberBadge as MemberBadgeModel
+from app.api.rating.model import Rating
+from app.api.comment.model import Comment, CommentLikes
+from app.api.comment.schema import CommentStatusEnum
 
 
 @pytest.fixture(scope='session')
 def setup_sql_db():
-    engine = create_engine(settings.active_database_url)
+    if settings.ENVIRONMENT == 'test':
+        engine = create_engine(
+            settings.DATABASE_URL,
+            connect_args={'check_same_thread': False, 'timeout': 20},
+            poolclass=StaticPool,
+            echo=False,
+        )
+    else:
+        engine = create_engine(settings.DATABASE_URL)
+
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
     session = TestSessionLocal()
@@ -58,8 +60,12 @@ def session_sql(setup_sql_db):
     session: Session = setup_sql_db
     session.rollback()
     session.connection()
-    for table in reversed(Base.metadata.sorted_tables):
-        session.execute(text(f'TRUNCATE TABLE {table.name} RESTART IDENTITY CASCADE'))
+    if settings.ENVIRONMENT == 'test':
+        for table in Base.metadata.sorted_tables:
+            session.execute(text(f'DELETE FROM {table.name}'))
+    else:
+        for table in reversed(Base.metadata.sorted_tables):
+            session.execute(text(f'TRUNCATE TABLE {table.name} RESTART IDENTITY CASCADE'))
 
     session.commit()
     try:
@@ -435,34 +441,6 @@ def rating_on_db(session_sql, community_member_on_db):
     session_sql.flush()
     session_sql.refresh(rating)
     return rating
-
-
-@pytest.fixture
-def multiple_ratings_on_db(session_sql, community_on_db, user_on_db, secondary_user_on_db):
-    secondary_member = CommunityMember(
-        community_id=community_on_db.id,
-        user_id=secondary_user_on_db.id,
-        role=CommunityMemberRoleEnum.MEMBER,
-    )
-    session_sql.add(secondary_member)
-    session_sql.flush()
-
-    ratings = [
-        Rating(
-            user_id=user_on_db.id,
-            community_id=community_on_db.id,
-            rating=5,
-            title='Excellent Community!',
-            description='Great experience',
-        ),
-        Rating(
-            user_id=secondary_user_on_db.id,
-            role=CommunityMemberRoleEnum.MEMBER,
-        )
-        session_sql.add(member)
-    session_sql.commit()
-    session_sql.refresh(member)
-    return member
     
     
 @pytest.fixture
@@ -563,4 +541,3 @@ def comment_like_on_db(session_sql, comment_on_db, user_on_db):
     session_sql.flush()
     session_sql.refresh(comment_like)
     return comment_like
-

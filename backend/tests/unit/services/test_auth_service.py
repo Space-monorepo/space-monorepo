@@ -3,7 +3,7 @@ import datetime
 from app.auth.deps import get_current_user
 from app.auth.schema import TokenSchema
 from app.auth.security import AuthService
-from app.users.schema import LoginSchema
+from app.api.users.schema import LoginSchema
 
 
 def test_authenticate_login(transaction_manager, user_on_db):

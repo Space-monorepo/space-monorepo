@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from app.comment.schema import (
+from app.api.comment.schema import (
     CommentAuthor,
     CommentCreate,
     CommentLikeResponse,
@@ -13,7 +13,6 @@ from app.comment.schema import (
     CommentUpdate,
     PostRelated,
 )
-from app.communities.schema import CommunityMemberRoleEnum
 
 
 def test_comment_create_schema():
@@ -89,14 +88,12 @@ def test_comment_author_schema():
         id=user_id,
         name='João Silva',
         profile_image_url='https://example.com/profile.jpg',
-        role=CommunityMemberRoleEnum.MEMBER,
     )
 
     assert author.model_dump() == {
         'id': user_id,
         'name': 'João Silva',
         'profile_image_url': 'https://example.com/profile.jpg',
-        'role': 'member',
     }
 
 
@@ -107,14 +104,12 @@ def test_comment_author_without_profile_image_schema():
         id=user_id,
         name='Maria Santos',
         profile_image_url=None,
-        role=CommunityMemberRoleEnum.ADMIN,
     )
 
     assert author.model_dump() == {
         'id': user_id,
         'name': 'Maria Santos',
         'profile_image_url': None,
-        'role': 'admin',
     }
 
 
@@ -147,7 +142,6 @@ def test_comment_response_schema():
         id=user_id,
         name='João Silva',
         profile_image_url='https://example.com/profile.jpg',
-        role=CommunityMemberRoleEnum.MEMBER,
     )
 
     comment = CommentResponse(
@@ -173,7 +167,6 @@ def test_comment_response_schema():
             'id': user_id,
             'name': 'João Silva',
             'profile_image_url': 'https://example.com/profile.jpg',
-            'role': 'member',
         },
         'content': 'Este é um comentário de teste',
         'status': 'active',
@@ -203,14 +196,12 @@ def test_comment_response_with_replies_schema():
         id=user_id,
         name='João Silva',
         profile_image_url='https://example.com/profile.jpg',
-        role=CommunityMemberRoleEnum.MEMBER,
     )
 
     reply_author = CommentAuthor(
         id=reply_user_id,
         name='Maria Santos',
         profile_image_url=None,
-        role=CommunityMemberRoleEnum.MODERATOR,
     )
 
     reply = CommentResponse(
@@ -249,7 +240,6 @@ def test_comment_response_with_replies_schema():
             'id': user_id,
             'name': 'João Silva',
             'profile_image_url': 'https://example.com/profile.jpg',
-            'role': 'member',
         },
         'content': 'Este é um comentário de teste',
         'status': 'active',
@@ -268,10 +258,9 @@ def test_comment_response_with_replies_schema():
                     'id': reply_user_id,
                     'name': 'Maria Santos',
                     'profile_image_url': None,
-                    'role': 'moderator',
                 },
                 'content': 'Esta é uma resposta',
-                'status': 'active',
+                'status': CommentStatusEnum.ACTIVE,
                 'likes_count': 2,
                 'report_count': 0,
                 'parent_id': comment_id,
@@ -336,7 +325,6 @@ def test_comment_author_invalid_schema():
             id=uuid.uuid4(),
             name='',
             profile_image_url=None,
-            role=CommunityMemberRoleEnum.MEMBER,
         )
 
     with pytest.raises(ValidationError):
@@ -344,7 +332,6 @@ def test_comment_author_invalid_schema():
             id=uuid.uuid4(),
             name='a' * 256,
             profile_image_url=None,
-            role=CommunityMemberRoleEnum.MEMBER,
         )
 
 
@@ -371,7 +358,6 @@ def test_comment_response_invalid_schema():
                 id=uuid.uuid4(),
                 name='João Silva',
                 profile_image_url=None,
-                role=CommunityMemberRoleEnum.MEMBER,
             ),
             content='Conteúdo válido',
             status=CommentStatusEnum.ACTIVE,

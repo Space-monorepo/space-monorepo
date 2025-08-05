@@ -1,6 +1,6 @@
 from fastapi import status
 
-from app.communities.schema import CommunityUpdate
+from app.api.communities.schema import CommunityUpdate
 
 def test_get_community_by_id_route(authenticate_client, community_on_db):
     response = authenticate_client.get(f'/communities/{community_on_db.id}')

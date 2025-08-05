@@ -1,7 +1,7 @@
 from fastapi import status
 
-from app.comment.model import Comment, CommentLikes
-from app.comment.schema import (
+from app.api.comment.model import Comment, CommentLikes
+from app.api.comment.schema import (
     CommentCreate,
     CommentStatusEnum,
     CommentUpdate,
@@ -249,7 +249,7 @@ def test_list_user_liked_comments_route(authenticate_client, comment_on_db, comm
 def test_create_comment_increments_post_comments_count_route(
     session_sql, authenticate_client, community_member_on_db, post_on_db
 ):
-    from app.post.model import Post
+    from app.api.post.model import Post
     
     original_comments_count = post_on_db.comments_count
     
@@ -274,7 +274,7 @@ def test_create_comment_increments_post_comments_count_route(
 def test_delete_comment_decrements_post_comments_count_route(
     session_sql, authenticate_client, comment_on_db, community_member_on_db, post_on_db
 ):
-    from app.post.model import Post
+    from app.api.post.model import Post
     
     original_comments_count = post_on_db.comments_count
 

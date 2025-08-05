@@ -1,5 +1,5 @@
-from app.post.model import Post, CampaignPost, ComplaintPost, PollPosts, PollOptions
-from app.post.schemas import (
+from app.api.post.model import Post, CampaignPost, ComplaintPost, PollPosts, PollOptions
+from app.api.post.schemas import (
     PostCreate,
     PostTypeEnum,
     PostUpdate,
@@ -8,7 +8,7 @@ from app.post.schemas import (
     ComplaintLevelEnum,
     PollCreate,
 )
-from app.post.service import PostService
+from app.api.post.service import PostService
 from app.utils.schema import PaginationSearchParams
 
 

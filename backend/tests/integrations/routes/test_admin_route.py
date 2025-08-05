@@ -1,9 +1,9 @@
 from fastapi import status
 
-from app.administration.schema import ImportMembers, MemberRoleUpdate
-from app.administration.service import AdministrationService
-from app.communities.schema import CommunityMemberRoleEnum
-from app.post.schemas import (
+from app.api.administration.schema import ImportMembers, MemberRoleUpdate
+from app.api.administration.service import AdministrationService
+from app.api.communities.schema import CommunityMemberRoleEnum
+from app.api.post.schemas import (
     CampaignStatusEnum,
     CampaignUpdate,
     ComplaintStatusEnum,

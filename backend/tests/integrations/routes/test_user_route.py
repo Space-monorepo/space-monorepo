@@ -2,9 +2,9 @@
 import pytest
 from fastapi import status
 
-from app.users.exceptions import UserNotFoundError
-from app.users.schema import UserCreate, UserResponse, UserStatusEnum, UserUpdate
-from app.users.service import UserService
+from app.api.users.exceptions import UserNotFoundError
+from app.api.users.schema import UserCreate, UserResponse, UserStatusEnum, UserUpdate
+from app.api.users.service import UserService
 
 
 def test_create_user_route(transaction_manager, client_sql):

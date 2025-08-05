@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from app.rating.schema import (
+from app.api.rating.schema import (
     RatingBase,
     RatingCreate,
     RatingUpdate,

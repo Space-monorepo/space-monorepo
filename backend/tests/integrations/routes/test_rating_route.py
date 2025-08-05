@@ -1,8 +1,8 @@
 import uuid
 from fastapi import status
 
-from app.rating.model import Rating
-from app.rating.schema import RatingCreate, RatingUpdate
+from app.api.rating.model import Rating
+from app.api.rating.schema import RatingCreate, RatingUpdate
 
 
 def test_create_rating_route(authenticate_client, community_member_on_db):

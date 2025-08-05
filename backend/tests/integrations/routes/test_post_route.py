@@ -1,7 +1,7 @@
 from fastapi import status
 
-from app.post.model import CampaignPost
-from app.post.schemas import (
+from app.api.post.model import CampaignPost
+from app.api.post.schemas import (
     CampaignStatusEnum,
     ComplaintLevelEnum,
     ComplaintStatusEnum,

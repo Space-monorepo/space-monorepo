@@ -2,15 +2,15 @@ import uuid
 
 import pytest
 
-from app.badges.exceptions import (
+from app.api.badges.exceptions import (
     BadgeAlreadyExistsError,
     BadgeNotFoundError,
     MemberAlreadyHasBadgeError,
     MemberBadgeNotFoundError,
 )
-from app.badges.schema import BadgeUpdate, MemberBadgeCreate
-from app.badges.service import BadgeService
-from app.communities.exceptions import CommunityMemberNotFoundError
+from app.api.badges.schema import BadgeUpdate, MemberBadgeCreate
+from app.api.badges.service import BadgeService
+from app.api.communities.exceptions import CommunityMemberNotFoundError
 from app.utils.schema import PaginationSearchParams
 
 

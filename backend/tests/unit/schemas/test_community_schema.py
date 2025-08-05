@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import ValidationError
 
-from app.communities.schema import (
+from app.api.communities.schema import (
     CommunityRelated,
     CommunityCreate,
     CommunityResponse,
@@ -17,7 +17,7 @@ from app.communities.schema import (
     CommunityMemberUpdate,
     CommunityMemberResponse
 )
-from app.users.schema import UserResponse, UserStatusEnum
+from app.api.users.schema import UserResponse, UserStatusEnum
 
 
 def test_community_related_schema():

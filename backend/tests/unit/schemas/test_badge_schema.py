@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-from app.badges.schema import (
+from app.api.badges.schema import (
     BadgeCreate,
     BadgeResponse,
     BadgeUpdate,

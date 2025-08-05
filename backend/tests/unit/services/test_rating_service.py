@@ -1,15 +1,15 @@
 import uuid
 import pytest
 
-from app.rating.model import Rating
-from app.rating.schema import RatingCreate, RatingUpdate
-from app.rating.service import RatingService
-from app.rating.exceptions import (
+from app.api.rating.model import Rating
+from app.api.rating.schema import RatingCreate, RatingUpdate
+from app.api.rating.service import RatingService
+from app.api.rating.exceptions import (
     RatingNotFoundError,
     RatingAlreadyExistsError,
     UnexpectedRatingError
 )
-from app.communities.exceptions import CommunityNotFoundError, CommunityMemberNotFoundError
+from app.api.communities.exceptions import CommunityNotFoundError, CommunityMemberNotFoundError
 from app.utils.schema import PaginationSearchParams
 
 

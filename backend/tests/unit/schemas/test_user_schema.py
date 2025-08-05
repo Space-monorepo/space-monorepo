@@ -1,7 +1,7 @@
 from datetime import datetime
 import uuid
 
-from app.users.schema import LoginSchema, UserCreate, UserResponse, UserUpdate
+from app.api.users.schema import LoginSchema, UserCreate, UserResponse, UserUpdate
 
 
 def test_user_input_schema():

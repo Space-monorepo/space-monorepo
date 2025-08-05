@@ -1,6 +1,6 @@
-from app.users.model import User
-from app.users.schema import UserCreate, UserUpdate
-from app.users.service import UserService
+from app.api.users.model import User
+from app.api.users.schema import UserCreate, UserUpdate
+from app.api.users.service import UserService
 
 
 def test_create_user_service(session_sql, transaction_manager):

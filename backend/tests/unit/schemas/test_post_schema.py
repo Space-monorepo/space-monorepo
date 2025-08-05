@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from app.post.schemas import (
+from app.api.post.schemas import (
     CampaignParticipantsResponse,
     CampaignResponse,
     CampaignStatusEnum,

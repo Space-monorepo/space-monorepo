@@ -2,9 +2,9 @@ import uuid
 
 import pytest
 
-from app.communities.exceptions import CommunityMemberNotFoundError, CommunityNotFoundError
-from app.communities.model import Community, CommunityMember
-from app.communities.schema import (
+from app.api.communities.exceptions import CommunityMemberNotFoundError, CommunityNotFoundError
+from app.api.communities.model import Community, CommunityMember
+from app.api.communities.schema import (
     CommunityCreate,
     CommunityTypeEnum,
     CommunityUpdate,
@@ -12,7 +12,7 @@ from app.communities.schema import (
     CommunityMemberStatusEnum,
     CommunityMemberCreate
 )
-from app.communities.service import CommunityService
+from app.api.communities.service import CommunityService
 from app.utils.schema import PaginationSearchParams
 
 
