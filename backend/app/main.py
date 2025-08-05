@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware import cors
 
 from app.core.exceptions import add_exception_handlers
 
@@ -16,6 +17,14 @@ app = FastAPI(
     title='Space API',
     description='API for Space application',
     version='0.1.0',
+)
+
+app.add_middleware(
+    cors.CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 routes = [
