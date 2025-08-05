@@ -1,0 +1,93 @@
+services:
+  backend:
+    build: .
+    container_name: space-backend
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./app:/app
+      - ./tests:/tests
+      - ./entrypoint.sh:/entrypoint.sh
+    env_file:
+      - ./.env
+    command: sh -c "python core/init_db.py && uvicorn main:app --host 0.0.0.0 --reload"
+    depends_on:
+      postgresql-test:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+    entrypoint: ["/bin/sh", "-c", "chmod +x /entrypoint.sh && /entrypoint.sh"]
+    networks:
+      - space-network
+  
+  postgresql-test:
+    image: postgres:14-alpine
+    container_name: space-postgresql-test
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_TEST_DB}
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata_test:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spaceadmin -d space_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - space-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: space-pgadmin
+    ports:
+      - "5050:80"
+    env_file:
+      - ./.env
+    depends_on:
+      postgresql-test:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - space-network
+
+  mongodb:
+    image: mongo:6.0
+    container_name: space-db
+    ports:
+      - "27017:27017"
+    env_file:
+      - ./.env
+    volumes:
+      - mongodata_test:/data/db
+    command: ["--auth"]
+    networks:
+      - space-network
+  
+  mongo-express:
+    image: mongo-express:1.0.0
+    container_name: space-mongo-express
+    ports:
+      - "8081:8081"
+    env_file:
+      - ./.env
+    depends_on:
+      - mongodb
+    volumes:
+      - mongoexpress:/var/lib/mongo-express
+    networks:
+      - space-network
+
+networks:
+  space-network:
+    driver: bridge
+
+volumes:
+  mongodata_test:
+  mongoexpress:
+  pgdata_test:
+  pgadmin_data:

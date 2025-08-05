@@ -1,0 +1,54 @@
+[tool.poetry]
+name = "app"
+version = "0.1.0"
+description = ""
+authors = ["briann <brianngomess@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = {extras = ["standard"], version = "^0.115.8"}
+pydantic = "^2.10.6"
+pydantic-settings = "^2.8.1"
+pymongo = "^4.11.2"
+bcrypt = "^4.3.0"
+pyjwt = "^2.10.1"
+sqlalchemy = "^2.0.40"
+psycopg2-binary = "^2.9.10"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-cov = "^6.0.0"
+ruff = "^0.9.7"
+taskipy = "^1.14.1"
+
+[tool.pytest.ini_options]
+pythonpath = "app"
+tests = "app/tests"
+addopts = '-p no:warnings'
+
+[tool.ruff]
+line-length = 89
+extend-exclude = ['migrations']
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'
+
+[tool.taskipy.tasks]
+lint = 'ruff check'
+pre_format = 'ruff check --fix'
+format = 'ruff format'
+run = 'fastapi dev fastapi_zero/app.py'
+pre_test = 'task lint'
+test = 'pytest -s -x --cov=fast_zero -vv'
+post_test = 'coverage html'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

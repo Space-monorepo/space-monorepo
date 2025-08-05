@@ -1,0 +1,27 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [wip]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔄 Checkout do repositório
+        uses: actions/checkout@v3
+
+      - name: 🧱 Instalar dependências
+        run: npm install
+
+    #   - name: 🔍 Rodar lint
+    #     run: npm run lint
+
+      - name: 🧪 Rodar testes (placeholder)
+        run: echo "Sem testes ainda"
+
+      - name: 🏗️ Build do projeto
+        run: npm run build
