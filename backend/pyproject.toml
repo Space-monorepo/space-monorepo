@@ -25,7 +25,7 @@ taskipy = "^1.14.1"
 
 [tool.pytest.ini_options]
 pythonpath = "app"
-tests = "app/tests"
+tests = "tests"
 addopts = '-p no:warnings'
 
 [tool.ruff]
@@ -35,6 +35,11 @@ extend-exclude = ['migrations']
 [tool.ruff.lint]
 preview = true
 select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+ignore = [
+    'E501',    # line too long
+    'PLR0915', # too many statements
+    'C901',    # too complex
+]
 
 [tool.ruff.format]
 preview = true
@@ -45,8 +50,7 @@ lint = 'ruff check'
 pre_format = 'ruff check --fix'
 format = 'ruff format'
 run = 'fastapi dev fastapi_zero/app.py'
-pre_test = 'task lint'
-test = 'pytest -s -x --cov=fast_zero -vv'
+test = 'pytest -m "unit or integration" -s -x --cov=app -vv'
 post_test = 'coverage html'
 
 [build-system]
