@@ -3,15 +3,15 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from app.communities.service import CommunityService
-from app.communities.exceptions import CommunityMemberNotFoundError
-from app.comment.service import CommentService
+from app.api.communities.service import CommunityService
+from app.api.communities.exceptions import CommunityMemberNotFoundError
+from app.api.comment.service import CommentService
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.transaction import TransactionManager
-from app.post.service import PostService
-from app.users.model import User
-from app.users.service import UserService
+from app.api.post.service import PostService
+from app.api.users.model import User
+from app.api.users.service import UserService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/users/login')
 

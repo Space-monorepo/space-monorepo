@@ -2,9 +2,9 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app.communities.repository import CommunityMemberRepository, CommunityRepository
-from app.comment.repository import CommentRepository, CommentLikesRepository
-from app.post.repository import (
+from app.api.communities.repository import CommunityMemberRepository, CommunityRepository
+from app.api.comment.repository import CommentRepository, CommentLikesRepository
+from app.api.post.repository import (
     CampaignParticipantsRepository,
     CampaignPostRepository,
     ComplaintPostRepository,
@@ -14,9 +14,9 @@ from app.post.repository import (
     PollOptionsRepository,
     PostLikesRepository
 )
-from app.rating.repository import RatingRepository
-from app.users.repository import UserRepository
-from app.badges.repository import BadgeRepository, MemberBadgeRepository
+from app.api.rating.repository import RatingRepository
+from app.api.users.repository import UserRepository
+from app.api.badges.repository import BadgeRepository, MemberBadgeRepository
 
 logger = logging.getLogger(__name__)
 

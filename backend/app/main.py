@@ -1,15 +1,16 @@
 from fastapi import FastAPI
 
-from app.administration.routes import router as admin_router
-from app.users.routes import router as users_router
-from app.post.routes import router as post_router
-from app.comment.routes import router as comment_router
-from app.communities.routes import router as communities_router
-from app.chat.routes import router as chat_router
-from app.moderation.routes import router as moderation_router
-from app.rating.routes import router as rating_router
 from app.core.exceptions import add_exception_handlers
-from app.badges.routes import router as badges_router
+
+from app.api.administration.routes import router as admin_router
+from app.api.badges.routes import router as badges_router
+from app.api.chat.routes import router as chat_router
+from app.api.comment.routes import router as comment_router
+from app.api.communities.routes import router as communities_router
+from app.api.moderation.routes import router as moderation_router
+from app.api.post.routes import router as post_router
+from app.api.rating.routes import router as rating_router
+from app.api.users.routes import router as users_router
 
 app = FastAPI(
     title='Space API',

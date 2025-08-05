@@ -6,9 +6,9 @@ import jwt
 from app.auth.schema import TokenSchema
 from app.core.config import settings
 from app.core.transaction import TransactionManager
-from app.users.exceptions import UserNotAuthenticatedError
-from app.users.model import User
-from app.users.schema import LoginSchema
+from app.api.users.exceptions import UserNotAuthenticatedError
+from app.api.users.model import User
+from app.api.users.schema import LoginSchema
 
 
 class AuthService:
@@ -29,7 +29,7 @@ class AuthService:
             email: str, 
             password: str, 
     ) -> User:
-        from app.users.service import UserService
+        from app.api.users.service import UserService
         user_service = UserService(self.tm)
         user: User = user_service.get_by_email(email)
         password_verified = self.verify_password(password, user.hashed_password)

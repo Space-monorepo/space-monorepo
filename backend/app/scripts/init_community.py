@@ -1,10 +1,10 @@
 import app.core.init_db
 
 from app.core.database import get_db
-from app.communities.model import Community, CommunityMember
-from app.users.model import User
-from app.users.service import UserService
-from app.users.schema import UserCreate
+from app.api.communities.model import Community, CommunityMember
+from app.api.users.model import User
+from app.api.users.service import UserService
+from app.api.users.schema import UserCreate
 from app.core.transaction import TransactionManager
 
 

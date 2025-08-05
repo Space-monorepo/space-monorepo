@@ -1,5 +1,5 @@
 from typing import Generic, TypeVar
-from app.post.schemas import PostTypeEnum
+from app.api.post.schemas import PostTypeEnum
 
 from pydantic import BaseModel, Field, ConfigDict
 

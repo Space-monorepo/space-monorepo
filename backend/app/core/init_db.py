@@ -1,7 +1,7 @@
 from app.core.config import settings
 from app.core.database import Base, engine
-from app.users.model import User
-from app.post.model import ( 
+from app.api.users.model import User
+from app.api.post.model import ( 
     Post, 
     CampaignPost, 
     ComplaintPost, 
@@ -11,11 +11,10 @@ from app.post.model import (
     PostLikes, 
     CampaignParticipants
 )
-from app.communities.model import CommunityMember, Community
-from app.badges.model import Badge, MemberBadge
-from app.rating.model import Rating
-from app.comment.model import Comment, CommentLikes
+from app.api.communities.model import CommunityMember, Community
+from app.api.badges.model import Badge, MemberBadge
+from app.api.rating.model import Rating
+from app.api.comment.model import Comment, CommentLikes
 
 
-if settings.TEST_MODE:
-    Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
