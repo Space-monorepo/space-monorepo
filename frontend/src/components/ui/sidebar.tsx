@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ChatLaunch, Events, Notification, Settings, Logout, Security } from "@carbon/icons-react";
+import { ChatLaunch, Events, Notification, Settings, Logout, Security, User } from "@carbon/icons-react";
 import { usePathname } from "next/navigation";
 import { useCheckTokenValidity } from "@/app/api/src/controllers/authCheckToken";
 import { Button } from "./button";
@@ -40,7 +40,7 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "bg-gray-50 text-gray-900 flex flex-col h-screen border-r border-gray-200 transition-all duration-300 ease-in-out",
+        "bg-gray-100 text-gray-900 flex flex-col h-screen border-r fixed border-gray-200 transition-all duration-300 ease-in-out",
         isOpen ? "w-64" : "w-26"
       )}
       onMouseEnter={() => variant === "hover" && setIsHovered(true)}
@@ -105,6 +105,13 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
             label="Moderação"
             href="/moderation"
             active={isActive("/moderation")}
+            isOpen={isOpen}
+          />
+          <SidebarItem
+            icon={<User size={20} />}
+            label="Administração"
+            href="/administration"
+            active={isActive("/security")}
             isOpen={isOpen}
           />
         </nav>

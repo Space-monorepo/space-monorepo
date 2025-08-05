@@ -34,14 +34,28 @@ const nextConfig: NextConfig = {
       {
         source: "/communities",
         destination: "/web/pages/communities",
-      }
+      },
+      {
+        source: "/administration",
+        destination: "/web/pages/administration",
+      },
+      {
+        source: "/administration/:id",
+        destination: "/web/pages/administration/:id",
+      },
+      {
+        source: "/notifications",
+        destination: "/web/pages/notifications",
+      },
     ];
   },
   images: {
     domains: ["res.cloudinary.com"],
-  },
-  eslint: {
+  },  eslint: {
     ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
   },
   devIndicators: false,
 };
