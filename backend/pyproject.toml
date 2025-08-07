@@ -27,6 +27,12 @@ taskipy = "^1.14.1"
 pythonpath = "app"
 tests = "tests"
 addopts = '-p no:warnings'
+markers = [
+    "unit: unit tests - verify individual components in isolation",
+    "integration: integration tests - verify components working together or with external services",
+    "smoke: smoke tests - verify critical features fastly",
+    "slow: slow tests - flag tests that take a long time to run"
+]
 
 [tool.ruff]
 line-length = 89
