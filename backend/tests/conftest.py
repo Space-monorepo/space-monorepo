@@ -387,10 +387,10 @@ def badge_on_db(session_sql, community_on_db):
         id=uuid.uuid4(),
         name='Test Badge',
         description='Test Description',
-        community_id=community_on_db.id, 
+        community_id=community_on_db.id,
         image_url='http://example.com/fixture_badge.png'
     )
-    session_sql.add(badge) 
+    session_sql.add(badge)
     session_sql.flush()
     session_sql.refresh(badge)
     return badge
@@ -441,22 +441,6 @@ def rating_on_db(session_sql, community_member_on_db):
     session_sql.flush()
     session_sql.refresh(rating)
     return rating
-    
-    
-@pytest.fixture
-def rating_on_db(session_sql, community_member_on_db):
-    rating = Rating(
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
-        rating=5,
-        title='Test Rating',
-        description='Test rating description',
-    )
-
-    session_sql.add(rating)
-    session_sql.flush()
-    session_sql.refresh(rating)
-    return rating
 
 
 @pytest.fixture
@@ -492,10 +476,10 @@ def multiple_ratings_on_db(session_sql, community_on_db, user_on_db, secondary_u
     for rating in ratings:
         session_sql.refresh(rating)
     return ratings
-    
-    
+
+
 @pytest.fixture
-def comment_on_db(session_sql, post_on_db, user_on_db):    
+def comment_on_db(session_sql, post_on_db, user_on_db):
     comment = Comment(
         post_id=post_on_db.id,
         user_id=user_on_db.id,
@@ -531,7 +515,7 @@ def comment_reply_on_db(session_sql, comment_on_db, secondary_user_on_db):
 
 
 @pytest.fixture
-def comment_like_on_db(session_sql, comment_on_db, user_on_db):    
+def comment_like_on_db(session_sql, comment_on_db, user_on_db):
     comment_like = CommentLikes(
         comment_id=comment_on_db.id,
         user_id=user_on_db.id,
