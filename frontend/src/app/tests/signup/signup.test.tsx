@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import SignUpPage from '../../web/pages/signup/page';
+import SignUpPage from '../../signup/page';
 
 // Mocking next/navigation
 jest.mock('next/navigation', () => ({
