@@ -3,10 +3,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ToastContainer } from "react-toastify";
 import { Manrope } from "next/font/google";
+import { AuthProvider } from "@/app/api/src/auth/AuthContext";
 
 const manrope = Manrope({
   subsets: ["latin"],
-  weight: ["200", "300", "400", "500","600", "700", "800"],
+  weight: ["200", "300", "400", "500", "600", "700", "800"],
   variable: "--font-manrope",
   display: "auto",
 });
@@ -24,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={manrope.variable}>
       <body className="font-manrope">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
         <ToastContainer
           position="top-right"
           autoClose={3000}
