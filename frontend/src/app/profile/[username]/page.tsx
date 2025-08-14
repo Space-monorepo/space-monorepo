@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import FilePicker from "@/components/ui/FilePicker";
 import Sidebar from "@/components/ui/sidebar";
-import EditProfileModal from "@/app/(authenticated)/pages/profile/components/EditProfileModal";
+import EditProfileModal from "../components/EditProfileModal";
 
 export interface User {
   username: string;
