@@ -1,5 +1,5 @@
 import FilePicker from "@/components/ui/FilePicker";
-import { User } from "../[username]/page";
+import { User } from "../page";
 import { Button } from "@/components/ui/button";
 import ReputationBar from "./ReputationBar";
 import UserInfo from "./UserInfo";
