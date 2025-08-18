@@ -20,6 +20,7 @@ from app.api.communities.schema import (
     CommunityMemberCreate,
     CommunityMemberResponse
 )
+from app.api.users.schema import UserStatusEnum
 from app.api.communities.service import CommunityService
 from app.utils.schema import PaginationSearchParams
 
@@ -522,7 +523,6 @@ def test_delete_community_service_unexpected_error():
     mock_community_repo.delete.assert_called_once_with(fake_community_model)
 
 
-
 @pytest.mark.unit
 def test_list_members_service_success():
     """
@@ -700,25 +700,34 @@ def test_create_member_service_success():
         status_participation=CommunityMemberStatusEnum.ACTIVE,
     )
 
+    # Create real community mock with proper attributes for _map_member_to_response
     fake_community_model = Mock(spec=Community)
     fake_community_model.id = fake_community_id
+    fake_community_model.name = "Test Community"
 
+    # Create properly configured user mock with all required UserResponse fields
     fake_user_model = Mock()
     fake_user_model.id = fake_user_id
+    fake_user_model.email = "test@example.com"
+    fake_user_model.name = "Test User"
+    fake_user_model.hashed_password = "hashedpassword123456789"
+    fake_user_model.profile_image_url = "https://example.com/profile.jpg"
+    fake_user_model.reputation_level = 5
+    fake_user_model.status = UserStatusEnum.active
+    fake_user_model.created_at = datetime.now()
+    fake_user_model.updated_at = datetime.now()
 
+    # Create a properly configured member mock that will be returned by save()
     fake_saved_member = Mock(spec=CommunityMember)
     fake_saved_member.user_id = fake_user_id
     fake_saved_member.community_id = fake_community_id
     fake_saved_member.role = CommunityMemberRoleEnum.MEMBER
     fake_saved_member.reputation = 10
     fake_saved_member.status_participation = CommunityMemberStatusEnum.ACTIVE
-
-    expect_member_response = Mock(spec=CommunityMemberResponse)
-    expect_member_response.user_id = fake_user_id
-    expect_member_response.community_id = fake_community_id
-    expect_member_response.role = CommunityMemberRoleEnum.MEMBER
-    expect_member_response.reputation = 10
-    expect_member_response.status_participation = CommunityMemberStatusEnum.ACTIVE
+    fake_saved_member.entered_in = datetime.now()
+    # Configure the user and community attributes for _map_member_to_response
+    fake_saved_member.user = fake_user_model
+    fake_saved_member.community = fake_community_model
 
     mock_tm = Mock()
     mock_community_repo = Mock()
@@ -733,7 +742,6 @@ def test_create_member_service_success():
     service.community_repo = mock_community_repo
     service.member_repo = mock_member_repo
     service.user_service = mock_user_service
-    service._map_member_to_response = Mock(return_value=expect_member_response)
 
     # Act
     result = service.create_member(fake_member_data)
@@ -743,13 +751,20 @@ def test_create_member_service_success():
     mock_user_service.get_user.assert_called_once_with(fake_user_id)
     mock_member_repo.member_exists.assert_called_once_with(fake_user_id, fake_community_id)
     mock_member_repo.save.assert_called_once()
-    service._map_member_to_response.assert_called_once_with(fake_saved_member)
+    # Verify the real _map_member_to_response was executed by checking the result
     assert result is not None
     assert result.user_id == fake_user_id
     assert result.community_id == fake_community_id
     assert result.role == CommunityMemberRoleEnum.MEMBER
     assert result.reputation == 10
     assert result.status_participation == CommunityMemberStatusEnum.ACTIVE
+    assert hasattr(result, 'user')
+    assert hasattr(result, 'community')
+    assert hasattr(result, 'entered_in')
+    # Verify user data is properly mapped
+    assert result.user.email == "test@example.com"
+    assert result.user.name == "Test User"
+    assert result.community.name == "Test Community"
 
 
 @pytest.mark.unit
