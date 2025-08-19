@@ -12,13 +12,26 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
+from app.core.config import settings
 from app.core.database import Base
+
+if settings.ENVIRONMENT == 'test':
+    UUIDColumn = String(36)
+
+    def uuid_default():
+        return str(uuid.uuid4())
+
+else:
+    UUIDColumn = UUID(as_uuid=True)
+
+    def uuid_default():
+        return uuid.uuid4()
 
 
 class Community(Base):
     __tablename__ = 'communities'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(UUIDColumn, primary_key=True, default=uuid_default, index=True)
     name = Column(String, nullable=False)
     description = Column(String, nullable=True)
     type_community = Column(String, nullable=False)
@@ -47,10 +60,10 @@ class Community(Base):
 class CommunityMember(Base):
     __tablename__ = 'community_members'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    id = Column(UUIDColumn, primary_key=True, default=uuid_default, index=True)
+    user_id = Column(UUIDColumn, ForeignKey('users.id'), nullable=False)
     community_id = Column(
-        UUID(as_uuid=True), ForeignKey('communities.id'), nullable=False, index=True
+        UUIDColumn, ForeignKey('communities.id'), nullable=False, index=True
     )
     role = Column(String, nullable=False)
     reputation = Column(Integer, nullable=False, default=0)
