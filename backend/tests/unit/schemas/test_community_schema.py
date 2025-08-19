@@ -1,8 +1,7 @@
 import uuid
-from datetime import datetime
-from unittest.mock import MagicMock
-
 import pytest
+
+from datetime import datetime
 from pydantic import ValidationError
 
 from app.api.communities.schema import (
@@ -20,6 +19,7 @@ from app.api.communities.schema import (
 from app.api.users.schema import UserResponse, UserStatusEnum
 
 
+@pytest.mark.unit
 def test_community_related_schema():
     community_id = uuid.uuid4()
     community = CommunityRelated(
@@ -33,6 +33,7 @@ def test_community_related_schema():
     }
 
 
+@pytest.mark.unit
 def test_community_type_enum():
     assert CommunityTypeEnum.UNIVERSITY.value == "university"
     assert CommunityTypeEnum.NEIGHBORHOOD.value == "neighborhood"
@@ -44,18 +45,21 @@ def test_community_type_enum():
     assert CommunityTypeEnum.CLUB.value == "club"
 
 
+@pytest.mark.unit
 def test_community_member_status_enum():
     assert CommunityMemberStatusEnum.ACTIVE.value == "active"
     assert CommunityMemberStatusEnum.SUSPENDED.value == "suspended"
     assert CommunityMemberStatusEnum.BANNED.value == "banned"
 
 
+@pytest.mark.unit
 def test_community_member_role_enum():
     assert CommunityMemberRoleEnum.ADMIN.value == "admin"
     assert CommunityMemberRoleEnum.MODERATOR.value == "moderator"
     assert CommunityMemberRoleEnum.MEMBER.value == "member"
 
 
+@pytest.mark.unit
 def test_community_create_schema():
     community = CommunityCreate(
         name="Test Community",
@@ -70,6 +74,7 @@ def test_community_create_schema():
     }
 
 
+@pytest.mark.unit
 def test_community_update_schema():
     community_update = CommunityUpdate(
         name="Updated Community",
@@ -94,6 +99,7 @@ def test_community_update_schema():
     }
 
 
+@pytest.mark.unit
 def test_community_response_schema():
     community_id = uuid.uuid4()
     created_at = datetime.now()
@@ -118,6 +124,7 @@ def test_community_response_schema():
     }
 
 
+@pytest.mark.unit
 def test_community_member_create_schema():
     user_id = uuid.uuid4()
     community_id = uuid.uuid4()
@@ -152,6 +159,7 @@ def test_community_member_create_schema():
     }
 
 
+@pytest.mark.unit
 def test_community_member_update_schema():
     # Test with all fields
     member_update = CommunityMemberUpdate(
@@ -177,6 +185,7 @@ def test_community_member_update_schema():
     }
 
 
+@pytest.mark.unit
 def test_community_member_response_schema():
     user_id = uuid.uuid4()
     community_id = uuid.uuid4()
@@ -225,6 +234,7 @@ def test_community_member_response_schema():
     }
 
 
+@pytest.mark.unit
 def test_community_create_invalid_schema():
     # Test invalid name (empty string)
     with pytest.raises(ValidationError):
@@ -259,6 +269,7 @@ def test_community_create_invalid_schema():
         )
 
 
+@pytest.mark.unit
 def test_community_update_invalid_schema():
     # Test invalid name (empty string)
     with pytest.raises(ValidationError):
@@ -289,6 +300,7 @@ def test_community_update_invalid_schema():
         )
 
 
+@pytest.mark.unit
 def test_community_member_create_invalid_schema():
     # Test invalid role
     with pytest.raises(ValidationError):
@@ -314,6 +326,7 @@ def test_community_member_create_invalid_schema():
         )
 
 
+@pytest.mark.unit
 def test_community_member_update_invalid_schema():
     # Test invalid role
     with pytest.raises(ValidationError):
