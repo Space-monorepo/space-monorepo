@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { fetchPostsByCommunity } from "@/app/api/src/services/post/postService";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
+import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { PostResponse, PostsListFeed } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
 import { translatePostType } from "@/lib/postTypeTranslations";
@@ -35,6 +36,13 @@ export default function PostList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [showNoCommunitiesMessage, setShowNoCommunitiesMessage] = useState(false);
+
+  const {
+    likePost,
+    unlikePost,
+    addComment,
+    sharePost,
+  } = usePostActions();
 
   useEffect(() => {
     const loadPosts = async () => {
@@ -91,12 +99,47 @@ export default function PostList() {
     loadPosts();
   }, []);
 
-  const toggleBookmark = (id: string) => {
-    setPosts(
-      posts.map((post) =>
-        post.id === id ? { ...post, bookmarked: !post.bookmarked } : post
-      )
-    );
+
+  const handleLike = async (post: PostDisplay) => {
+    const communityId = post.community?.id || "default-community-id";
+    try {
+      if (!post.bookmarked) {
+        await likePost(communityId, post.id);
+        setPosts(posts.map((p) =>
+          p.id === post.id ? { ...p, likes: p.likes + 1, bookmarked: true } : p
+        ));
+      } else {
+        await unlikePost(communityId, post.id);
+        setPosts(posts.map((p) =>
+          p.id === post.id ? { ...p, likes: Math.max(0, p.likes - 1), bookmarked: false } : p
+        ));
+      }
+    } catch (err) {
+      // Tratar erro se necessário
+    }
+  };
+
+  const handleComment = async (post: PostDisplay) => {
+    const communityId = post.community?.id || "default-community-id";
+    const content = prompt("Digite seu comentário:");
+    if (!content) return;
+    try {
+      await addComment(communityId, post.id, content);
+      setPosts(posts.map((p) =>
+        p.id === post.id ? { ...p, comments: p.comments + 1 } : p
+      ));
+    } catch (err) {
+      // Tratar erro se necessário
+    }
+  };
+
+  const handleShare = async (post: PostDisplay) => {
+    const communityId = post.community?.id || "default-community-id";
+    await sharePost(communityId, post.id);
+    // Quando implementar no backend, incremente shares
+    // setPosts(posts.map((p) =>
+    //   p.id === post.id ? { ...p, shares: p.shares + 1 } : p
+    // ));
   };
 
   if (loading) {
@@ -188,7 +231,7 @@ export default function PostList() {
                   </div>
                   <div className="flex gap-4 items-center">
                     <button
-                      onClick={() => toggleBookmark(post.id)}
+                      onClick={() => handleLike(post)}
                       className="p-1 hover:bg-gray-100 rounded-full transition-colors"
                     >
                       <Bookmark
@@ -237,24 +280,36 @@ export default function PostList() {
 
               <div className="flex justify-between items-center mt-10 w-full text-xs font-medium leading-none text-neutral-500 max-md:max-w-full">
                 <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5 w-[214px]">
-                  <div className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap">
+                  <button
+                    className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap"
+                    onClick={() => handleLike(post)}
+                    title="Curtir"
+                  >
                     <ArrowUp className="h-4 w-4 text-gray-500" />
                     <div className="self-stretch my-auto text-neutral-500">
                       {post.likes}
                     </div>
-                  </div>
-                  <div className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap">
+                  </button>
+                  <button
+                    className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap"
+                    onClick={() => handleComment(post)}
+                    title="Comentar"
+                  >
                     <MessageSquare className="h-4 w-4 text-gray-500" />
                     <div className="self-stretch my-auto text-neutral-500">
                       {post.comments}
                     </div>
-                  </div>
-                  <div className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-teal-700">
+                  </button>
+                  <button
+                    className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-teal-700"
+                    onClick={() => handleShare(post)}
+                    title="Compartilhar"
+                  >
                     <Activity className="h-4 w-4 text-teal-700" />
                     <div className="self-stretch my-auto">
                       {post.shares}
                     </div>
-                  </div>
+                  </button>
                 </div>
               </div>
             </div>

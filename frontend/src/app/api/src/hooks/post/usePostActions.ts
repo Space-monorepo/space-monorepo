@@ -43,7 +43,7 @@ interface ComplaintData extends BasePostData { // Modificado para interface
 
 // Função hipotética para upload de arquivo. Substitua pela sua implementação real.
 // Ela deve retornar a URL pública do arquivo upado.
- 
+
 const uploadToCloudinary = async (file: File): Promise<string | null> => {
   const formData = new FormData();
   formData.append('file', file);
@@ -302,6 +302,106 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
     createCampaign,
     createPoll,
     createComplaint,
+    likePost: async (communityId: string, postId: string) => {
+      setIsLoading(true);
+      try {
+        const token = getTokenFromCookies();
+        if (!token) throw new Error("Token não encontrado nos cookies");
+        const response = await axios.post(
+          `${API_URL}/posts/${communityId}/post/${postId}/like`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        onSuccess?.(response.data);
+        return response.data;
+      } catch (error) {
+        console.error("Erro ao curtir post:", error);
+        onError?.(error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    unlikePost: async (communityId: string, postId: string) => {
+      setIsLoading(true);
+      try {
+        const token = getTokenFromCookies();
+        if (!token) throw new Error("Token não encontrado nos cookies");
+        const response = await axios.post(
+          `${API_URL}/posts/${communityId}/post/${postId}/unlike`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        onSuccess?.(response.data);
+        return response.data;
+      } catch (error) {
+        console.error("Erro ao descurtir post:", error);
+        onError?.(error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    listLikes: async (communityId: string, postId: string) => {
+      setIsLoading(true);
+      try {
+        const token = getTokenFromCookies();
+        if (!token) throw new Error("Token não encontrado nos cookies");
+        const response = await axios.get(
+          `${API_URL}/posts/${communityId}/post/${postId}/list-likes`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        onSuccess?.(response.data);
+        return response.data;
+      } catch (error) {
+        console.error("Erro ao listar likes:", error);
+        onError?.(error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    addComment: async (communityId: string, postId: string, content: string) => {
+      setIsLoading(true);
+      try {
+        const token = getTokenFromCookies();
+        if (!token) throw new Error("Token não encontrado nos cookies");
+        const response = await axios.post(
+          `${API_URL}/posts/${communityId}/post/${postId}/comment`,
+          { content },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        onSuccess?.(response.data);
+        return response.data;
+      } catch (error) {
+        console.error("Erro ao comentar post:", error);
+        onError?.(error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    sharePost: async (communityId: string, postId: string) => {
+      // Placeholder: implementar quando rota existir no backend
+      alert("Funcionalidade de compartilhamento ainda não implementada no backend.");
+    },
   };
 };
 
