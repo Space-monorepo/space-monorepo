@@ -180,7 +180,7 @@ class CommunityService:
         except Exception as e:
             raise UnexpectedCommunityMemberError(
                 f'Unexpected error creating member: {e}'
-            )
+            ) from e
 
     def remove_member(self, member_id: UUID) -> bool:
         member = self.get_member(member_id)
