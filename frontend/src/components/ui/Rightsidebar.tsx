@@ -5,8 +5,14 @@ import { Loader2 } from "lucide-react";
 import useRightSidebarData from "@/app/api/src/hooks/sidebar/useRightSidebarData";
 
 export default function RightSidebar() {
-  const { userCampaigns, loading, error, refreshCampaigns } =
-    useRightSidebarData();
+
+  const { userCampaigns, loading, error, refreshCampaigns } = useRightSidebarData();
+
+  // Campanhas em engajamento: ordena por soma de likes + comentários e pega as top 3
+  const trendingCampaigns = [...userCampaigns]
+    .sort((a, b) => (b.likes_count + b.comments_count) - (a.likes_count + a.comments_count))
+    .slice(0, 3)
+    .filter(c => (c.likes_count + c.comments_count) > 0);
 
   useEffect(() => {
     refreshCampaigns();
@@ -20,8 +26,8 @@ export default function RightSidebar() {
 
   return (
     <nav className="flex flex-col shrink-0 gap-10 items-start pt-10 pr-0 pb-0 pl-5 border border-solid bg-zinc-100 border-stone-300 h-[927px] w-[330px] max-md:gap-8 max-md:px-4 max-md:py-8 max-md:w-full max-md:h-auto max-md:max-w-[330px] max-sm:gap-5 max-sm:px-2.5 max-sm:py-5 max-sm:w-full max-sm:border-t max-sm:border-b max-sm:border-solid max-sm:border-[none] max-sm:border-y-stone-300 lg:block fixed right-0 top-16 bottom-0 overflow-y-auto z-[5]">
-      <section className="flex relative flex-col items-start w-[180px] max-md:w-full">
-        <header className="flex relative gap-2 items-center self-stretch px-0 py-3 max-sm:px-0 max-sm:py-2">
+      <section className="flex relative flex-col items-start w-[180px] max-md:w-full mb-8">
+        <header className="flex relative gap-2 items-center self-stretch px-0 py-3 max-sm:px-0 max-sm:py-2 mb-2">
           <h2 className="text-sm font-bold text-neutral-800 max-sm:text-sm">
             Minhas Campanhas
           </h2>
@@ -75,29 +81,47 @@ export default function RightSidebar() {
         </div>
       </section>
 
-      <section className="flex relative flex-col items-start self-stretch">
-        <header className="flex relative gap-2 items-center self-stretch px-0 py-3 max-sm:px-0 max-sm:py-2">
+      <section className="flex relative flex-col items-start self-stretch mb-8">
+        <header className="flex relative gap-2 items-center self-stretch px-0 py-3 max-sm:px-0 max-sm:py-2 mb-2">
           <h2 className="text-sm font-bold text-neutral-800 max-sm:text-sm">
             Em discussão agora
           </h2>
         </header>
-        <article className="flex relative gap-2 items-center self-stretch px-0 py-2 max-sm:px-0 max-sm:py-1.5">
-          <div>
-            <div
-              dangerouslySetInnerHTML={{
-                __html:
-                  "<svg layer-name=\"Trending up\" data-component-name=\"Trending up\" data-variant-name=\"Size=24\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" class=\"trending-icon\" style=\"width: 16px; height: 16px; position: relative\"> <g clip-path=\"url(#clip0_545_4615)\"> <path d=\"M15.3334 4L9.00008 10.3333L5.66675 7L0.666748 12M15.3334 4H11.3334M15.3334 4V8\" stroke=\"#262626\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> </g> <defs> <clipPath id=\"clip0_545_4615\"> <rect width=\"16\" height=\"16\" fill=\"white\"></rect> </clipPath> </defs> </svg>",
-              }}
-            />
-          </div>
-          <div className="relative text-xs text-neutral-800">
-            <p className="text-xs text-neutral-800 max-sm:text-xs">Não há discussões criadas no momento</p>
-          </div>
-        </article>
+        {trendingCampaigns.length > 0 ? (
+          trendingCampaigns.map((campaign) => (
+            <article key={campaign.id} className="flex relative gap-2 items-center self-stretch px-0 py-2 max-sm:px-0 max-sm:py-1.5">
+              <div>
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      "<svg layer-name=\"Trending up\" data-component-name=\"Trending up\" data-variant-name=\"Size=24\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" class=\"trending-icon\" style=\"width: 16px; height: 16px; position: relative\"> <g clip-path=\"url(#clip0_545_4615)\"> <path d=\"M15.3334 4L9.00008 10.3333L5.66675 7L0.666748 12M15.3334 4H11.3334M15.3334 4V8\" stroke=\"#262626\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> </g> <defs> <clipPath id=\"clip0_545_4615\"> <rect width=\"16\" height=\"16\" fill=\"white\"></rect> </clipPath> </defs> </svg>",
+                  }}
+                />
+              </div>
+              <div className="relative text-xs text-neutral-800" title={campaign.title}>
+                <p className="text-xs text-neutral-800 max-sm:text-xs font-semibold">{truncateText(campaign.title)}</p>
+              </div>
+            </article>
+          ))
+        ) : (
+          <article className="flex relative gap-2 items-center self-stretch px-0 py-2 max-sm:px-0 max-sm:py-1.5">
+            <div>
+              <div
+                dangerouslySetInnerHTML={{
+                  __html:
+                    "<svg layer-name=\"Trending up\" data-component-name=\"Trending up\" data-variant-name=\"Size=24\" width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" class=\"trending-icon\" style=\"width: 16px; height: 16px; position: relative\"> <g clip-path=\"url(#clip0_545_4615)\"> <path d=\"M15.3334 4L9.00008 10.3333L5.66675 7L0.666748 12M15.3334 4H11.3334M15.3334 4V8\" stroke=\"#262626\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path> </g> <defs> <clipPath id=\"clip0_545_4615\"> <rect width=\"16\" height=\"16\" fill=\"white\"></rect> </clipPath> </defs> </svg>",
+                }}
+              />
+            </div>
+            <div className="relative text-xs text-neutral-800">
+              <p className="text-xs text-neutral-800 max-sm:text-xs">Não há discussões criadas no momento</p>
+            </div>
+          </article>
+        )}
       </section>
 
-      <section className="flex relative flex-col items-start self-stretch">
-        <header className="flex relative gap-2 items-center self-stretch px-0 py-3 max-sm:px-0 max-sm:py-2">
+      <section className="flex relative flex-col items-start self-stretch mb-8">
+        <header className="flex relative gap-2 items-center self-stretch px-0 py-3 max-sm:px-0 max-sm:py-2 mb-2">
           <h2 className="text-sm font-bold text-neutral-800 max-sm:text-sm">
             Agenda Comunitária
           </h2>
