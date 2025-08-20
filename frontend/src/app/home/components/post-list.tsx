@@ -486,8 +486,8 @@ export default function PostList() {
 
                   <div className="mt-6 w-full text-neutral-800 max-md:max-w-full">
                     <div className="flex flex-wrap gap-10 justify-between items-center w-full max-md:max-w-full">
-                      <div className="flex gap-2.5 justify-center items-center self-stretch my-auto text-xl font-bold leading-relaxed min-w-60">
-                        <h2 className="self-stretch my-auto text-neutral-800">
+                      <div className="flex gap-2.5 items-center self-stretch my-auto text-xl font-bold leading-relaxed min-w-60 px-0">
+                        <h2 className="self-stretch my-auto text-neutral-800 px-0">
                           {post.title}
                         </h2>
                       </div>
