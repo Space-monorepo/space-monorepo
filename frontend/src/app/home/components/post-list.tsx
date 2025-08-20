@@ -230,7 +230,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
               <span className="cursor-pointer">&#8226;=</span>
             </div>
             <button
-              className="px-4 py-2 bg-neutral-800 text-white rounded text-base font-medium"
+              className="px-4 py-2 bg-neutral-800 text-white text-base font-medium"
               onClick={handleAddComment}
             >
               Enviar
