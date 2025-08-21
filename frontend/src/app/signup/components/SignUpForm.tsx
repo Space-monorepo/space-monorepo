@@ -1,12 +1,15 @@
+"use client";
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, RegisterFormData } from '@/app/api/src/schemas/auth';
 import { useRouter } from 'next/navigation';
 import { registerUser } from '@/app/api/src';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import SignUpHeader from './SignUpHeader';
 import AlternativeSignUpMethods from './AlternativeSignUpMethods';
+import { useState } from 'react';
+import { toast } from 'react-toastify';
+
 
 export default function SignUpForm() {
   const router = useRouter();
@@ -18,11 +21,23 @@ export default function SignUpForm() {
     resolver: zodResolver(registerSchema),
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const onSubmit = async (data: RegisterFormData) => {
+    if (data.password !== data.confirm_password) {
+      alert('As senhas não coincidem.');
+      return;
+    }
+    // Pega o valor do campo sobrenome manualmente
+    const lastNameInput = document.querySelector<HTMLInputElement>('input[name="lastName"]');
+    const lastName = lastNameInput ? lastNameInput.value.trim() : '';
+    const fullName = `${data.name.trim()}${lastName ? ' ' + lastName : ''}`;
+    const dataToSend = { ...data, name: fullName };
     try {
-      const response = await registerUser(data);
+      const response = await registerUser(dataToSend);
       if (response.id) {
-        alert('Cadastro realizado com sucesso!');
+        toast.success('Cadastro realizado com sucesso!');
         router.push('/login');
       }
     } catch (error) {
@@ -31,33 +46,117 @@ export default function SignUpForm() {
   };
 
   return (
-    <>
+    <div className="max-w-[480px]">
       <SignUpHeader />
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
-          <Input type="text" placeholder="Nome completo" {...register('name')} />
-          {errors.name && <span className="text-red-500 text-sm">{errors.name.message}</span>}
+
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-28 w-full text-sm leading-6 text-neutral-500">
+        <div className="w-full whitespace-nowrap">
+          <div className="flex gap-5 items-center w-full">
+            <div className="relative min-h-10 w-[180px]">
+              <div className="box-border flex gap-2.5 items-center px-4 py-2 w-full bg-zinc-100">
+                <input
+                  type="text"
+                  placeholder="Nome"
+                  {...register('name')}
+                  className="flex-1 bg-transparent outline-none text-zinc-900 text-sm"
+                />
+              </div>
+              <div className="flex z-0 max-w-full bg-neutral-500 min-h-px w-[180px]" />
+              {errors.name && <span className="text-red-500 text-xs mt-1 block">{errors.name.message}</span>}
+            </div>
+            <div className="relative min-h-10 min-w-60 w-[280px]">
+              <div className="box-border flex gap-2.5 items-center px-4 py-2 w-full bg-zinc-100">
+                <input
+                  type="text"
+                  placeholder="Sobrenome"
+                  name="lastName"
+                  className="flex-1 bg-transparent outline-none text-zinc-900 text-sm"
+                />
+              </div>
+              <div className="flex z-0 max-w-full bg-neutral-500 min-h-px w-[280px]" />
+            </div>
+          </div>
+          <div className="relative mt-6 w-full min-h-10">
+            <div className="box-border flex gap-2.5 items-center px-4 py-2 w-full bg-zinc-100">
+              <input
+                type="email"
+                placeholder="E-mail"
+                {...register('email')}
+                className="flex-1 bg-transparent outline-none text-zinc-900 text-sm"
+              />
+            </div>
+            <div className="flex z-0 w-full bg-neutral-500 min-h-px" />
+            {errors.email && <span className="text-red-500 text-xs mt-1 block">{errors.email.message}</span>}
+          </div>
         </div>
-        <div className="space-y-2">
-          <Input type="email" placeholder="m.example@email.com" {...register('email')} />
-          {errors.email && <span className="text-red-500 text-sm">{errors.email.message}</span>}
+
+        <div className="mt-14 w-full">
+          <div className="relative w-full whitespace-nowrap min-h-10">
+            <div className="box-border flex gap-2.5 items-center px-4 py-2 w-full bg-zinc-100">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Senha"
+                {...register('password')}
+                className="flex-1 bg-transparent outline-none text-zinc-900 text-sm"
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                className="ml-2 text-xs text-zinc-600 hover:text-zinc-900 focus:outline-none"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                {showPassword ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </div>
+            <div className="flex z-0 w-full bg-neutral-500 min-h-px" />
+            {errors.password && <span className="text-red-500 text-xs mt-1 block">{errors.password.message}</span>}
+          </div>
+          <div className="relative mt-6 w-full min-h-10">
+            <div className="box-border flex gap-2.5 items-center px-4 py-2 w-full bg-zinc-100">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Confirmação da senha"
+                {...register('confirm_password')}
+                className="flex-1 bg-transparent outline-none text-zinc-900 text-sm"
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                className="ml-2 text-xs text-zinc-600 hover:text-zinc-900 focus:outline-none"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                aria-label={showConfirmPassword ? 'Ocultar confirmação' : 'Mostrar confirmação'}
+              >
+                {showConfirmPassword ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </div>
+            <div className="flex z-0 w-full bg-neutral-500 min-h-px" />
+            {errors.confirm_password && <span className="text-red-500 text-xs mt-1 block">{errors.confirm_password.message}</span>}
+          </div>
+          {/* <div className="relative mt-6 w-full min-h-10">
+            <div className="box-border flex gap-2.5 items-center px-4 py-2 w-full bg-zinc-100">
+              <input
+                type="text"
+                placeholder="URL da imagem de perfil (opcional)"
+                {...register('profile_image_url')}
+                className="flex-1 bg-transparent outline-none text-zinc-900 text-sm"
+              />
+            </div>
+            <div className="flex z-0 w-full bg-neutral-500 min-h-px" />
+          </div> */}
         </div>
-        <div className="space-y-2">
-          <Input type="password" placeholder="Senha" {...register('password')} />
-          {errors.password && <span className="text-red-500 text-sm">{errors.password.message}</span>}
+
+        <div className="mt-28 w-full">
+          <button
+            type="submit"
+            className="flex gap-2.5 items-center pt-3 pr-16 pb-4 pl-4 w-full text-base text-gray-200 bg-neutral-800 hover:bg-neutral-700 transition-colors"
+          >
+            <span className="self-stretch my-auto">Criar conta</span>
+          </button>
         </div>
-        <div className="space-y-2">
-          <Input type="password" placeholder="Confirmação da senha" {...register('confirm_password')} />
-          {errors.confirm_password && <span className="text-red-500 text-sm">{errors.confirm_password.message}</span>}
-        </div>
-        <div className="space-y-2">
-          <Input type="text" placeholder="URL da imagem de perfil (opcional)" {...register('profile_image_url')} />
-        </div>
-        <Button type="submit" className="w-full text-white bg-black hover:bg-black/90">
-          Criar conta
-        </Button>
       </form>
+
       <AlternativeSignUpMethods />
-    </>
+    </div>
   );
 }
