@@ -2,14 +2,16 @@ import Link from 'next/link';
 
 export default function Header() {
   return (
-    <div className="space-y-2 text-center">
-      <h1 className="text-2xl font-bold">Entre com sua conta</h1>
-      <p className="text-gray-500 text-sm">
+    <header className="flex flex-col gap-1 items-start w-full">
+      <h1 className="w-full text-3xl font-semibold text-zinc-900 max-sm:text-3xl">
+        <div className="text-3xl font-bold text-zinc-900 max-sm:text-3xl">
+          Entre com sua conta
+        </div>
+      </h1>
+      <p className="w-full text-xs text-neutral-500">
         Não tem uma conta?{' '}
-        <Link href="/signup" className="text-gray-700 hover:underline">
-          Cadastre-se
-        </Link>
+        <Link href="/signup" className="underline hover:text-neutral-700">Cadastre-se</Link>
       </p>
-    </div>
+    </header>
   );
 }

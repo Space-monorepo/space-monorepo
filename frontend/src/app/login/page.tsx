@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { toast } from 'react-toastify';
 import { API_URL } from '@/config';
+import { loginUser } from '@/app/api/src';
+import { useBypassAuth } from '@/app/api/src/hooks/useBypassAuth';
+import Header from './components/Header';
 import LoginForm from './components/LoginForm';
 import SocialLoginButtons from './components/SocialLoginButtons';
-import Header from './components/Header';
 import ImageSection from './components/ImageSection';
-import { loginUser } from '@/app/api/src';
-import { Separator } from '@/components/ui/separator';
-import { useBypassAuth } from '@/app/api/src/hooks/useBypassAuth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -46,12 +45,9 @@ export default function LoginPage() {
     }
   }, [token, router, bypass]);
 
-  interface LoginData {
-    email: string;
-    password: string;
-  }
 
-  const handleLogin = async (data: LoginData) => {
+
+  const handleLogin = async (data: { email: string; password: string }) => {
     try {
       const formData = new FormData();
       formData.append('username', data.email);
@@ -74,22 +70,25 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col md:flex-row">
-      <ImageSection />
-      <div className="flex items-center justify-center w-full md:w-1/2 bg-gray-100 p-6">
-        <div className="max-w-[400px] w-full space-y-8">
+    <main className="flex min-h-screen bg-white overflow-x-hidden">
+      {/* Imagem lateral esquerda */}
+      <div className="hidden md:flex w-1/2 items-center justify-center">
+        <ImageSection />
+      </div>
+      <div className="flex-1 flex items-center justify-center bg-white">
+        <section className="flex flex-col gap-28 items-start w-full max-w-[480px] px-4">
           <Header />
-          <LoginForm onSubmit={handleLogin} />
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
+
+          <section className="flex flex-col gap-8 items-start w-full">
+            <LoginForm onSubmit={handleLogin} />
+            <div className="flex justify-between items-center w-full">
+              <div className="h-px bg-stone-300 w-[152px]" />
+              <p className="text-xs leading-4 text-neutral-500">Ou entre com</p>
+              <div className="h-px bg-stone-300 w-[152px]" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-gray-100 px-2 text-gray-500">Ou entre com</span>
-            </div>
-          </div>
-          <SocialLoginButtons />
-        </div>
+            <SocialLoginButtons />
+          </section>
+        </section>
       </div>
     </main>
   );
