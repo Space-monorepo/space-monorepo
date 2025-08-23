@@ -1,3 +1,4 @@
+import pytest
 from fastapi import status
 
 from app.api.post.model import CampaignPost
@@ -17,12 +18,13 @@ from app.api.post.schemas import (
 # o usuario é moderador ou admin e quando o conteúdo é o dono do post
 
 
+@pytest.mark.integration
 def test_create_post_route(authenticate_client, community_member_on_db):
     post = PostCreate(
         title='Title test',
         content='Content test',
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
+        user_id=str(community_member_on_db.user_id),
+        community_id=str(community_member_on_db.community_id),
         type_post=PostTypeEnum.CAMPAIGN,
         image_url=None,
     )
@@ -42,6 +44,7 @@ def test_create_post_route(authenticate_client, community_member_on_db):
     assert response_data['image_url'] == post.image_url
 
 
+@pytest.mark.integration
 def test_get_post_route(authenticate_client, post_on_db):
     response = authenticate_client.get(
         f'/posts/{post_on_db.community_id}/post/{post_on_db.id}'
@@ -58,6 +61,7 @@ def test_get_post_route(authenticate_client, post_on_db):
     assert response_data['image_url'] == post_on_db.image_url
 
 
+@pytest.mark.integration
 def test_list_posts_by_user_route(authenticate_client, posts_on_db):
     response = authenticate_client.get(
         f'/posts/{posts_on_db[0].community_id}/user/{posts_on_db[0].user_id}/list-posts'
@@ -70,6 +74,7 @@ def test_list_posts_by_user_route(authenticate_client, posts_on_db):
     assert response_data['total'] == len(posts_on_db)
 
 
+@pytest.mark.integration
 def test_list_posts_by_community_route(authenticate_client, posts_on_db):
     response = authenticate_client.get(
         f'/posts/{posts_on_db[0].community_id}/community/list-posts'
@@ -82,6 +87,7 @@ def test_list_posts_by_community_route(authenticate_client, posts_on_db):
     assert response_data['total'] == len(posts_on_db)
 
 
+@pytest.mark.integration
 def test_update_post_route(authenticate_client, post_on_db):
     post_update = PostUpdate(
         content='Updated content',
@@ -96,6 +102,7 @@ def test_update_post_route(authenticate_client, post_on_db):
     assert response.json()['content'] == post_update.content
 
 
+@pytest.mark.integration
 def test_update_post_status_route(authenticate_client, post_on_db):
     post_update = PostUpdate(
         status=PostStatusEnum.SUSPENDED,
@@ -110,6 +117,7 @@ def test_update_post_status_route(authenticate_client, post_on_db):
     assert response.json()['status'] == post_update.status
 
 
+@pytest.mark.integration
 def test_update_post_status_from_not_admin_route(
     authenticate_member_client, post_on_db, commun_member_on_db
 ):
@@ -125,6 +133,7 @@ def test_update_post_status_from_not_admin_route(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.integration
 def test_update_post_from_not_owner_route(
     authenticate_member_client, post_on_db, commun_member_on_db
 ):
@@ -140,6 +149,7 @@ def test_update_post_from_not_owner_route(
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+@pytest.mark.integration
 def test_delete_post_route(authenticate_client, post_on_db):
     response = authenticate_client.delete(
         f'/posts/{post_on_db.community_id}/post/{post_on_db.id}'
@@ -152,6 +162,7 @@ def test_delete_post_route(authenticate_client, post_on_db):
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+@pytest.mark.integration
 def test_like_post_route(authenticate_client, post_on_db):
     response = authenticate_client.post(
         f'/posts/{post_on_db.community_id}/post/{post_on_db.id}/like'
@@ -160,6 +171,7 @@ def test_like_post_route(authenticate_client, post_on_db):
     assert response.json()['likes_count'] == 1
 
 
+@pytest.mark.integration
 def test_unlike_post_route(authenticate_client, post_on_db):
     response = authenticate_client.post(
         f'/posts/{post_on_db.community_id}/post/{post_on_db.id}/like'
@@ -174,12 +186,13 @@ def test_unlike_post_route(authenticate_client, post_on_db):
     assert response.json()['likes_count'] == 0
 
 
+@pytest.mark.integration
 def test_create_campaign_route(authenticate_client, community_member_on_db):
     post = PostCreate(
         title='Title test',
         content='Content test',
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
+        user_id=str(community_member_on_db.user_id),
+        community_id=str(community_member_on_db.community_id),
         type_post=PostTypeEnum.CAMPAIGN,
         image_url=None,
     )
@@ -201,6 +214,7 @@ def test_create_campaign_route(authenticate_client, community_member_on_db):
     assert response.json()['status_campaign'] == CampaignStatusEnum.PENDING
 
 
+@pytest.mark.integration
 def test_participate_campaign_route(
     session_sql, authenticate_client, community_member_on_db, campaign_post_on_db
 ):
@@ -219,12 +233,13 @@ def test_participate_campaign_route(
     assert post.current_participants == 1
 
 
+@pytest.mark.integration
 def test_create_complaint_route(authenticate_client, community_member_on_db):
     post = PostCreate(
         title='Title test',
         content='Content test',
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
+        user_id=str(community_member_on_db.user_id),
+        community_id=str(community_member_on_db.community_id),
         type_post=PostTypeEnum.COMPLAINT,
         image_url=None,
     )
@@ -245,12 +260,13 @@ def test_create_complaint_route(authenticate_client, community_member_on_db):
     assert response.json()['status_complaint'] == ComplaintStatusEnum.PENDING
 
 
+@pytest.mark.integration
 def test_create_poll_route(authenticate_client, community_member_on_db):
     post = PostCreate(
         title='Title test',
         content='Content test',
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
+        user_id=str(community_member_on_db.user_id),
+        community_id=str(community_member_on_db.community_id),
         type_post=PostTypeEnum.POLL,
         image_url=None,
     )
@@ -272,6 +288,7 @@ def test_create_poll_route(authenticate_client, community_member_on_db):
     assert response.json()['options'][2]['answer'] == poll.options[2]
 
 
+@pytest.mark.integration
 def test_vote_poll_route(authenticate_client, community_member_on_db, poll_option_on_db):
     poll_option = poll_option_on_db[0]
     response = authenticate_client.patch(
@@ -281,6 +298,7 @@ def test_vote_poll_route(authenticate_client, community_member_on_db, poll_optio
     assert response.json()['options'][0]['votes_count'] == 1
 
 
+@pytest.mark.integration
 def test_get_user_feed_route(authenticate_client, community_member_on_db, post_on_db):
     response = authenticate_client.get(
         '/posts/feed'
@@ -289,6 +307,7 @@ def test_get_user_feed_route(authenticate_client, community_member_on_db, post_o
     assert response.json()['items'][0]['id'] == str(post_on_db.id)
 
 
+@pytest.mark.integration
 def test_list_user_campaigns_route(
     authenticate_client, community_member_on_db, campaign_post_on_db, campaign_participants_on_db
 ):
