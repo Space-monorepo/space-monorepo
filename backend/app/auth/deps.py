@@ -70,7 +70,7 @@ def require_post_owner(
 ) -> User:
     with TransactionManager(session) as tm:
         post = PostService(tm).get_post(post_id)
-    if post.user.id != user.id:
+    if str(post.user.id) != str(user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
         )

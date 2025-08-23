@@ -53,7 +53,7 @@ class PostService:
         self.community_service = CommunityService(tm)
 
     def _get_post(self, post_id: UUID) -> Post:
-        post = self.post_repo.get_by_id(post_id)
+        post = self.post_repo.get_by_id(str(post_id))
         if not post:
             raise PostNotFoundError('Post not found')
         return post
@@ -222,7 +222,7 @@ class PostService:
     def create_campaign(self, post: PostCreate) -> CampaignResponse:
         try:
             post = self.create_post(post)
-            campaign = CampaignPost(post_id=post.id)
+            campaign = CampaignPost(post_id=str(post.id))
             campaign_saved = self.campaign_repo.save(campaign)
             return CampaignResponse(
                 post=self.get_post(post.id),
@@ -277,7 +277,7 @@ class PostService:
     def create_complaint(self, post: PostCreate) -> ComplaintResponse:
         try:
             post = self.create_post(post)
-            complaint = ComplaintPost(post_id=post.id)
+            complaint = ComplaintPost(post_id=str(post.id))
             complaint_saved = self.complaint_repo.save(complaint)
             return ComplaintResponse(
                 post=self.get_post(post.id),
@@ -300,11 +300,11 @@ class PostService:
     def create_poll(self, poll_create: PollCreate) -> PollResponse:
         try:
             post = self.create_post(poll_create.post)
-            poll = PollPosts(post_id=post.id, question=poll_create.question)
+            poll = PollPosts(post_id=str(post.id), question=poll_create.question)
             poll_saved = self.poll_posts_repo.save(poll)
             poll_options = []
             for option in poll_create.options:
-                poll_option = PollOptions(post_id=post.id, answer=option)
+                poll_option = PollOptions(post_id=str(post.id), answer=option)
                 poll_option_saved = self.poll_options_repo.save(poll_option)
                 poll_options.append(
                     PollOptionResponse(

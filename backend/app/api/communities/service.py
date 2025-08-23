@@ -45,7 +45,7 @@ class CommunityService:
         )
 
     def get_community(self, id: UUID) -> Community:
-        community = self.community_repo.get_by_id(id)
+        community = self.community_repo.get_by_id(str(id))
         if not community:
             raise CommunityNotFoundError(f'Community with id {id} not found')
         return community
@@ -130,7 +130,7 @@ class CommunityService:
         self.get_community(community_id)
         self.user_service.get_user(user_id)
         member_assocation = self.member_repo.get_member_association(
-            user_id, community_id
+            str(user_id), str(community_id)
         )
         if not member_assocation:
             raise CommunityMemberNotFoundError(
@@ -157,7 +157,7 @@ class CommunityService:
         )
 
     def get_member(self, member_id: UUID) -> CommunityMember:
-        member = self.member_repo.get_by_id(member_id)
+        member = self.member_repo.get_by_id(str(member_id))
         if not member:
             raise CommunityMemberNotFoundError(
                 f'Community member with id {member_id} not found'

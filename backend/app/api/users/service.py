@@ -35,7 +35,7 @@ class UserService:
             raise UnexpectedUserError('Unexpected error creating user') from e
 
     def get_user(self, id: UUID) -> User:
-        user = self.user_repo.get_by_id(id)
+        user = self.user_repo.get_by_id(str(id))
         if not user:
             raise UserNotFoundError('User not found')
         return user

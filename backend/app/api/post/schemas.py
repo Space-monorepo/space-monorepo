@@ -62,8 +62,12 @@ class ComplaintLevelEnum(str, Enum):
 
 
 class PostCreate(BaseModel):
-    community_id: uuid.UUID = Field(..., description='Community id of the post')
-    user_id: uuid.UUID = Field(..., description='User id of the post')
+    community_id: str = Field(
+        ..., min_length=36, max_length=36, description='Community id of the post'
+    )
+    user_id: str = Field(
+        ..., min_length=36, max_length=36, description='User id of the post'
+    )
     type_post: PostTypeEnum = Field(
         ..., description='Type of post, required for certain types.'
     )
@@ -251,8 +255,15 @@ class CampaignParticipantsResponse(BaseModel):
 
 
 class PostFeedbackCreate(BaseModel):
-    post_id: uuid.UUID = Field(..., description='Post id of the feedback')
-    member_id: uuid.UUID = Field(..., description='Community member id of the feedback')
+    post_id: str = Field(
+        ..., min_length=36, max_length=36, description='Post id of the feedback'
+    )
+    member_id: str = Field(
+        ...,
+        min_length=36,
+        max_length=36,
+        description='Community member id of the feedback',
+    )
     subject: str = Field(..., min_length=1, max_length=255)
     message: str = Field(..., min_length=1, max_length=255)
 
@@ -273,6 +284,8 @@ class PostFeedbackCreate(BaseModel):
 
 class PostFeedbackResponse(PostFeedbackCreate):
     id: uuid.UUID = Field(..., description='Id of the feedback')
+    post_id: uuid.UUID = Field(..., description='Id of the post')
+    member_id: uuid.UUID = Field(..., description='Id of the member')
     created_at: datetime = Field(..., description='Created at of the feedback')
 
     model_config = ConfigDict(
