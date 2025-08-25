@@ -150,7 +150,7 @@ export function ModalCreatePublication({
                     )}
                   {fetchedCommunities.map((community) => (
                     <SelectItem
-                      className="flex flex-wrap gap-10 justify-between rounded-none items-center px-4 py-3 w-full text-black hover:bg-neutral-300 focus:bg-neutral-300"
+                      className="flex flex-wrap gap-10 justify-between rounded-none items-center px-6 py-3 w-full text-black hover:bg-neutral-300 focus:bg-neutral-100 cursor-pointer"
                       key={community.id}
                       value={community.id}
                     >
@@ -181,7 +181,7 @@ export function ModalCreatePublication({
                 <SelectContent className="bg-white border border-neutral-300 shadow-lg">
                   {publicationTypes.map((type) => (
                     <SelectItem
-                      className="flex flex-wrap gap-10 justify-between rounded-none items-center px-4 py-3 w-full border-0 text-black hover:bg-neutral-300 focus:bg-neutral-300"
+                      className="flex flex-wrap gap-10 justify-between rounded-none items-center px-6 py-3 w-full border-0 text-black hover:bg-neutral-300 focus:bg-neutral-100 cursor-pointer"
                       key={type.value}
                       value={type.value}
                     >
@@ -197,14 +197,14 @@ export function ModalCreatePublication({
           <footer className="flex w-full h-16 text-sm leading-6 whitespace-nowrap mt-auto">
             <button
               onClick={handleClose}
-              className="w-1/2 h-full flex items-center justify-start p-4 bg-neutral-200 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-400 border-r border-neutral-300"
+              className="w-1/2 h-full flex items-center justify-start p-4 bg-neutral-200 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-400 border-r border-neutral-300 cursor-pointer"
             >
               Cancelar
             </button>
             <button
               onClick={handleCreate}
               disabled={!selectedCommunity || !publicationType}
-              className="w-1/2 h-full flex items-center justify-start p-4 bg-neutral-800 text-zinc-100 disabled:bg-neutral-400 focus:outline-none focus:ring-2 focus:ring-zinc-400"
+              className="w-1/2 h-full flex items-center justify-start p-4 bg-neutral-800 text-zinc-100 disabled:bg-neutral-400 focus:outline-none focus:ring-2 focus:ring-zinc-400 cursor-pointer"
             >
               Criar
             </button>
