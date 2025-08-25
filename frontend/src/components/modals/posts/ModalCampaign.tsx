@@ -5,7 +5,7 @@ import { useState, useRef } from "react";
 import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { toast } from "react-toastify";
 import { PostStatusEnum } from "@/app/api/src/types/posts/Post";
-
+import { FaceSatisfied, TextBold, TextItalic, ListNumbered, ListBulleted } from "@carbon/icons-react";
 
 interface StepIndicatorProps {
   active: boolean;
@@ -94,6 +94,8 @@ const InputField: React.FC<{
   );
 };
 
+
+
 const WritePost: React.FC<{
   content: string;
   files: File[];
@@ -105,9 +107,7 @@ const WritePost: React.FC<{
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const droppedFiles = Array.from(e.dataTransfer.files);
-    if (droppedFiles.length > 0) {
-      onFilesChange([droppedFiles[0]]);
-    }
+    onFilesChange([...files, ...droppedFiles]);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -119,44 +119,86 @@ const WritePost: React.FC<{
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      onFilesChange([e.target.files[0]]);
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files);
+      onFilesChange([...files, ...selectedFiles]);
     }
   };
 
   return (
-    <section className="flex relative flex-col gap-2 items-start self-stretch">
-      <label className="relative self-stretch text-sm leading-6 text-neutral-800">
-        Conteúdo da publicação
-      </label>
-      <div className="flex relative gap-8 items-start self-stretch px-4 py-2 border-b border-solid bg-neutral-200 border-b-neutral-500">
-        <textarea
-          value={content}
-          onChange={(e) => onContentChange(e.target.value)}
-          placeholder="Escreva o conteúdo da sua publicação"
-          className="relative text-sm leading-6 text-neutral-500 bg-transparent border-none outline-none flex-1 h-32 resize-none placeholder:text-neutral-500"
-          aria-label="Conteúdo da publicação"
+    <>
+      {/* Editor de Publicação */}
+      <section className="flex flex-col gap-2 items-start self-stretch">
+        <label htmlFor="publication-text" className="self-stretch text-sm leading-6 text-neutral-800 max-sm:text-sm">
+          Publicação
+        </label>
+        <div className="flex flex-col items-start self-stretch">
+          <div className="flex flex-col justify-between items-start self-stretch p-4 rounded-sm bg-neutral-200 h-[174px]">
+            <textarea
+              id="publication-text"
+              value={content}
+              onChange={(e) => onContentChange(e.target.value)}
+              placeholder="Escreva a publicação"
+              className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+            />
+            {/* Barra de formatação */}
+            <div className="flex gap-4 items-start max-sm:gap-3">
+              <button type="button" aria-label="Adicionar emoji">
+                <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
+              </button>
+              <button type="button" aria-label="Negrito">
+                <TextBold size={20} className="toolbar-icon text-neutral-500" />
+              </button>
+              <button type="button" aria-label="Itálico">
+                <TextItalic size={20} className="toolbar-icon text-neutral-500" />
+              </button>
+              <button type="button" aria-label="Lista numerada">
+                <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
+              </button>
+              <button type="button" aria-label="Lista com marcadores">
+                <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
+              </button>
+            </div>
+          </div>
+          <div className="self-stretch h-px bg-neutral-500" />
+        </div>
+      </section>
+
+      {/* Upload de Arquivos */}
+      <section className="flex flex-col gap-4 items-start self-stretch">
+        <div className="flex flex-col gap-2 items-start self-stretch">
+          <h3 className="self-stretch text-sm font-semibold leading-6 text-neutral-800 max-sm:text-sm">
+            Carregar arquivos
+          </h3>
+          <p className="text-sm text-neutral-500 w-[497px] max-md:w-full max-sm:w-full max-sm:text-sm">
+            Tamanho máximo do arquivo é 2MB. Tipos de arquivos suportados são .jpg e .png.
+          </p>
+        </div>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileInput}
+          className="hidden"
+          multiple
         />
-      </div>
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileInput}
-        className="hidden"
-        accept="image/*"
-      />
-      <div
-        onClick={handleFileSelect}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        className="mt-4 p-6 border-2 border-dashed border-neutral-300 rounded-lg text-center cursor-pointer hover:bg-neutral-50 transition-colors w-full"
-      >
-        <p className="text-sm text-neutral-500">Arraste e solte uma imagem aqui ou clique para selecionar</p>
+        <div
+          className="flex gap-8 items-start self-stretch p-4 h-24 border border-dashed border-neutral-500 cursor-pointer hover:bg-neutral-50 transition-colors"
+          onClick={handleFileSelect}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          role="button"
+          tabIndex={0}
+          aria-label="Upload files"
+        >
+          <p className="text-sm leading-5 text-neutral-500 w-[230px] max-md:w-full max-sm:w-full max-sm:text-sm">
+            Arraste and solte os arquivos aqui ou clique para carregar
+          </p>
+        </div>
         {files.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-neutral-800 font-medium mb-2 text-sm">
-              Arquivo selecionado:
-            </h3>
+          <div className="mt-4 w-full">
+            <h4 className="text-neutral-800 font-medium mb-2 text-sm">
+              Arquivos selecionados:
+            </h4>
             <ul className="space-y-1">
               {files.map((file, index) => (
                 <li
@@ -167,7 +209,7 @@ const WritePost: React.FC<{
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onFilesChange([]);
+                      onFilesChange(files.filter((_, i) => i !== index));
                     }}
                     className="text-red-500 hover:text-red-700 text-xs"
                   >
@@ -178,11 +220,8 @@ const WritePost: React.FC<{
             </ul>
           </div>
         )}
-      </div>
-      <p className="relative text-xs text-neutral-500 w-[496px] max-md:w-full max-md:max-w-[496px] max-sm:w-full">
-        A imagem é obrigatória para a campanha.
-      </p>
-    </section>
+      </section>
+    </>
   );
 };
 
