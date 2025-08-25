@@ -272,7 +272,7 @@ type PostDisplay = PostResponse & {
   likes: number;
   comments: number;
   shares: number;
-  bookmarked: boolean;
+  liked: boolean;
   username?: string;
 };
 
@@ -328,7 +328,7 @@ export default function PostList() {
             likes: item.likes_count,
             comments: item.comments_count,
             shares: item.report_count,
-            bookmarked: false,
+            liked: false, // novo campo para curtir
           })
         );
         setPosts(fetchedPosts);
@@ -350,15 +350,15 @@ export default function PostList() {
   const handleLike = async (post: PostDisplay) => {
     const communityId = post.community?.id || "default-community-id";
     try {
-      if (!post.bookmarked) {
+      if (!post.liked) {
         await likePost(communityId, post.id);
         setPosts(posts.map((p) =>
-          p.id === post.id ? { ...p, likes: p.likes + 1, bookmarked: true } : p
+          p.id === post.id ? { ...p, likes: p.likes + 1, liked: true } : p
         ));
       } else {
         await unlikePost(communityId, post.id);
         setPosts(posts.map((p) =>
-          p.id === post.id ? { ...p, likes: Math.max(0, p.likes - 1), bookmarked: false } : p
+          p.id === post.id ? { ...p, likes: Math.max(0, p.likes - 1), liked: false } : p
         ));
       }
     } catch (err) {
@@ -468,14 +468,12 @@ export default function PostList() {
                     </div>
                     <div className="flex gap-4 items-center">
                       <button
-                        onClick={() => handleLike(post)}
                         className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                        title="Salvar nos favoritos"
+                      // Aqui você pode adicionar lógica de bookmark real se desejar
                       >
                         <Bookmark
-                          className={`h-4 w-4 ${post.bookmarked
-                            ? "fill-blue-600 text-blue-600"
-                            : "text-gray-500"
-                            }`}
+                          className={`h-4 w-4 text-gray-500`}
                         />
                       </button>
                       <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
@@ -487,7 +485,7 @@ export default function PostList() {
                   <div className="mt-6 w-full text-neutral-800 max-md:max-w-full">
                     <div className="flex flex-wrap gap-10 justify-between items-center w-full max-md:max-w-full">
                       <div className="flex gap-2.5 items-center self-stretch my-auto text-xl font-bold leading-relaxed min-w-60 px-0">
-                        <h2 className="self-stretch my-auto text-neutral-800 px-0">
+                        <h2 className="self-stretch my-auto text-neutral-800 px-0 font-georgia font-bold" style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold' }}>
                           {post.title}
                         </h2>
                       </div>
@@ -500,7 +498,7 @@ export default function PostList() {
                     </div>
 
                     {post.content && (
-                      <div className="mt-4 text-sm leading-5 text-justify text-neutral-800 max-md:max-w-full whitespace-pre-line">
+                      <div className="mt-4 text-sm leading-5 text-justify text-neutral-800 max-md:max-w-full whitespace-pre-line font-regular">
                         {post.content}
                       </div>
                     )}
