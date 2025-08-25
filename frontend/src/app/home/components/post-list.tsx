@@ -6,7 +6,6 @@ import {
   Bookmark,
   EllipsisVerticalIcon as OverflowMenuVertical,
   ArrowUp,
-  MessageSquare,
   Activity,
 } from "lucide-react";
 import { fetchPostsByCommunity } from "@/app/api/src/services/post/postService";
@@ -15,6 +14,7 @@ import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { PostResponse, PostsListFeed } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
 import { translatePostType } from "@/lib/postTypeTranslations";
+import { Forum } from "@carbon/icons-react";
 
 
 // CommentsSection como componente interno
@@ -528,12 +528,12 @@ export default function PostList() {
                       </div>
                     </button>
                     <button
-                      className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap"
+                      className={`flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap transition-colors px-3 py-1 ${openCommentsPostId === post.id ? 'bg-neutral-200' : ''}`}
                       onClick={() => handleComment(post)}
                       title="Comentar"
                     >
-                      <MessageSquare className="h-4 w-4 text-gray-500" />
-                      <div className="self-stretch my-auto text-neutral-500">
+                      <Forum className={`h-4 w-4 ${openCommentsPostId === post.id ? 'text-black-300' : 'text-gray-500'}`} />
+                      <div className={`self-stretch my-auto ${openCommentsPostId === post.id ? 'text-black-600' : 'text-neutral-500'}`}>
                         {post.comments}
                       </div>
                     </button>
@@ -552,7 +552,7 @@ export default function PostList() {
               </div>
             </article>
             {openCommentsPostId === post.id && (
-              <div className="flex justify-center w-full">
+              <div className="flex justify-center w-full -mt-6">
                 <CommentsSection communityId={post.community?.id || "default-community-id"} postId={post.id} />
               </div>
             )}
