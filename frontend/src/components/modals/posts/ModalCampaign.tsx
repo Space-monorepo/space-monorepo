@@ -232,7 +232,7 @@ const NavigationButtons: React.FC<{
   isLoading?: boolean;
 }> = ({ onBack, onNext, currentStep, isLoading }) => {
   return (
-    <footer className="flex w-full h-16 text-sm leading-6 whitespace-nowrap mt-auto">
+    <footer className="flex w-full h-16 text-sm leading-6 whitespace-nowrap">
       <button
         onClick={onBack}
         type="button"
@@ -367,7 +367,7 @@ export function ModalCampaign({
           </button>
         </header>
 
-        <main className="flex relative flex-col gap-6 items-stretch self-stretch px-4 pt-0 pb-12">
+        <main className={`flex relative flex-col gap-6 items-stretch self-stretch px-4 pt-0 ${(currentStep === 2 && campaignData.files.length > 0) ? 'pb-0' : 'pb-12'}`}>
           <StepProgress currentStep={currentStep} />
           {currentStep === 1 ? (
             <InputField
