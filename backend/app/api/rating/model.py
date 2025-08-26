@@ -12,19 +12,30 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
+from app.core.config import settings
 from app.core.database import Base
+
+if settings.ENVIRONMENT == 'test':
+    UUIDColumn = String(36)
+
+    def uuid_default():
+        return str(uuid.uuid4())
+
+else:
+    UUIDColumn = UUID(as_uuid=True)
+
+    def uuid_default():
+        return uuid.uuid4()
 
 
 class Rating(Base):
     __tablename__ = 'ratings'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(UUIDColumn, primary_key=True, default=uuid_default, index=True)
     community_id = Column(
-        UUID(as_uuid=True), ForeignKey('communities.id'), nullable=False, index=True
+        UUIDColumn, ForeignKey('communities.id'), nullable=False, index=True
     )
-    user_id = Column(
-        UUID(as_uuid=True), ForeignKey('users.id'), nullable=False, index=True
-    )
+    user_id = Column(UUIDColumn, ForeignKey('users.id'), nullable=False, index=True)
     rating = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)
     description = Column(String(1000), nullable=True)
