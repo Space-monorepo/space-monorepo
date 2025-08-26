@@ -73,7 +73,7 @@ def delete_community(
     status_code=status.HTTP_200_OK,
 )
 def list_community_members(
-    community_id: UUID,
+    community_id: str,
     params: PaginationSearchParams = Depends(PaginationSearchParams),
     session: Session = Depends(get_db),
     _: UserResponse = Depends(get_current_user),
@@ -88,7 +88,7 @@ def list_community_members(
     status_code=status.HTTP_200_OK,
 )
 def list_user_communities(
-    user_id: UUID,
+    user_id: str,
     params: PaginationSearchParams = Depends(PaginationSearchParams),
     session: Session = Depends(get_db),
     _: UserResponse = Depends(get_current_user),
@@ -103,7 +103,7 @@ def list_user_communities(
     status_code=status.HTTP_200_OK,
 )
 def list_community_moderators(
-    community_id: UUID,
+    community_id: str,
     params: PaginationSearchParams = Depends(PaginationSearchParams),
     session: Session = Depends(get_db),
     _: UserResponse = Depends(get_current_user),
