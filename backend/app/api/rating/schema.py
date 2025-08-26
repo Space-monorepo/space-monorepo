@@ -15,8 +15,12 @@ class RatingBase(BaseModel):
 
 
 class RatingCreate(RatingBase):
-    user_id: uuid.UUID = Field(..., description='ID of the user giving the rating')
-    community_id: uuid.UUID = Field(..., description='ID of the community being rated')
+    user_id: str = Field(
+        ..., min_length=36, max_length=36, description='ID of the user giving the rating'
+    )
+    community_id: str = Field(
+        ..., min_length=36, max_length=36, description='ID of the community being rated'
+    )
 
 
 class RatingUpdate(BaseModel):

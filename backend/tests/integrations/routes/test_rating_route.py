@@ -1,10 +1,12 @@
 import uuid
+import pytest
 from fastapi import status
 
 from app.api.rating.model import Rating
 from app.api.rating.schema import RatingCreate, RatingUpdate
 
 
+@pytest.mark.integration
 def test_create_rating_route(authenticate_client, community_member_on_db):
     rating_create = RatingCreate(
         user_id=community_member_on_db.user_id,
@@ -18,9 +20,9 @@ def test_create_rating_route(authenticate_client, community_member_on_db):
         f'/ratings/{community_member_on_db.community_id}/create-rating',
         json=rating_create.model_dump(mode='json'),
     )
-    
+
     assert response.status_code == status.HTTP_201_CREATED
-    
+
     response_data = response.json()
     assert response_data['rating'] == rating_create.rating
     assert response_data['title'] == rating_create.title
@@ -32,6 +34,7 @@ def test_create_rating_route(authenticate_client, community_member_on_db):
     assert response_data['updated_at'] is not None
 
 
+@pytest.mark.integration
 def test_create_rating_without_description_route(authenticate_client, community_member_on_db):
     rating_create = RatingCreate(
         user_id=community_member_on_db.user_id,
@@ -45,9 +48,9 @@ def test_create_rating_without_description_route(authenticate_client, community_
         f'/ratings/{community_member_on_db.community_id}/create-rating',
         json=rating_create.model_dump(mode='json'),
     )
-    
+
     assert response.status_code == status.HTTP_201_CREATED
-    
+
     response_data = response.json()
     assert response_data['rating'] == rating_create.rating
     assert response_data['title'] == rating_create.title
@@ -56,6 +59,7 @@ def test_create_rating_without_description_route(authenticate_client, community_
     assert response_data['community_id'] == str(rating_create.community_id)
 
 
+@pytest.mark.integration
 def test_create_rating_minimum_rating_route(authenticate_client, community_member_on_db):
     rating_create = RatingCreate(
         user_id=community_member_on_db.user_id,
@@ -69,14 +73,15 @@ def test_create_rating_minimum_rating_route(authenticate_client, community_membe
         f'/ratings/{community_member_on_db.community_id}/create-rating',
         json=rating_create.model_dump(mode='json'),
     )
-    
+
     assert response.status_code == status.HTTP_201_CREATED
-    
+
     response_data = response.json()
     assert response_data['rating'] == 1
     assert response_data['title'] == rating_create.title
 
 
+@pytest.mark.integration
 def test_create_rating_maximum_rating_route(authenticate_client, community_member_on_db):
     rating_create = RatingCreate(
         user_id=community_member_on_db.user_id,
@@ -90,14 +95,15 @@ def test_create_rating_maximum_rating_route(authenticate_client, community_membe
         f'/ratings/{community_member_on_db.community_id}/create-rating',
         json=rating_create.model_dump(mode='json'),
     )
-    
+
     assert response.status_code == status.HTTP_201_CREATED
-    
+
     response_data = response.json()
     assert response_data['rating'] == 5
     assert response_data['title'] == rating_create.title
 
 
+@pytest.mark.integration
 def test_create_rating_duplicate_returns_conflict(authenticate_client, rating_on_db):
     rating_create = RatingCreate(
         user_id=rating_on_db.user_id,
@@ -111,11 +117,12 @@ def test_create_rating_duplicate_returns_conflict(authenticate_client, rating_on
         f'/ratings/{rating_on_db.community_id}/create-rating',
         json=rating_create.model_dump(mode='json'),
     )
-    
+
     assert response.status_code == status.HTTP_409_CONFLICT
     assert 'already rated' in response.json()['message']
 
 
+@pytest.mark.integration
 def test_create_rating_invalid_rating_returns_validation_error(authenticate_client, community_member_on_db):
     rating_create_data = {
         'user_id': str(community_member_on_db.user_id),
@@ -129,10 +136,11 @@ def test_create_rating_invalid_rating_returns_validation_error(authenticate_clie
         f'/ratings/{community_member_on_db.community_id}/create-rating',
         json=rating_create_data,
     )
-    
+
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+@pytest.mark.integration
 def test_create_rating_empty_title_returns_validation_error(authenticate_client, community_member_on_db):
     rating_create_data = {
         'user_id': str(community_member_on_db.user_id),
@@ -146,17 +154,18 @@ def test_create_rating_empty_title_returns_validation_error(authenticate_client,
         f'/ratings/{community_member_on_db.community_id}/create-rating',
         json=rating_create_data,
     )
-    
+
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+@pytest.mark.integration
 def test_get_rating_route(authenticate_client, rating_on_db):
     response = authenticate_client.get(
         f'/ratings/{rating_on_db.community_id}/rating/{rating_on_db.id}'
     )
-    
+
     assert response.status_code == status.HTTP_200_OK
-    
+
     response_data = response.json()
     assert response_data['id'] == str(rating_on_db.id)
     assert response_data['rating'] == rating_on_db.rating
@@ -168,42 +177,45 @@ def test_get_rating_route(authenticate_client, rating_on_db):
     assert response_data['updated_at'] is not None
 
 
+@pytest.mark.integration
 def test_get_rating_not_found_route(authenticate_client, community_member_on_db):
     non_existent_id = uuid.uuid4()
-    
+
     response = authenticate_client.get(
         f'/ratings/{community_member_on_db.community_id}/rating/{non_existent_id}'
     )
-    
+
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert 'not found' in response.json()['message']
 
 
+@pytest.mark.integration
 def test_list_ratings_by_community_route(authenticate_client, rating_on_db):
     response = authenticate_client.get(
         f'/ratings/{rating_on_db.community_id}/list-ratings'
     )
-    
+
     assert response.status_code == status.HTTP_200_OK
-    
+
     response_data = response.json()
     assert response_data['total'] == 1
     assert response_data['has_more'] is False
     assert response_data['current_offset'] == 0
     assert response_data['current_limit'] == 10
     assert len(response_data['items']) == 1
-    
+
     # Check that the rating belongs to the community
     assert response_data['items'][0]['community_id'] == str(rating_on_db.community_id)
 
 
+@pytest.mark.integration
 def test_list_ratings_by_community_with_pagination_route(authenticate_client, rating_on_db):
     response = authenticate_client.get(
         f'/ratings/{rating_on_db.community_id}/list-ratings?offset=0&limit=1'
     )
-    
+
     assert response.status_code == status.HTTP_200_OK
-    
+
     response_data = response.json()
     assert response_data['total'] == 1
     assert response_data['has_more'] is False
@@ -212,19 +224,21 @@ def test_list_ratings_by_community_with_pagination_route(authenticate_client, ra
     assert len(response_data['items']) == 1
 
 
+@pytest.mark.integration
 def test_list_ratings_by_community_empty_route(authenticate_client, community_member_on_db):
     response = authenticate_client.get(
         f'/ratings/{community_member_on_db.community_id}/list-ratings'
     )
-    
+
     assert response.status_code == status.HTTP_200_OK
-    
+
     response_data = response.json()
     assert response_data['total'] == 0
     assert response_data['has_more'] is False
     assert len(response_data['items']) == 0
 
 
+@pytest.mark.integration
 def test_update_rating_route(authenticate_client, rating_on_db):
     rating_update = RatingUpdate(
         rating=4,
@@ -236,9 +250,9 @@ def test_update_rating_route(authenticate_client, rating_on_db):
         f'/ratings/{rating_on_db.community_id}/rating/{rating_on_db.id}',
         json=rating_update.model_dump(mode='json'),
     )
-    
+
     assert response.status_code == status.HTTP_200_OK
-    
+
     response_data = response.json()
     assert response_data['id'] == str(rating_on_db.id)
     assert response_data['rating'] == rating_update.rating
@@ -246,25 +260,27 @@ def test_update_rating_route(authenticate_client, rating_on_db):
     assert response_data['description'] == rating_update.description
 
 
+@pytest.mark.integration
 def test_update_rating_partial_route(authenticate_client, rating_on_db):
     original_title = rating_on_db.title
     original_description = rating_on_db.description
-    
+
     rating_update = RatingUpdate(rating=2)  # Only update rating
 
     response = authenticate_client.patch(
         f'/ratings/{rating_on_db.community_id}/rating/{rating_on_db.id}',
         json=rating_update.model_dump(mode='json'),
     )
-    
+
     assert response.status_code == status.HTTP_200_OK
-    
+
     response_data = response.json()
     assert response_data['rating'] == 2
     assert response_data['title'] == original_title  # Should remain unchanged
     assert response_data['description'] == original_description  # Should remain unchanged
 
 
+@pytest.mark.integration
 def test_update_rating_not_found_route(authenticate_client, community_member_on_db):
     non_existent_id = uuid.uuid4()
     rating_update = RatingUpdate(rating=3, title='Updated Title')
@@ -273,11 +289,12 @@ def test_update_rating_not_found_route(authenticate_client, community_member_on_
         f'/ratings/{community_member_on_db.community_id}/rating/{non_existent_id}',
         json=rating_update.model_dump(mode='json'),
     )
-    
+
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert 'Unexpected error' in response.json()['message']
 
 
+@pytest.mark.integration
 def test_update_rating_invalid_rating_returns_validation_error(authenticate_client, rating_on_db):
     rating_update_data = {
         'rating': 0,  # Invalid rating (< 1)
@@ -288,15 +305,16 @@ def test_update_rating_invalid_rating_returns_validation_error(authenticate_clie
         f'/ratings/{rating_on_db.community_id}/rating/{rating_on_db.id}',
         json=rating_update_data,
     )
-    
+
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+@pytest.mark.integration
 def test_delete_rating_route(session_sql, authenticate_client, rating_on_db):
     response = authenticate_client.delete(
         f'/ratings/{rating_on_db.community_id}/rating/{rating_on_db.id}'
     )
-    
+
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # Verify the rating was deleted from the database
@@ -310,17 +328,19 @@ def test_delete_rating_route(session_sql, authenticate_client, rating_on_db):
     assert get_response.status_code == status.HTTP_404_NOT_FOUND
 
 
+@pytest.mark.integration
 def test_delete_rating_not_found_route(authenticate_client, community_member_on_db):
     non_existent_id = uuid.uuid4()
 
     response = authenticate_client.delete(
         f'/ratings/{community_member_on_db.community_id}/rating/{non_existent_id}'
     )
-    
+
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert 'Unexpected error' in response.json()['message']
 
 
+@pytest.mark.integration
 def test_create_rating_unauthorized_returns_401(client_sql, community_member_on_db):
     rating_create = RatingCreate(
         user_id=community_member_on_db.user_id,
@@ -334,26 +354,29 @@ def test_create_rating_unauthorized_returns_401(client_sql, community_member_on_
         f'/ratings/{community_member_on_db.community_id}/create-rating',
         json=rating_create.model_dump(mode='json'),
     )
-    
+
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.integration
 def test_get_rating_unauthorized_returns_401(client_sql, rating_on_db):
     response = client_sql.get(
         f'/ratings/{rating_on_db.community_id}/rating/{rating_on_db.id}'
     )
-    
+
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.integration
 def test_list_ratings_unauthorized_returns_401(client_sql, community_on_db):
     response = client_sql.get(
         f'/ratings/{community_on_db.id}/list-ratings'
     )
-    
+
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.integration
 def test_update_rating_unauthorized_returns_401(client_sql, rating_on_db):
     rating_update = RatingUpdate(rating=4, title='Updated Title')
 
@@ -361,13 +384,14 @@ def test_update_rating_unauthorized_returns_401(client_sql, rating_on_db):
         f'/ratings/{rating_on_db.community_id}/rating/{rating_on_db.id}',
         json=rating_update.model_dump(mode='json'),
     )
-    
+
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
+@pytest.mark.integration
 def test_delete_rating_unauthorized_returns_401(client_sql, rating_on_db):
     response = client_sql.delete(
         f'/ratings/{rating_on_db.community_id}/rating/{rating_on_db.id}'
     )
-    
+
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
