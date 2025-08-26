@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { toast } from "react-toastify";
+import { useCampaignParticipation } from "@/app/api/src/hooks/post/useCampaignParticipation";
 import Link from "next/link";
 import {
   Bookmark,
@@ -15,6 +17,7 @@ import { PostResponse, PostsListFeed } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
 import { translatePostType } from "@/lib/postTypeTranslations";
 import { Forum } from "@carbon/icons-react";
+import { API_URL } from "@/config";
 
 
 // CommentsSection como componente interno
@@ -274,6 +277,7 @@ type PostDisplay = PostResponse & {
   shares: number;
   liked: boolean;
   username?: string;
+  alreadyParticipating?: boolean;
 };
 
 
@@ -291,6 +295,8 @@ export default function PostList() {
     sharePost,
   } = usePostActions();
 
+  const { participating, loading: loadingParticipation, checkParticipation, participate } = useCampaignParticipation();
+
   useEffect(() => {
     const loadPosts = async () => {
       const token = getTokenFromCookies();
@@ -307,8 +313,13 @@ export default function PostList() {
           communityId
         );
 
-        const fetchedPosts = feedData.items.map(
-          (item: PostResponse): PostDisplay => ({
+        // Checar participação em paralelo usando hook
+        const fetchedPosts = await Promise.all(feedData.items.map(async (item: PostResponse): Promise<PostDisplay> => {
+          let alreadyParticipating = false;
+          if (translatePostType(item.type_post) === 'Campanha') {
+            alreadyParticipating = await checkParticipation(item.community.id, item.id);
+          }
+          return {
             ...item,
             author: item.user.name,
             username: item.user.username || item.user.id,
@@ -328,9 +339,10 @@ export default function PostList() {
             likes: item.likes_count,
             comments: item.comments_count,
             shares: item.report_count,
-            liked: false, // novo campo para curtir
-          })
-        );
+            liked: false,
+            alreadyParticipating,
+          };
+        }));
         setPosts(fetchedPosts);
         if (fetchedPosts.length === 0) {
           setShowNoCommunitiesMessage(true);
@@ -344,6 +356,7 @@ export default function PostList() {
     };
 
     loadPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -377,6 +390,17 @@ export default function PostList() {
     // setPosts(posts.map((p) =>
     //   p.id === post.id ? { ...p, shares: p.shares + 1 } : p
     // ));
+  };
+
+  // Participar da campanha
+  const handleParticipateCampaign = async (post: PostDisplay) => {
+    try {
+      await participate(post.community?.id || "default-community-id", post.id);
+      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
+      toast.success('Você agora faz parte da campanha!');
+    } catch (err) {
+      toast.error('Erro ao participar da campanha');
+    }
   };
 
   if (loading) {
@@ -509,6 +533,17 @@ export default function PostList() {
                         alt="Post content"
                         className="object-contain mt-4 w-full rounded aspect-[2.26] max-md:max-w-full"
                       />
+                    )}
+
+                    {/* Botão Participar da Campanha */}
+                    {post.type === 'Campanha' && (
+                      <button
+                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${participating[post.id] ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                        onClick={() => !participating[post.id] && handleParticipateCampaign(post)}
+                        disabled={participating[post.id]}
+                      >
+                        {participating[post.id] ? 'Já participa da campanha' : 'Participar da Campanha'}
+                      </button>
                     )}
                   </div>
                 </div>
