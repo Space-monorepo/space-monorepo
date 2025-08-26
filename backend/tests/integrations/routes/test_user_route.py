@@ -6,7 +6,7 @@ from app.api.users.exceptions import UserNotFoundError
 from app.api.users.schema import UserCreate, UserResponse, UserStatusEnum, UserUpdate
 from app.api.users.service import UserService
 
-
+@pytest.mark.integration
 def test_create_user_route(transaction_manager, client_sql):
     user = UserCreate(
         email='johndoe@example.com',
@@ -25,6 +25,7 @@ def test_create_user_route(transaction_manager, client_sql):
     assert response.json() == user_response.model_dump(mode='json', by_alias=True)
 
 
+@pytest.mark.integration
 def test_get_user_by_id_route(authenticate_client, user_on_db):
     response = authenticate_client.get('/users/me')
     assert response.status_code == status.HTTP_200_OK
@@ -32,6 +33,7 @@ def test_get_user_by_id_route(authenticate_client, user_on_db):
     assert response.json() == user_response.model_dump(mode='json', by_alias=True)
 
 
+@pytest.mark.integration
 def test_get_user_by_email_route(client_sql, user_on_db):
     response = client_sql.get(f'/users/{user_on_db.email}')
     assert response.status_code == status.HTTP_200_OK
@@ -39,6 +41,7 @@ def test_get_user_by_email_route(client_sql, user_on_db):
     assert response.json() == user_response.model_dump(mode='json', by_alias=True)
 
 
+@pytest.mark.integration
 def test_update_user_route(transaction_manager, authenticate_client, user_on_db):
     user = UserUpdate(email='new_johndoe@example.com')
 
@@ -51,6 +54,7 @@ def test_update_user_route(transaction_manager, authenticate_client, user_on_db)
     assert user_on_db.email == 'new_johndoe@example.com'
 
 
+@pytest.mark.integration
 def test_delete_user_route(transaction_manager, authenticate_client, user_on_db):
     response = authenticate_client.delete('/users/me')
     assert response.status_code == status.HTTP_200_OK
@@ -59,6 +63,7 @@ def test_delete_user_route(transaction_manager, authenticate_client, user_on_db)
         user_on_db = UserService(transaction_manager).get_user(user_on_db.id)
 
 
+@pytest.mark.integration
 def test_login_user_route(client_sql, user_on_db):
     response = client_sql.post(
         '/users/login',

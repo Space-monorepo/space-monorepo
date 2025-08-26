@@ -87,8 +87,12 @@ class CommunityResponse(CommunityCreate):
 
 
 class CommunityMemberCreate(BaseModel):
-    user_id: uuid.UUID = Field(..., description='The ID of the user')
-    community_id: uuid.UUID = Field(..., description='The ID of the community')
+    user_id: str = Field(
+        ..., min_length=36, max_length=36, description='The ID of the user'
+    )
+    community_id: str = Field(
+        ..., min_length=36, max_length=36, description='The ID of the community'
+    )
     role: CommunityMemberRoleEnum = Field(
         default=CommunityMemberRoleEnum.MEMBER,
         description='The role of the member in the community',

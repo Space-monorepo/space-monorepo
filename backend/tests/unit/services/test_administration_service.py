@@ -31,8 +31,8 @@ def test_import_users_to_community_service_success():
     """
     #Arrange
     fake_email = "test@example.com"
-    fake_community_id = uuid4()
-    fake_user_id = uuid4()
+    fake_community_id = str(uuid4())
+    fake_user_id = str(uuid4())
 
     fake_user = Mock(spec=User)
     fake_user.id = fake_user_id
@@ -135,8 +135,8 @@ def test_list_user_admin_communities_service_success():
     - Then it should return a paginated response with only admin communities
     """
     #Arrange
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
     
     fake_pagination_params = PaginationSearchParams(offset=0, limit=10)
     
@@ -474,8 +474,8 @@ def test_create_post_feedback_service_success():
     - Then it should return the expected feedback
     """
     #Arrange
-    fake_post_id = uuid4()
-    fake_member_id = uuid4()
+    fake_post_id = str(uuid4())
+    fake_member_id = str(uuid4())
 
     fake_post = Mock(spec=PostResponse)
     fake_post.id = fake_post_id

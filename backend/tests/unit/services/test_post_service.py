@@ -35,8 +35,8 @@ def test_create_post_service_success():
     """
     # Arrange
     fake_post_id = uuid4()
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
     fake_title = "Test Post Title"
     fake_content = "Test post content"
     fake_type_post = PostTypeEnum.ANNOUNCEMENT
@@ -103,8 +103,8 @@ def test_create_post_service_success():
     assert result is not None
     assert isinstance(result, PostResponse)
     assert result.id == fake_post_id
-    assert result.user.id == fake_user_id
-    assert result.community.id == fake_community_id
+    assert str(result.user.id) == fake_user_id
+    assert str(result.community.id) == fake_community_id
     assert result.title == fake_title
     assert result.content == fake_content
     assert result.type_post == fake_type_post
@@ -127,9 +127,9 @@ def test_get_post_by_id_service_success():
     - Then it should return the expected post response
     """
     # Arrange
-    fake_post_id = uuid4()
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_post_id = str(uuid4())
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
     fake_title = "Test Post Title"
     fake_content = "Test post content"
     fake_type_post = PostTypeEnum.ANNOUNCEMENT
@@ -175,12 +175,12 @@ def test_get_post_by_id_service_success():
     mock_post_repo.get_by_id.assert_called_once_with(fake_post_id)
     assert result is not None
     assert isinstance(result, PostResponse)
-    assert result.id == fake_post_id
+    assert str(result.id) == fake_post_id
     assert result.title == fake_title
     assert result.content == fake_content
-    assert result.user.id == fake_user_id
+    assert str(result.user.id) == fake_user_id
     assert result.user.role == fake_role
-    assert result.community.id == fake_community_id
+    assert str(result.community.id) == fake_community_id
     assert result.likes_count == 5
     assert result.comments_count == 3
     assert result.report_count == 0
@@ -489,9 +489,9 @@ def test_delete_post_service_success():
     - Then it should return True indicating successful deletion
     """
     # Arrange
-    fake_post_id = uuid4()
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_post_id = str(uuid4())
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
 
     fake_existing_post = Mock(spec=Post)
     fake_existing_post.id = fake_post_id
@@ -537,10 +537,10 @@ def test_like_post_service_success():
     - Then it should return the post with incremented likes count
     """
     # Arrange
-    fake_post_id = uuid4()
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
-    fake_member_id = uuid4()
+    fake_post_id = str(uuid4())
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
+    fake_member_id = str(uuid4())
 
     fake_existing_post = Mock(spec=Post)
     fake_existing_post.id = fake_post_id
@@ -619,7 +619,7 @@ def test_like_post_service_success():
     assert fake_existing_post.likes_count == 1  # Verificar que foi incrementado
     assert result is not None
     assert isinstance(result, PostResponse)
-    assert result.id == fake_post_id
+    assert str(result.id) == fake_post_id
     assert result.likes_count == 1
     assert result.title == "Post to Like"
 
@@ -635,10 +635,10 @@ def test_unlike_post_service_success():
     - Then it should return the post with decremented likes count
     """
     # Arrange
-    fake_post_id = uuid4()
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
-    fake_member_id = uuid4()
+    fake_post_id = str(uuid4())
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
+    fake_member_id = str(uuid4())
 
     fake_existing_post = Mock(spec=Post)
     fake_existing_post.id = fake_post_id
@@ -719,7 +719,7 @@ def test_unlike_post_service_success():
     assert fake_existing_post.likes_count == 0  # Verificar que foi decrementado
     assert result is not None
     assert isinstance(result, PostResponse)
-    assert result.id == fake_post_id
+    assert str(result.id) == fake_post_id
     assert result.likes_count == 0
     assert result.title == "Post to Unlike"
 
@@ -735,10 +735,10 @@ def test_list_likes_post_service_success():
     - Then it should return a list of community member responses
     """
     # Arrange
-    fake_post_id = uuid4()
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
-    fake_member_id = uuid4()
+    fake_post_id = str(uuid4())
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
+    fake_member_id = str(uuid4())
 
     fake_existing_post = Mock(spec=Post)
     fake_existing_post.id = fake_post_id
@@ -811,9 +811,9 @@ def test_create_campaign_service_success():
     - Then it should return a campaign response with default values
     """
     # Arrange
-    fake_post_id = uuid4()
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_post_id = str(uuid4())
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
     fake_title = "Campaign Title"
     fake_content = "Campaign content"
 
@@ -883,7 +883,7 @@ def test_create_campaign_service_success():
     assert saved_campaign_call.post_id == fake_post_id
     
     assert result is not None
-    assert result.post.id == fake_post_id
+    assert str(result.post.id) == fake_post_id
     assert result.target_participants == 100
     assert result.current_participants == 0
     assert result.status_campaign == CampaignStatusEnum.PENDING
@@ -1039,9 +1039,9 @@ def test_create_complaint_service_success():
     - Then it should return a complaint response with default values
     """
     # Arrange
-    fake_post_id = uuid4()
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_post_id = str(uuid4())
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
     fake_title = "Complaint Title"
     fake_content = "Complaint content"
 
@@ -1113,7 +1113,7 @@ def test_create_complaint_service_success():
     
     # Verificar o resultado
     assert result is not None
-    assert result.post.id == fake_post_id
+    assert str(result.post.id) == fake_post_id
     assert result.confirmations_count == 0
     assert result.status_complaint == ComplaintStatusEnum.PENDING
     assert result.level_complaint == ComplaintLevelEnum.LOW
@@ -1130,9 +1130,9 @@ def test_create_poll_service_success():
     - Then it should return a poll response with all options
     """
     # Arrange
-    fake_post_id = uuid4()
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_post_id = str(uuid4())
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
     fake_title = "Poll Title"
     fake_content = "Poll content"
     fake_question = "Question test"
@@ -1226,7 +1226,7 @@ def test_create_poll_service_success():
     
     # Verificar o resultado
     assert result is not None
-    assert result.post.id == fake_post_id
+    assert str(result.post.id) == fake_post_id
     assert result.question == fake_question
     assert len(result.options) == 3
     assert result.options[0].answer == 'Option 1'

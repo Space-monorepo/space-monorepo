@@ -128,7 +128,7 @@ def test_get_community_by_id_service_success():
     - Then it should return the expected Community model
     """
     # Arrange
-    fake_community_id = uuid4()
+    fake_community_id = str(uuid4())
 
     fake_community_model = Mock(spec=Community)
     fake_community_model.id = fake_community_id
@@ -166,7 +166,7 @@ def test_get_community_by_id_service_not_found():
     - Then it should raise CommunityNotFoundError
     """
     # Arrange
-    fake_community_id = uuid4()
+    fake_community_id = str(uuid4())
 
     mock_tm = Mock()
     mock_community_repo = Mock()
@@ -285,7 +285,7 @@ def test_update_community_service_success():
     - Then it should return the updated Community model
     """
     # Arrange
-    fake_community_id = uuid4()
+    fake_community_id = str(uuid4())
     fake_community_update = CommunityUpdate(
         name='Updated Community',
         description='Updated Description',
@@ -335,7 +335,7 @@ def test_update_community_partial_service_success():
     - Then it should return the community with only updated fields changed
     """
     # Arrange
-    fake_community_id = uuid4()
+    fake_community_id = str(uuid4())
     fake_partial_update = CommunityUpdate(name='Partially Updated Community')
 
     fake_existing_community = Mock(spec=Community)
@@ -381,7 +381,7 @@ def test_update_community_service_not_found():
     - Then it should raise CommunityNotFoundError
     """
     # Arrange
-    fake_community_id = uuid4()
+    fake_community_id = str(uuid4())
     fake_community_update = CommunityUpdate(name='Updated Community')
 
     mock_tm = Mock()
@@ -409,7 +409,7 @@ def test_update_community_service_unexpected_error():
     - Then it should raise UnexpectedCommunityError
     """
     # Arrange
-    fake_community_id = uuid4()
+    fake_community_id = str(uuid4())
     fake_community_update = CommunityUpdate(name='Updated Community')
 
     fake_existing_community = Mock(spec=Community)
@@ -442,7 +442,7 @@ def test_delete_community_service_success():
     - Then it should return True indicating successful deletion
     """
     # Arrange
-    fake_community_id = uuid4()
+    fake_community_id = str(uuid4())
 
     fake_community_model = Mock(spec=Community)
     fake_community_model.id = fake_community_id
@@ -475,7 +475,7 @@ def test_delete_community_service_not_found():
     - Then it should propagate the exception
     """
     # Arrange
-    fake_community_id = uuid4()
+    fake_community_id = str(uuid4())
 
     mock_tm = Mock()
     mock_community_repo = Mock()
@@ -502,7 +502,7 @@ def test_delete_community_service_unexpected_error():
     - Then it should raise UnexpectedCommunityError
     """
     # Arrange
-    fake_community_id = uuid4()
+    fake_community_id = str(uuid4())
 
     fake_community_model = Mock(spec=Community)
     fake_community_model.id = fake_community_id
@@ -534,8 +534,8 @@ def test_list_members_service_success():
     - Then it should return a paginated response with CommunityMemberResponse items
     """
     # Arrange
-    fake_community_id = uuid4()
-    fake_user_id = uuid4()
+    fake_community_id = str(uuid4())
+    fake_user_id = str(uuid4())
     fake_params = PaginationSearchParams(offset=0, limit=10)
 
     fake_community_model = Mock(spec=Community)
@@ -632,8 +632,8 @@ def test_list_moderators_service_success():
     - Then it should return a paginated response with CommunityMemberResponse items
     """
     # Arrange
-    fake_community_id = uuid4()
-    fake_user_id = uuid4()
+    fake_community_id = str(uuid4())
+    fake_user_id = str(uuid4())
     fake_params = PaginationSearchParams(offset=0, limit=10)
 
     fake_community_model = Mock(spec=Community)
@@ -690,8 +690,8 @@ def test_create_member_service_success():
     - Then it should return the CommunityMemberResponse
     """
     # Arrange
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
     fake_member_data = CommunityMemberCreate(
         user_id=fake_user_id,
         community_id=fake_community_id,
@@ -753,8 +753,8 @@ def test_create_member_service_success():
     mock_member_repo.save.assert_called_once()
     # Verify the real _map_member_to_response was executed by checking the result
     assert result is not None
-    assert result.user_id == fake_user_id
-    assert result.community_id == fake_community_id
+    assert str(result.user_id) == fake_user_id
+    assert str(result.community_id) == fake_community_id
     assert result.role == CommunityMemberRoleEnum.MEMBER
     assert result.reputation == 10
     assert result.status_participation == CommunityMemberStatusEnum.ACTIVE
@@ -778,8 +778,8 @@ def test_create_member_service_member_already_exists():
     - Then it should raise CommunityMemberAlreadyExistsError
     """
     # Arrange
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
     fake_member_data = CommunityMemberCreate(
         user_id=fake_user_id,
         community_id=fake_community_id,
@@ -827,8 +827,8 @@ def test_create_member_service_unexpected_error():
     - Then it should raise UnexpectedCommunityMemberError
     """
     # Arrange
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
     fake_member_data = CommunityMemberCreate(
         user_id=fake_user_id,
         community_id=fake_community_id,
@@ -878,7 +878,7 @@ def test_remove_member_service_success():
     - Then it should return True indicating successful removal
     """
     # Arrange
-    fake_member_id = uuid4()
+    fake_member_id = str(uuid4())
 
     fake_member_model = Mock(spec=CommunityMember)
     fake_member_model.id = fake_member_id
@@ -911,7 +911,7 @@ def test_remove_member_service_member_not_found():
     - Then it should raise CommunityMemberNotFoundError
     """
     # Arrange
-    fake_member_id = uuid4()
+    fake_member_id = str(uuid4())
 
     mock_tm = Mock()
     mock_member_repo = Mock()
@@ -938,7 +938,7 @@ def test_remove_member_service_unexpected_error():
     - Then it should raise UnexpectedCommunityMemberError
     """
     # Arrange
-    fake_member_id = uuid4()
+    fake_member_id = str(uuid4())
 
     fake_member_model = Mock(spec=CommunityMember)
     fake_member_model.id = fake_member_id
@@ -970,9 +970,9 @@ def test_update_member_role_service_success():
     - Then it should return the updated CommunityMemberResponse
     """
     # Arrange
-    fake_member_id = uuid4()
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_member_id = str(uuid4())
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
     fake_new_role = CommunityMemberRoleEnum.ADMIN
 
     fake_member_model = Mock(spec=CommunityMember)
@@ -1029,7 +1029,7 @@ def test_update_member_role_service_member_not_found():
     - Then it should raise CommunityMemberNotFoundError
     """
     # Arrange
-    fake_member_id = uuid4()
+    fake_member_id = str(uuid4())
     fake_new_role = CommunityMemberRoleEnum.MODERATOR
 
     mock_tm = Mock()
@@ -1057,7 +1057,7 @@ def test_update_member_role_service_unexpected_error():
     - Then it should raise UnexpectedCommunityMemberError
     """
     # Arrange
-    fake_member_id = uuid4()
+    fake_member_id = str(uuid4())
     fake_new_role = CommunityMemberRoleEnum.ADMIN
 
     fake_member_model = Mock(spec=CommunityMember)
@@ -1091,8 +1091,8 @@ def test_get_member_association_service_success():
     - Then it should return the CommunityMember model
     """
     # Arrange
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
 
     fake_community_model = Mock(spec=Community)
     fake_community_model.id = fake_community_id
@@ -1142,8 +1142,8 @@ def test_get_member_association_service_not_found():
     - Then it should raise CommunityMemberNotFoundError
     """
     # Arrange
-    fake_user_id = uuid4()
-    fake_community_id = uuid4()
+    fake_user_id = str(uuid4())
+    fake_community_id = str(uuid4())
 
     fake_community_model = Mock(spec=Community)
     fake_community_model.id = fake_community_id
@@ -1184,7 +1184,7 @@ def test_get_member_service_success():
     - Then it should return the CommunityMember model
     """
     # Arrange
-    fake_member_id = uuid4()
+    fake_member_id = str(uuid4())
 
     fake_member_model = Mock(spec=CommunityMember)
     fake_member_model.id = fake_member_id
@@ -1218,7 +1218,7 @@ def test_get_member_service_not_found():
     - Then it should raise CommunityMemberNotFoundError
     """
     # Arrange
-    fake_member_id = uuid4()
+    fake_member_id = str(uuid4())
 
     mock_tm = Mock()
     mock_member_repo = Mock()

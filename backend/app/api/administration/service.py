@@ -47,7 +47,7 @@ class AdministrationService:
         members = []
         for user in users:
             community_member = CommunityMemberCreate(
-                user_id=user.id, community_id=community_id
+                user_id=str(user.id), community_id=str(community_id)
             )
             member = self.community_service.create_member(community_member)
             members.append(self.community_service._map_member_to_response(member))
@@ -75,7 +75,7 @@ class AdministrationService:
         communities_admin = []
         for community in user_communities.items:
             member_association = self.community_service.get_member_association(
-                user_id, community.id
+                user_id, str(community.id)
             )
             if member_association.role == CommunityMemberRoleEnum.ADMIN:
                 communities_admin.append(community)

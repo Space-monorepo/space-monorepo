@@ -78,7 +78,7 @@ def test_get_user_service_success():
     - Then it should return the expected user
     """
     # Arrange
-    fake_user_id = uuid4()
+    fake_user_id = str(uuid4())
     fake_email = "johndoe@example.com"
     fake_name = "John Doe"
 
@@ -100,7 +100,7 @@ def test_get_user_service_success():
     # Assert
     mock_user_repo.get_by_id.assert_called_once_with(fake_user_id)
     assert result is not None
-    assert result.id == fake_user_id
+    assert str(result.id) == fake_user_id
     assert result.email == fake_email
     assert result.name == fake_name
 
@@ -154,7 +154,7 @@ def test_update_user_service_success():
     - Then it should return the updated user
     """
     # Arrange
-    fake_user_id = uuid4()
+    fake_user_id = str(uuid4())
     fake_old_email = "johndoe@example.com"
     fake_new_email = "new_johndoe@example.com"
     fake_name = "John Doe"
@@ -186,7 +186,7 @@ def test_update_user_service_success():
     mock_user_repo.get_by_id.assert_called_once_with(fake_user_id)
     mock_user_repo.save.assert_called_once_with(fake_existing_user)
     assert result is not None
-    assert result.id == fake_user_id
+    assert str(result.id) == fake_user_id
     assert result.email == fake_new_email
     assert result.name == fake_name
 
