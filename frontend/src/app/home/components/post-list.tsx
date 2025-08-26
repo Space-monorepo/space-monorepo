@@ -449,11 +449,13 @@ export default function PostList() {
                 <div className="w-full max-md:max-w-full">
                   <header className="flex flex-wrap gap-10 justify-between items-start w-full max-md:max-w-full">
                     <div className="flex items-start min-w-60">
-                      <img
-                        src={post.avatar || "/placeholder.svg"}
-                        alt={`${post.author} avatar`}
-                        className="object-contain shrink-0 w-11 aspect-square rounded-[32px]"
-                      />
+                      <div className="w-11 h-11 rounded-[32px] overflow-hidden shrink-0 flex items-center justify-center bg-neutral-200">
+                        <img
+                          src={post.avatar || "/placeholder.svg"}
+                          alt={`${post.author} avatar`}
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
                       <div className="flex flex-col min-w-60 w-[342px]">
                         <div className="flex gap-2 items-center w-full h-[23px]">
                           <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
@@ -507,13 +509,16 @@ export default function PostList() {
                   </header>
 
                   <div className="mt-6 w-full text-neutral-800 max-md:max-w-full">
-                    <div className="flex flex-wrap gap-10 justify-between items-center w-full max-md:max-w-full">
-                      <div className="flex gap-2.5 items-center self-stretch my-auto text-xl font-bold leading-relaxed min-w-60 px-0">
-                        <h2 className="self-stretch my-auto text-neutral-800 px-0 font-georgia font-bold" style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold' }}>
+                    <div className="flex flex-row justify-between items-center w-full max-md:max-w-full">
+                      <div className="flex gap-2.5 items-center text-xl font-bold leading-relaxed min-w-60 px-0 w-0 flex-1" style={{ wordBreak: 'break-word' }}>
+                        <h2
+                          className="text-neutral-800 px-0 font-georgia font-bold break-words w-full max-w-full"
+                          style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}
+                        >
                           {post.title}
                         </h2>
                       </div>
-                      <div className="flex gap-2 items-center self-stretch px-3 py-1 my-auto text-sm leading-none text-justify whitespace-nowrap rounded-sm">
+                      <div className="flex gap-2 items-center px-3 py-1 my-auto text-sm leading-none text-justify whitespace-nowrap rounded-sm flex-shrink-0">
                         <div className="self-stretch my-auto text-neutral-800">
                           {post.likes + post.comments + post.shares}
                         </div>
@@ -522,7 +527,10 @@ export default function PostList() {
                     </div>
 
                     {post.content && (
-                      <div className="mt-4 text-sm leading-5 text-justify text-neutral-800 max-md:max-w-full whitespace-pre-line font-regular">
+                      <div
+                        className="mt-4 text-sm leading-5 text-justify text-neutral-800 max-md:max-w-full whitespace-pre-line font-regular break-words w-full max-w-full"
+                        style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}
+                      >
                         {post.content}
                       </div>
                     )}
