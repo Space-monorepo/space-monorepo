@@ -296,6 +296,58 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
   };
 
 
+  // Curtir comentário
+  const likeComment = async (communityId: string, commentId: string) => {
+    setIsLoading(true);
+    try {
+      const token = getTokenFromCookies();
+      if (!token) throw new Error("Token não encontrado nos cookies");
+      const response = await axios.post(
+        `${API_URL}/comments/${communityId}/comment/${commentId}/like`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      onSuccess?.(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao curtir comentário:", error);
+      onError?.(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Descurtir comentário
+  const unlikeComment = async (communityId: string, commentId: string) => {
+    setIsLoading(true);
+    try {
+      const token = getTokenFromCookies();
+      if (!token) throw new Error("Token não encontrado nos cookies");
+      const response = await axios.post(
+        `${API_URL}/comments/${communityId}/comment/${commentId}/unlike`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      onSuccess?.(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao descurtir comentário:", error);
+      onError?.(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     createAnnouncement,
@@ -411,8 +463,6 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
       // Placeholder: implementar quando rota existir no backend
       alert("Funcionalidade de compartilhamento ainda não implementada no backend.");
     },
-
-    // Listar comentários de um post
     listComments: async (communityId: string, postId: string) => {
       setIsLoading(true);
       try {
@@ -436,8 +486,6 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
         setIsLoading(false);
       }
     },
-
-    // Responder a um comentário (comentário filho)
     replyComment: async (communityId: string, postId: string, parentCommentId: string, content: string) => {
       setIsLoading(true);
       try {
@@ -472,6 +520,8 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
         setIsLoading(false);
       }
     },
+    likeComment,
+    unlikeComment,
   };
 };
 

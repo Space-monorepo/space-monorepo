@@ -34,10 +34,12 @@ interface Comment {
   parent_id?: string | null;
   replies?: Comment[];
   children?: Comment[];
+  likes_count?: number;
 }
 
 function CommentsSection({ communityId, postId }: { communityId: string; postId: string }) {
-  const { listComments, addComment, replyComment } = usePostActions();
+  const { listComments, addComment, replyComment, likeComment, unlikeComment } = usePostActions();
+  const [likedComments, setLikedComments] = React.useState<{ [key: string]: boolean }>({});
   const [comments, setComments] = React.useState<Comment[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -68,6 +70,12 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
       const data = await listComments(communityId, postId);
       const items = data.items || [];
       setComments(buildCommentsTree(items));
+      // Atualiza o estado de likes dos comentários (simples, só para UX, não busca likes do usuário)
+      const likedMap: { [key: string]: boolean } = {};
+      items.forEach((c: any) => {
+        likedMap[c.id] = false;
+      });
+      setLikedComments(likedMap);
     } catch (err: any) {
       setError('Erro ao carregar comentários');
     } finally {
@@ -104,93 +112,177 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
     }
   };
 
+  // Like/Unlike comentário
+  const handleLikeComment = async (comment: Comment) => {
+    try {
+      if (!likedComments[comment.id]) {
+        await likeComment(communityId, comment.id);
+        setComments(prev => prev.map(c => c.id === comment.id ? { ...c, likes_count: (c.likes_count || 0) + 1 } : c));
+        setLikedComments(prev => ({ ...prev, [comment.id]: true }));
+      } else {
+        await unlikeComment(communityId, comment.id);
+        setComments(prev => prev.map(c => c.id === comment.id ? { ...c, likes_count: Math.max(0, (c.likes_count || 0) - 1) } : c));
+        setLikedComments(prev => ({ ...prev, [comment.id]: false }));
+      }
+    } catch (err) {
+      setError('Erro ao curtir/descurtir comentário');
+    }
+  };
+
   const renderComment = (comment: Comment, isChild = false) => (
-    <article
-      key={comment.id}
-      className={`flex ${isChild ? 'ml-12' : ''} items-start self-stretch p-4 bg-white rounded-sm max-md:p-3 max-sm:p-2`}
-    >
-      <div className="flex flex-col gap-2 items-center">
+    <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]' : 'flex flex-wrap justify-between w-full max-md:max-w-full'}`}>
+      <div className={`flex flex-col items-center ${isChild ? 'w-11' : 'w-11'}`}>
         <img
           src={comment.user && (comment.user.profile_image_url || comment.user.profile_picture) ? (comment.user.profile_image_url || comment.user.profile_picture) : '/no-profile-pic.png'}
           alt={`${comment.user.name} avatar`}
-          className="w-11 h-11 border border-solid border-stone-300 rounded-[32px] max-sm:w-9 max-sm:h-9"
+          className={`object-contain w-11 aspect-square ${isChild ? 'rounded-[32px]' : ''}`}
         />
+        {!isChild && ((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) && (
+          <div className="flex mt-2 w-px bg-zinc-300 min-h-[78px]" />
+        )}
       </div>
-      <div className="flex flex-col gap-2 items-start flex-[1_0_0]">
-        <header className="flex gap-3 items-center self-stretch px-0 py-3">
-          <div className="flex items-center">
-            <div className="flex flex-col gap-2 items-start">
-              <div className="flex gap-2 items-center self-stretch h-[23px]">
-                <div className="flex gap-2.5 justify-center items-center px-3 py-0 max-sm:flex-wrap max-sm:gap-1.5 max-sm:px-2 max-sm:py-0">
-                  <span className="text-sm text-neutral-800 max-md:text-sm max-sm:text-xs">
+      <div className="flex-1 shrink my-auto basis-0 min-w-60 max-md:max-w-full">
+        <header className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
+          <div className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? 'w-[360px]' : 'w-[301px]'}`}>
+            <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[301px]'}`}>
+              <div className="flex gap-2 items-center w-full h-[23px]">
+                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto min-w-60">
+                  <h3 className="self-stretch my-auto text-sm text-neutral-800">
                     {comment.user.name}
-                  </span>
+                  </h3>
+                  <img
+                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/97b080f7bd5924b4ccaf06454d2157867cd44b63?placeholderIfAbsent=true"
+                    alt="Verified"
+                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
+                  />
                   {comment.user.role && (
-                    <div className="flex gap-2.5 justify-center items-center px-3 py-1 rounded bg-neutral-800">
-                      <span className="text-xs text-zinc-100 max-sm:text-xs">
+                    <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${comment.user.role.toLowerCase().includes('admin')
+                      ? 'bg-yellow-600 bg-opacity-40 text-yellow-950'
+                      : 'bg-neutral-800 text-zinc-100'
+                      }`}>
+                      <span className="self-stretch my-auto">
                         {comment.user.role}
                       </span>
                     </div>
                   )}
-                  <div className="flex flex-col gap-2.5 items-start">
-                    <time className="text-xs font-semibold text-neutral-800 max-md:text-xs max-sm:text-xs">
-                      {new Date(comment.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    </time>
-                  </div>
+                  <time className="self-stretch my-auto text-xs font-semibold text-neutral-800">
+                    {new Date(comment.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} atrás
+                  </time>
                 </div>
               </div>
             </div>
           </div>
+          <div className="flex gap-4 items-center self-stretch my-auto w-5 min-h-5">
+            <button
+              type="button"
+              className="hover:opacity-70 transition-opacity"
+              aria-label="Comment options"
+            >
+              <img
+                src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/b9b040552c62d3229e839df667790239d172e8eb?placeholderIfAbsent=true"
+                alt="Options"
+                className="object-contain self-stretch my-auto w-5 aspect-square"
+              />
+            </button>
+          </div>
         </header>
-        <div className="flex flex-col gap-2 items-start self-stretch px-3 py-0">
-          <div className="flex gap-2.5 items-center self-stretch py-2 pr-3 pl-0">
-            <p className="text-sm leading-5 flex-[1_0_0] text-neutral-800 max-md:text-sm max-md:leading-5 max-sm:text-xs max-sm:leading-4">
+        <div className="px-3 mt-2 w-full max-md:max-w-full">
+          <div className={`flex ${isChild ? 'overflow-hidden ' : ''}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-md:max-w-full`}>
+            <p className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-md:max-w-full">
               {comment.content}
             </p>
           </div>
-          <footer className="flex justify-between items-center self-stretch">
-            <div className="flex gap-8 items-center h-5">
-              {/* Aqui pode exibir likes, replies, etc. */}
-            </div>
-            <button
-              className="flex gap-2 items-center"
-              onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-            >
-              <i className="ti ti-message-circle w-4 h-4 text-neutral-500 max-sm:w-3.5 max-sm:h-3.5" />
-              <span className="text-xs font-medium leading-4 text-justify text-neutral-500 max-md:text-xs max-sm:text-xs">
-                Responder
-              </span>
-            </button>
-          </footer>
-          {replyingTo === comment.id && (
-            <div className="w-full mt-2">
-              <textarea
-                className="w-full p-2 border rounded text-sm"
-                rows={2}
-                placeholder="Digite sua resposta..."
-                value={replyInput[comment.id] || ''}
-                onChange={e => setReplyInput(prev => ({ ...prev, [comment.id]: e.target.value }))}
-              />
+          <div className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? 'whitespace-nowrap ' : ''}text-neutral-500 max-md:max-w-full`}>
+            <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5">
               <button
-                className="mt-1 px-3 py-1 bg-neutral-800 text-white rounded text-xs"
-                onClick={() => handleReply(comment.id)}
+                className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? '' : 'whitespace-nowrap '}hover:text-neutral-700 transition-colors`}
+                type="button"
+                onClick={() => handleLikeComment(comment)}
+                aria-label={likedComments[comment.id] ? 'Descurtir comentário' : 'Curtir comentário'}
               >
-                Enviar resposta
+                <ArrowUp size={16} className={`shrink-0 self-stretch my-auto w-4 aspect-square ${likedComments[comment.id] ? 'text-blue-600' : 'text-gray-500'}`} />
+                <span className={`self-stretch my-auto ${likedComments[comment.id] ? 'text-blue-600' : 'text-neutral-500'}`}>
+                  {comment.likes_count ?? 0}
+                </span>
               </button>
+              <button
+                className="flex overflow-hidden gap-2 items-center self-stretch my-auto hover:text-neutral-700 transition-colors"
+                onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                type="button"
+              >
+                <img
+                  src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/76fc42bedb22beda24433b506515bdee6ba7cab0?placeholderIfAbsent=true"
+                  alt="Reply"
+                  className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square"
+                />
+                <span className="self-stretch my-auto text-neutral-500">
+                  {isChild ? 'Responder' : `Responder${((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) ? ` (${(comment.children?.length || 0) + (comment.replies?.length || 0)})` : ''}`}
+                </span>
+              </button>
+            </div>
+          </div>
+          {replyingTo === comment.id && (
+            <div className="flex flex-col gap-2 items-start self-stretch w-full mt-4">
+              <div className="flex flex-col items-start self-stretch w-full">
+                <div className="flex flex-col justify-between items-start self-stretch p-4 bg-gray-100 h-[160px] rounded-xs w-full">
+                  <textarea
+                    className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+                    rows={2}
+                    placeholder="Digite sua resposta..."
+                    value={replyInput[comment.id] || ''}
+                    onChange={e => setReplyInput(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleReply(comment.id);
+                      }
+                    }}
+                  />
+                  <div className="flex flex-row justify-end items-end w-full">
+                    <button
+                      className="px-3 py-2 bg-neutral-800 text-white rounded-xs font-regular"
+                      onClick={() => handleReply(comment.id)}
+                    >
+                      Enviar
+                    </button>
+                    <button
+                      className="ml-2 px-3 py-2 bg-gray-300 text-gray-700 rounded-xs font-regular hover:bg-gray-400 transition-colors"
+                      onClick={() => setReplyingTo(null)}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                  {/* Barra de formatação igual ao adicionar comentário */}
+                  <div className="flex gap-4 items-start max-sm:gap-3 mt-2">
+                    <button type="button" aria-label="Adicionar emoji">
+                      <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
+                    </button>
+                    <button type="button" aria-label="Negrito">
+                      <TextBold size={20} className="toolbar-icon text-neutral-500" />
+                    </button>
+                    <button type="button" aria-label="Itálico">
+                      <TextItalic size={20} className="toolbar-icon text-neutral-500" />
+                    </button>
+                    <button type="button" aria-label="Lista numerada">
+                      <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
+                    </button>
+                    <button type="button" aria-label="Lista com marcadores">
+                      <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
-        {/* Renderizar respostas (filhos) recursivamente */}
-        {((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) && (
-          <div className="w-full mt-2">
-            {(comment.children && comment.children.length > 0
-              ? comment.children
-              : comment.replies || []
-            ).map(child => renderComment(child, true))}
-          </div>
-        )}
       </div>
-    </article>
+      {/* Renderizar respostas (filhos) recursivamente */}
+      {((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) && !isChild && (
+        <div className="w-full">
+          {[...(comment.children || []), ...(comment.replies || [])].map(child => renderComment(child, true))}
+        </div>
+      )}
+    </div>
   );
 
   return (
@@ -257,7 +349,10 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
         </header>
 
         {/* Comments List */}
-        <section className="flex flex-col gap-2 items-start self-stretch">
+        <section
+          className="flex flex-col p-4 bg-white rounded-sm max-w-[648px] w-full"
+          style={{ maxHeight: 600, overflowY: 'auto' }}
+        >
           {loading && <div>Carregando comentários...</div>}
           {error && <div className="text-red-500">{error}</div>}
           {!loading && comments.length === 0 && <div className="px-2">Nenhum comentário ainda.</div>}
