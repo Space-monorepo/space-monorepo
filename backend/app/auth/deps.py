@@ -84,7 +84,7 @@ def require_comment_owner(
 ) -> User:
     with TransactionManager(session) as tm:
         comment = CommentService(tm).get_comment(comment_id)
-    if comment.user.id != user.id:
+    if str(comment.user.id) != str(user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
         )

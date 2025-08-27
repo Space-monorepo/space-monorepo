@@ -1,35 +1,41 @@
 "use client";
 import * as React from "react";
+
 import { useState, useRef } from "react";
 import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { toast } from "react-toastify";
+import { Incomplete, CircleDash, CheckmarkFilled, Close, FaceDizzyFilled, TextBold, TextItalic, ListNumbered, ListBulleted, FaceSatisfied } from "@carbon/icons-react";
+
 
 interface StepIndicatorProps {
   active: boolean;
-  icon: string;
+  completed: boolean;
+  stepNumber: number;
   label: string;
 }
 
 const StepIndicator: React.FC<StepIndicatorProps> = ({
   active,
-  icon,
+  completed,
+  stepNumber,
   label,
 }) => {
   return (
-    <div className="grow shrink self-stretch my-auto min-w-60 w-[243px]">
-      <div
-        className={`flex w-full ${
-          active ? "bg-neutral-800" : "bg-stone-300"
-        } min-h-0.5`}
-      />
-      <div className="flex gap-2 items-center mt-2.5 w-72 max-w-full">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={icon}
-          alt=""
-          className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square"
-        />
-        <span className="self-stretch my-auto">{label}</span>
+    <div className="flex relative flex-col gap-2.5 items-start w-full max-md:w-full max-md:max-w-full max-sm:w-full">
+      <div className={`relative self-stretch h-0.5 ${active || completed ? 'bg-neutral-800' : 'bg-stone-300'}`} />
+      <div className="flex relative gap-2 items-center w-full max-md:w-full max-md:max-w-full max-sm:w-full">
+        <div className="relative shrink-0 w-4 h-4 flex items-center justify-center">
+          {completed ? (
+            <CheckmarkFilled size={16} className="text-black" />
+          ) : active ? (
+            <Incomplete size={16} className="text-black" />
+          ) : (
+            <CircleDash size={16} className="text-black" />
+          )}
+        </div>
+        <p className="relative text-xs leading-4 text-black">
+          {stepNumber}. {label}
+        </p>
       </div>
     </div>
   );
@@ -37,23 +43,26 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({
 
 const StepProgress: React.FC<{ currentStep: number }> = ({ currentStep }) => {
   return (
-    <nav className="flex flex-wrap items-center py-4 w-full text-xs leading-none text-black max-md:max-w-full">
+    <section className="flex relative items-center w-full self-stretch px-0 py-4 max-sm:p-3">
       <StepIndicator
         active={currentStep === 1}
-        icon="https://cdn.builder.io/api/v1/image/assets/TEMP/1ef80c9a750193eba71404b8d050d883e7ab8686?placeholderIfAbsent=true&apiKey=c82d577402ec4a68b3d9eb6968f38275"
+        completed={currentStep > 1}
+        stepNumber={1}
         label="Definir o título"
       />
       <StepIndicator
         active={currentStep === 2}
-        icon="https://cdn.builder.io/api/v1/image/assets/TEMP/7dce8eec7e4883fda51019d4aaaf8f1a6fcc0a29?placeholderIfAbsent=true&apiKey=c82d577402ec4a68b3d9eb6968f38275"
+        completed={currentStep > 2}
+        stepNumber={2}
         label="Escrever a publicação"
       />
       <StepIndicator
         active={currentStep === 3}
-        icon="https://cdn.builder.io/api/v1/image/assets/TEMP/placeholder-icon-poll-options?apiKey=c82d577402ec4a68b3d9eb6968f38275" // Placeholder icon, replace with actual
+        completed={false}
+        stepNumber={3}
         label="Definir opções da enquete"
       />
-    </nav>
+    </section>
   );
 };
 
@@ -72,21 +81,22 @@ const InputField: React.FC<{
   onTitleChange: (value: string) => void;
 }> = ({ title, onTitleChange }) => {
   return (
-    <section className="mt-6 w-full text-sm leading-6 text-neutral-500 max-md:max-w-full">
-      <label className="block text-neutral-800 max-md:max-w-full">
+    <section className="flex relative flex-col gap-2 items-start self-stretch">
+      <label className="relative self-stretch text-sm leading-6 text-neutral-800">
         Título da enquete
       </label>
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => onTitleChange(e.target.value)}
-        placeholder="Escreva o título da enquete"
-        className="gap-8 self-stretch px-4 py-2 mt-2 w-full bg-neutral-200 text-neutral-500 max-md:max-w-full"
-        aria-label="Título da campanha"
-      />
-      <p className="mt-2 text-xs text-neutral-500 max-md:max-w-full">
-        Este será o título exibido nas notificações para todos os participantes
-        da enquete. Certifique-se de escolher uma frase clara e direta.
+      <div className="flex relative gap-8 items-center self-stretch px-4 py-2 border-b border-solid bg-neutral-200 border-b-neutral-500">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          placeholder="Escreva o título da enquete"
+          className="relative text-sm leading-6 text-neutral-500 bg-transparent border-none outline-none flex-1 placeholder:text-neutral-500"
+          aria-label="Título da enquete"
+        />
+      </div>
+      <p className="relative text-xs text-neutral-500 w-[496px] max-md:w-full max-md:max-w-[496px] max-sm:w-full">
+        Este será o título exibido nas notificações para todos os participantes da enquete. Certifique-se de escolher uma frase clara e direta.
       </p>
     </section>
   );
@@ -122,39 +132,84 @@ const WritePost: React.FC<{
   };
 
   return (
-    <section className="mt-6 w-full text-sm leading-6 text-neutral-500">
-      <label className="block text-neutral-800">Conteúdo do enquete</label>
-      <textarea
-        value={content}
-        onChange={(e) => onContentChange(e.target.value)}
-        placeholder="Escreva o conteúdo da sua publicação"
-        className="gap-8 self-stretch px-4 py-2 mt-2 w-full h-32 bg-neutral-200 text-neutral-500 resize-none"
-        aria-label="Conteúdo da publicação"
-      />
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileInput}
-        className="hidden"
-        multiple
-      />
-      <div
-        onClick={handleFileSelect}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        className="mt-4 p-6 border-2 border-dashed border-neutral-300 rounded-lg text-center cursor-pointer hover:bg-neutral-50 transition-colors"
-      >
-        <p>Arraste e solte arquivos aqui ou clique para selecionar</p>
+    <>
+      {/* Publication Editor */}
+      <section className="flex flex-col gap-2 items-start self-stretch">
+        <label htmlFor="publication-text" className="self-stretch text-sm leading-6 text-neutral-800 max-sm:text-sm">
+          Publicação
+        </label>
+        <div className="flex flex-col items-start self-stretch">
+          <div className="flex flex-col justify-between items-start self-stretch p-4 rounded-sm bg-neutral-200 h-[174px]">
+            <textarea
+              id="publication-text"
+              value={content}
+              onChange={(e) => onContentChange(e.target.value)}
+              placeholder="Escreva a publicação"
+              className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+            />
+            {/* Formatting Toolbar */}
+            <div className="flex gap-4 items-start max-sm:gap-3">
+              <button type="button" aria-label="Add emoji">
+                <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
+              </button>
+              <button type="button" aria-label="Bold text">
+                <TextBold size={20} className="toolbar-icon text-neutral-500" />
+              </button>
+              <button type="button" aria-label="Italic text">
+                <TextItalic size={20} className="toolbar-icon text-neutral-500" />
+              </button>
+              <button type="button" aria-label="Numbered list">
+                <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
+              </button>
+              <button type="button" aria-label="Bullet list">
+                <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
+              </button>
+            </div>
+          </div>
+          <div className="self-stretch h-px bg-neutral-500" />
+        </div>
+      </section>
+
+      {/* File Upload */}
+      <section className="flex flex-col gap-4 items-start self-stretch">
+        <div className="flex flex-col gap-2 items-start self-stretch">
+          <h3 className="self-stretch text-sm font-semibold leading-6 text-neutral-800 max-sm:text-sm">
+            Carregar arquivos
+          </h3>
+          <p className="text-sm text-neutral-500 w-[497px] max-md:w-full max-sm:w-full max-sm:text-sm">
+            Tamanho máximo do arquivo é 2MB. Tipos de arquivos suportados são .jpg e .png.
+          </p>
+        </div>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileInput}
+          className="hidden"
+          multiple
+        />
+        <div
+          className="flex gap-8 items-start self-stretch p-4 h-24 border border-dashed border-neutral-500 cursor-pointer hover:bg-neutral-50 transition-colors"
+          onClick={handleFileSelect}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          role="button"
+          tabIndex={0}
+          aria-label="Upload files"
+        >
+          <p className="text-sm leading-5 text-neutral-500 w-[230px] max-md:w-full max-sm:w-full max-sm:text-sm">
+            Arraste and solte os arquivos aqui ou clique para carregar
+          </p>
+        </div>
         {files.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-neutral-800 font-medium mb-2">
+          <div className="mt-4 w-full">
+            <h4 className="text-neutral-800 font-medium mb-2 text-sm">
               Arquivos selecionados:
-            </h3>
+            </h4>
             <ul className="space-y-1">
               {files.map((file, index) => (
                 <li
                   key={index}
-                  className="flex items-center justify-between bg-neutral-100 p-2 rounded"
+                  className="flex items-center justify-between bg-neutral-100 p-2 rounded text-sm"
                 >
                   <span>{file.name}</span>
                   <button
@@ -162,7 +217,7 @@ const WritePost: React.FC<{
                       e.stopPropagation();
                       onFilesChange(files.filter((_, i) => i !== index));
                     }}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 text-xs"
                   >
                     Remover
                   </button>
@@ -171,8 +226,8 @@ const WritePost: React.FC<{
             </ul>
           </div>
         )}
-      </div>
-    </section>
+      </section>
+    </>
   );
 };
 
@@ -196,14 +251,14 @@ const PollOptions: React.FC<{
   };
 
   return (
-    <section className="mt-6 w-full text-sm text-neutral-500">
+    <section className="mt-2 w-full text-sm text-neutral-500">
       <label className="block text-neutral-800">Pergunta da enquete</label>
       <input
         type="text"
         value={question}
         onChange={(e) => onQuestionChange(e.target.value)}
-        placeholder="Qual sua pergunta?"
-        className="w-full px-4 py-2 mt-2 bg-neutral-200 text-neutral-700"
+        placeholder="Escreva a pergunta da enquete"
+        className="w-full px-4 py-2 mt-2 bg-neutral-200 text-neutral-700 border-b"
       />
       <label className="block mt-4 text-neutral-800">Opções</label>
       {options.map((opt, i) => (
@@ -215,17 +270,22 @@ const PollOptions: React.FC<{
             placeholder={`Opção ${i + 1}`}
             className="w-full px-4 py-2 bg-neutral-200 text-neutral-700"
           />
-          <button className="text-red-500" onClick={() => removeOption(i)}>
-            Remover
-          </button>
+          {/* Só mostra o botão Remover se não for as duas primeiras opções */}
+          {i > 1 && (
+            <button className="text-red-500" onClick={() => removeOption(i)}>
+              Remover
+            </button>
+          )}
         </div>
       ))}
-      <button
-        className="mt-4 px-4 py-2 bg-neutral-800 text-white rounded hover:bg-neutral-900"
+      <div
+        className="mt-2 flex items-center px-3 py-2 border-2 border-dashed border-neutral-300 text-neutral-500 cursor-pointer hover:bg-neutral-50 transition-colors w-full"
+        style={{ minHeight: '48px' }}
         onClick={addOption}
       >
-        Adicionar opção
-      </button>
+        <span className="text-xl mr-2 select-none">+</span>
+        <span className="text-sm select-none">Adicionar outra opção</span>
+      </div>
     </section>
   );
 };
@@ -234,26 +294,31 @@ const NavigationButtons: React.FC<{
   onBack: () => void;
   onNext: () => void;
   currentStep: number;
-}> = ({ onBack, onNext, currentStep }) => {
+  isLoading?: boolean;
+}> = ({ onBack, onNext, currentStep, isLoading }) => {
   return (
-    <footer className="flex items-center w-full text-sm leading-6 whitespace-nowrap max-md:max-w-full mt-auto">
+    <footer className="flex w-full h-16 text-sm leading-6 whitespace-nowrap mt-auto">
       <button
         onClick={onBack}
         type="button"
-        className="flex-1 pt-4 pr-16 pb-6 pl-4 bg-neutral-200 text-neutral-800 max-md:pr-5 hover:bg-neutral-300 transition-colors"
+        className="w-1/2 h-full flex cursor-pointer items-center justify-start p-4 bg-neutral-200 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-400 border-r border-neutral-300 disabled:opacity-50"
         aria-label="Voltar para a etapa anterior"
-        disabled={currentStep === 1}
-        style={{ opacity: currentStep === 1 ? 0.5 : 1 }}
+        disabled={currentStep === 1 || isLoading}
       >
         Voltar
       </button>
       <button
         onClick={onNext}
         type="button"
-        className="flex-1 pt-4 pr-16 pb-6 pl-4 bg-neutral-800 text-zinc-100 max-md:pr-5 hover:bg-neutral-900 transition-colors"
+        className="w-1/2 h-full cursor-pointer flex items-center justify-start p-4 bg-neutral-800 text-zinc-100 disabled:bg-neutral-400 focus:outline-none focus:ring-2 focus:ring-zinc-400"
         aria-label="Avançar para a próxima etapa"
+        disabled={isLoading}
       >
-        {currentStep === 3 ? "Concluir" : "Seguinte"}
+        {isLoading
+          ? "Enviando..."
+          : currentStep < 3
+            ? "Seguinte"
+            : "Concluir"}
       </button>
     </footer>
   );
@@ -265,9 +330,11 @@ interface ModalPollProps {
 }
 
 // Adicionar a prop onClose à interface
+
 export function ModalPoll({ onClose, communityId }: ModalPollProps) {
   const [status] = useState<string>("active");
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [pollData, setPollData] = useState<PollData>({
     community_id: communityId,
     title: "",
@@ -275,14 +342,16 @@ export function ModalPoll({ onClose, communityId }: ModalPollProps) {
     files: [],
     status: status,
     pollQuestion: "",
-    pollOptions: ["", ""], // Initial two options for the poll
+    pollOptions: ["", ""],
   });
   const { createPoll } = usePostActions({
     onSuccess: () => {
+      setIsLoading(false);
       onClose?.();
       toast.success("Enquete criada com sucesso!");
     },
     onError: (error: unknown) => {
+      setIsLoading(false);
       const message =
         typeof error === "object" && error !== null && "message" in error
           ? (error as { message?: string }).message
@@ -299,60 +368,70 @@ export function ModalPoll({ onClose, communityId }: ModalPollProps) {
   const handleNext = async () => {
     if (currentStep === 1) {
       if (!pollData.title.trim()) {
-        alert("Por favor, insira um título para a enquete");
+        toast.warn("Por favor, insira um título para a enquete.");
         return;
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
       if (!pollData.content.trim()) {
-        alert("Por favor, insira o conteúdo da publicação");
+        toast.warn("Por favor, insira o conteúdo da publicação.");
         return;
       }
       setCurrentStep(3);
     } else {
       if (!pollData.pollQuestion.trim()) {
-        alert("Por favor, insira a pergunta da enquete");
+        toast.warn("Por favor, insira a pergunta da enquete.");
         return;
       }
       if (pollData.pollOptions.some((opt) => !opt.trim())) {
-        alert("Por favor, preencha todas as opções da enquete");
+        toast.warn("Por favor, preencha todas as opções da enquete.");
         return;
       }
+      setIsLoading(true);
       try {
         await createPoll({
-          ...pollData, // Contém title, content, files, community_id, pollQuestion, pollOptions
-          // pollQuestion já está em pollData, não precisa ser passado separadamente se estiver lá
-          options: pollData.pollOptions, // Passar as opções como string[]
-          endDate: "", // Defina um valor apropriado se necessário
+          ...pollData,
+          options: pollData.pollOptions,
+          endDate: "",
         });
       } catch {
-        // O erro já será tratado pelo hook
+        setIsLoading(false);
       }
     }
   };
 
   const handleBack = () => {
-    console.log("handleBack clicked");
+    if (isLoading) return;
     setCurrentStep((prev) => (prev > 1 ? prev - 1 : 1));
+  };
+
+  const handleClose = () => {
+    if (isLoading) return;
+    onClose?.();
   };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-[#858585]/80 backdrop-blur-xd z-50">
-      <article
-        className={`${
-          currentStep === 2 ? "w-[926px] h-[673px]" : "max-w-screen-sm w-full"
-        } border border-solid shadow-lg bg-zinc-100 border-[color:var(--gray-300,#C6C6C6)] relative z-[51] flex flex-col`}
-      >
-        <header className="flex overflow-hidden flex-wrap items-start p-4 w-full text-xl leading-relaxed text-neutral-800 max-md:max-w-full">
-          <h1 className="text-neutral-800">Criar enquete</h1>
+      <article className={`flex relative flex-col items-start mx-auto my-0 shadow-sm bg-zinc-100 border-stone-300
+        ${currentStep === 1 ? 'min-w-[640px] min-h-[372px]' : ''}
+        ${currentStep === 2 ? 'min-w-[926px] min-h-[673px]' : ''}
+        ${currentStep === 3 ? 'min-w-[640px] min-h-[524px]' : ''}
+        max-md:max-w-screen-sm max-md:w-[90%] max-sm:mx-auto max-sm:my-5 max-sm:h-auto max-sm:w-[95%]`}>
+        <header className="flex relative justify-between items-start self-stretch p-4 max-sm:p-3">
+          <h1 className="relative text-xl leading-8 text-neutral-800">
+            Criar enquete
+          </h1>
           <button
-            onClick={onClose}
-            className="absolute top-2 right-2 text-2xl font-bold text-neutral-800 hover:text-neutral-600"
+            onClick={handleClose}
+            disabled={isLoading}
+            className="cursor-pointer disabled:opacity-50"
+            aria-label="Fechar modal"
           >
-            &times;
+            <Close size={20} className="text-neutral-800" />
           </button>
         </header>
-        <main className="px-4 flex-1 flex flex-col w-full max-md:max-w-full">
+
+        <main className="flex relative flex-col gap-6 items-stretch self-stretch px-4 pt-0 pb-12">
           <StepProgress currentStep={currentStep} />
           {currentStep === 1 ? (
             <InputField
@@ -381,10 +460,12 @@ export function ModalPoll({ onClose, communityId }: ModalPollProps) {
             />
           )}
         </main>
+
         <NavigationButtons
           onBack={handleBack}
           onNext={handleNext}
           currentStep={currentStep}
+          isLoading={isLoading}
         />
       </article>
     </div>

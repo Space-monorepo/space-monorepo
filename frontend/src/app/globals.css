@@ -105,3 +105,10 @@ main {
   scrollbar-width: none !important; /* Firefox */
   -ms-overflow-style: none !important; /* IE and Edge */
 }
+
+/* Remove arredondamento de todos os SelectTrigger e filhos */
+.SelectTrigger, .SelectTrigger *, [data-radix-popper-content-wrapper], .rounded-none, [data-state] {
+  border-radius: 0 !important;
+}
+
+/* Se o SelectTrigger for de alguma lib específica, ajuste o seletor conforme necessário */

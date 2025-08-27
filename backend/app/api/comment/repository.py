@@ -34,6 +34,18 @@ class CommentRepository(BaseRepository[Comment]):
 
         return comments, total
 
+    def list_all_comments_by_post(
+        self, post_id: UUID, status_filter=None
+    ) -> List[Comment]:
+        """Busca todos os comentários do post para montar a árvore de replies."""
+        query = self.session.query(Comment).filter(Comment.post_id == post_id)
+
+        if status_filter:
+            query = query.filter(Comment.status.in_(status_filter))
+
+        query = query.order_by(Comment.created_at)
+        return query.all()
+
     def list_comments_by_user(
         self, user_id: UUID, params: PaginationSearchParams
     ) -> tuple[List[Comment], int]:

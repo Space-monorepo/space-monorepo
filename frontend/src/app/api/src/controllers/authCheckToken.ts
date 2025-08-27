@@ -38,15 +38,22 @@ export const useCheckTokenValidity = () => {
             name: data.name,
             username: data.username,
             profile_image_url: data.profile_image_url
-          });        } else {
+          });
+        } else {
           Cookies.remove("token");
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("space_responsibility_accepted");
+          }
           router.push("/login");
         }
       } catch (error) {
         console.error("Erro ao validar token:", error);
         Cookies.remove("token");
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("space_responsibility_accepted");
+        }
         router.push("/login");
-      }finally {
+      } finally {
         setLoading(false);
       }
     };
