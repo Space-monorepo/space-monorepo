@@ -16,7 +16,7 @@ import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { PostResponse, PostsListFeed } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
 import { translatePostType } from "@/lib/postTypeTranslations";
-import { Forum } from "@carbon/icons-react";
+import { Forum, FaceSatisfied, TextBold, TextItalic, ListNumbered, ListBulleted } from "@carbon/icons-react";
 import { API_URL } from "@/config";
 
 
@@ -195,57 +195,61 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
 
   return (
     <>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
-      />
       <main className="flex flex-col shrink-0 gap-8 items-start p-4 bg-white rounded border-solid border-[0.5px] border-stone-300 h-[907px] w-[680px] max-md:p-3 max-md:w-full max-md:max-w-[680px] max-sm:gap-6 max-sm:p-2 max-sm:w-full">
         {/* Comment Input Section */}
-        <div className="flex flex-col gap-2 shrink-0 items-start self-stretch p-4 rounded-sm bg-zinc-100 min-h-[140px] max-md:p-3 max-md:min-h-[120px] max-sm:p-2 max-sm:min-h-[100px]">
-          <div className="relative w-full">
-            {/* Label flutuante */}
-            <label
-              className={`absolute left-0 top-0 px-0 py-0 text-sm leading-6 text-neutral-600 pointer-events-none transition-all duration-200 ${commentInput ? 'opacity-0' : 'opacity-100'}`}
-              htmlFor="comment-textarea"
-            >
-              Adicione um comentário
-            </label>
-            <textarea
-              id="comment-textarea"
-              className="w-full resize-none p-0 bg-transparent border-none outline-none text-base min-h-[32px] max-h-[80px] mt-0"
-              rows={2}
-              value={commentInput}
-              onChange={e => setCommentInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleAddComment();
-                }
-              }}
-            />
-          </div>
-          <div className="flex flex-row justify-between items-end w-full mt-2">
-            <div className="flex gap-4 items-center text-neutral-600 text-xl">
-              <i className="ti ti-mood-smile" />
-              <b className="font-bold cursor-pointer">B</b>
-              <i className="italic cursor-pointer">I</i>
-              <span className="cursor-pointer">1&#x2012;2</span>
-              <span className="cursor-pointer">&#8226;=</span>
+        <div className="flex flex-col gap-2 items-start self-stretch">
+          <div className="flex flex-col items-start self-stretch">
+            <div className="flex flex-col justify-between items-start self-stretch p-4 bg-gray-100 h-[160px] rounded-xs">
+              <textarea
+                id="comment-textarea"
+                value={commentInput}
+                onChange={e => setCommentInput(e.target.value)}
+                placeholder="Adicione um comentário"
+                className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+                rows={2}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleAddComment();
+                  }
+                }}
+              />
+              <div className="flex flex-row justify-end items-end w-full">
+                <button
+                  className="px-3 py-2 bg-neutral-800 text-white rounded-xs font-regular"
+                  onClick={handleAddComment}
+                >
+                  Enviar
+                </button>
+              </div>
+              {/* Barra de formatação com os mesmos ícones da campanha */}
+              <div className="flex gap-4 items-start max-sm:gap-3 mt-2">
+                <button type="button" aria-label="Adicionar emoji">
+                  <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
+                </button>
+                <button type="button" aria-label="Negrito">
+                  <TextBold size={20} className="toolbar-icon text-neutral-500" />
+                </button>
+                <button type="button" aria-label="Itálico">
+                  <TextItalic size={20} className="toolbar-icon text-neutral-500" />
+                </button>
+                <button type="button" aria-label="Lista numerada">
+                  <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
+                </button>
+                <button type="button" aria-label="Lista com marcadores">
+                  <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
+                </button>
+              </div>
             </div>
-            <button
-              className="px-4 py-2 bg-neutral-800 text-white text-base font-medium"
-              onClick={handleAddComment}
-            >
-              Enviar
-            </button>
+            {/* <div className="self-stretch h-px bg-neutral-500" /> */}
           </div>
         </div>
         {/* Comments Header */}
-        <header className="flex gap-4 items-center self-stretch px-4 py-0 max-md:gap-3 max-md:px-3 max-md:py-0 max-sm:flex-wrap max-sm:gap-2 max-sm:px-2 max-sm:py-0">
+        <header className="flex gap-4 items-center self-stretch px-2 py-0 max-md:gap-3 max-md:px-3 max-md:py-0 max-sm:flex-wrap max-sm:gap-2 max-sm:px-2 max-sm:py-0">
           <h2 className="text-base leading-6 text-neutral-800 max-md:text-base max-sm:text-sm">
             Comentários
           </h2>
-          <div className="flex flex-col gap-2.5 justify-center items-center px-2 py-1 rounded bg-neutral-800">
+          <div className="flex flex-col gap-2.5 justify-center items-center px-2 py-1 rounded-xs bg-neutral-800">
             <span className="self-stretch text-base leading-6 text-zinc-100 max-md:text-base max-sm:text-sm">
               {comments.length}
             </span>
@@ -256,7 +260,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
         <section className="flex flex-col gap-2 items-start self-stretch">
           {loading && <div>Carregando comentários...</div>}
           {error && <div className="text-red-500">{error}</div>}
-          {!loading && comments.length === 0 && <div>Nenhum comentário ainda.</div>}
+          {!loading && comments.length === 0 && <div className="px-2">Nenhum comentário ainda.</div>}
           {comments.map(comment => renderComment(comment))}
         </section>
       </main>
