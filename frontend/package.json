@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "check-backend": "bash ./scripts/check-backend.sh",
     "dev": "next dev --turbopack",
+    "dev:check": "npm run check-backend && npm run dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
