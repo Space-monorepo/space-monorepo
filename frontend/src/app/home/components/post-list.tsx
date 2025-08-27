@@ -290,10 +290,10 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
           )}
         </div>
       </div>
-      {/* Renderizar respostas (filhos) recursivamente */}
-      {((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) && !isChild && (
+      {/* Renderizar replies recursivamente para qualquer nível */}
+      {Array.isArray(comment.replies) && comment.replies.length > 0 && (
         <div className="w-full">
-          {[...(comment.children || []), ...(comment.replies || [])].map(child => renderComment(child, true))}
+          {comment.replies.map(child => renderComment(child, true))}
         </div>
       )}
     </div>
