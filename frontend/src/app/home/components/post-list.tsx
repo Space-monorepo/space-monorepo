@@ -7,7 +7,6 @@ import Link from "next/link";
 import {
   Bookmark,
   EllipsisVerticalIcon as OverflowMenuVertical,
-  ArrowUp,
   Activity,
 } from "lucide-react";
 import { fetchPostsByCommunity } from "@/app/api/src/services/post/postService";
@@ -16,9 +15,9 @@ import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { PostResponse, PostsListFeed } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
 import { translatePostType } from "@/lib/postTypeTranslations";
-import { Forum, FaceSatisfied, TextBold, TextItalic, ListNumbered, ListBulleted } from "@carbon/icons-react";
+import { Forum, FaceSatisfied, TextBold, TextItalic, ListNumbered, ListBulleted, CheckmarkFilled, OverflowMenuHorizontal, ArrowUp } from "@carbon/icons-react";
+import { getRelativeTime } from "@/lib/relativeTime";
 import { API_URL } from "@/config";
-
 
 // CommentsSection como componente interno
 interface Comment {
@@ -142,9 +141,20 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
     }
   };
 
+  const getRoleBadgeClasses = (role?: string) => {
+    if (!role) return '';
+    if (role.toLowerCase().includes('admin')) {
+      return 'bg-yellow-600 bg-opacity-40 text-yellow-950';
+    }
+    if (role.toLowerCase().includes('líder') || role.toLowerCase().includes('leader')) {
+      return 'bg-neutral-800 text-zinc-100';
+    }
+    return 'bg-neutral-800 text-zinc-100';
+  };
+
   const renderComment = (comment: Comment, isChild = false) => (
     <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]' : 'flex flex-wrap justify-between w-full max-md:max-w-full'}`}>
-      <div className={`flex flex-col items-center ${isChild ? 'w-11' : 'w-11'}`}>
+      <div className="flex flex-col items-center w-11">
         <img
           src={comment.user && (comment.user.profile_image_url || comment.user.profile_picture) ? (comment.user.profile_image_url || comment.user.profile_picture) : '/no-profile-pic.png'}
           alt={`${comment.user.name} avatar`}
@@ -155,83 +165,64 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
         )}
       </div>
       <div className="flex-1 shrink my-auto basis-0 min-w-60 max-md:max-w-full">
-        <header className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
+        <div className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
           <div className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? 'w-[360px]' : 'w-[301px]'}`}>
             <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[301px]'}`}>
               <div className="flex gap-2 items-center w-full h-[23px]">
-                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto min-w-60">
-                  <h3 className="self-stretch my-auto text-sm text-neutral-800">
+                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                  <div className="self-stretch my-auto text-sm text-neutral-800">
                     {comment.user.name}
-                  </h3>
-                  <img
-                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/97b080f7bd5924b4ccaf06454d2157867cd44b63?placeholderIfAbsent=true"
-                    alt="Verified"
-                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
-                  />
+                  </div>
+                  <CheckmarkFilled className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] text-black" aria-label="Verificado" />
                   {comment.user.role && (
-                    <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${comment.user.role.toLowerCase().includes('admin')
-                      ? 'bg-yellow-600 bg-opacity-40 text-yellow-950'
-                      : 'bg-neutral-800 text-zinc-100'
-                      }`}>
-                      <span className="self-stretch my-auto">
+                    <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(comment.user.role)}`}>
+                      <div className="self-stretch my-auto">
                         {comment.user.role}
-                      </span>
+                      </div>
                     </div>
                   )}
-                  <time className="self-stretch my-auto text-xs font-semibold text-neutral-800">
-                    {new Date(comment.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} atrás
-                  </time>
+                  <div className="self-stretch my-auto text-xs font-semibold">
+                    <div className="text-neutral-800">
+                      {getRelativeTime(comment.created_at)}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
           <div className="flex gap-4 items-center self-stretch my-auto w-5 min-h-5">
-            <button
-              type="button"
-              className="hover:opacity-70 transition-opacity"
-              aria-label="Comment options"
-            >
-              <img
-                src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/b9b040552c62d3229e839df667790239d172e8eb?placeholderIfAbsent=true"
-                alt="Options"
-                className="object-contain self-stretch my-auto w-5 aspect-square"
-              />
-            </button>
+            <OverflowMenuHorizontal className="object-contain self-stretch my-auto w-5 aspect-square cursor-pointer hover:opacity-70 transition-opacity text-neutral-500" aria-label="Menu" />
           </div>
-        </header>
+        </div>
         <div className="px-3 mt-2 w-full max-md:max-w-full">
           <div className={`flex ${isChild ? 'overflow-hidden ' : ''}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-md:max-w-full`}>
-            <p className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-md:max-w-full">
+            <div className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-md:max-w-full">
               {comment.content}
-            </p>
+            </div>
           </div>
           <div className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? 'whitespace-nowrap ' : ''}text-neutral-500 max-md:max-w-full`}>
             <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5">
-              <button
-                className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? '' : 'whitespace-nowrap '}hover:text-neutral-700 transition-colors`}
-                type="button"
-                onClick={() => handleLikeComment(comment)}
-                aria-label={likedComments[comment.id] ? 'Descurtir comentário' : 'Curtir comentário'}
-              >
-                <ArrowUp size={16} className={`shrink-0 self-stretch my-auto w-4 aspect-square ${likedComments[comment.id] ? 'text-blue-600' : 'text-gray-500'}`} />
-                <span className={`self-stretch my-auto ${likedComments[comment.id] ? 'text-blue-600' : 'text-neutral-500'}`}>
-                  {comment.likes_count ?? 0}
-                </span>
-              </button>
-              <button
-                className="flex overflow-hidden gap-2 items-center self-stretch my-auto hover:text-neutral-700 transition-colors"
-                onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                type="button"
-              >
-                <img
-                  src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/76fc42bedb22beda24433b506515bdee6ba7cab0?placeholderIfAbsent=true"
-                  alt="Reply"
-                  className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square"
+              <div className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? '' : 'whitespace-nowrap'}`}>
+                <ArrowUp
+                  className="object-contain shrink-0 self-stretch my-auto w-3 aspect-square cursor-pointer hover:opacity-70 transition-opacity text-neutral-500"
+                  onClick={() => handleLikeComment(comment)}
+                  aria-label="Curtir"
                 />
-                <span className="self-stretch my-auto text-neutral-500">
+                <div className={`self-stretch my-auto ${likedComments[comment.id] ? 'text-blue-600' : 'text-neutral-500'}`}>
+                  {comment.likes_count ?? 0}
+                </div>
+              </div>
+              <div className="flex overflow-hidden gap-2 items-center self-stretch my-auto">
+                <img
+                  src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/76fc42bedb22beda24433b506515bdee6ba7cab0?placeholderIfAbsent=true"
+                  className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square cursor-pointer hover:opacity-70 transition-opacity"
+                  onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                  alt="Reply"
+                />
+                <div className="self-stretch my-auto text-neutral-500 cursor-pointer hover:text-neutral-700 transition-colors" onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}>
                   {isChild ? 'Responder' : `Responder${((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) ? ` (${(comment.children?.length || 0) + (comment.replies?.length || 0)})` : ''}`}
-                </span>
-              </button>
+                </div>
+              </div>
             </div>
           </div>
           {replyingTo === comment.id && (
@@ -290,9 +281,15 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
           )}
         </div>
       </div>
-      {/* Renderizar replies recursivamente para qualquer nível */}
+      {/* Renderizar children recursivamente */}
+      {Array.isArray(comment.children) && comment.children.length > 0 && (
+        <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]">
+          {comment.children.map(child => renderComment(child, true))}
+        </div>
+      )}
+      {/* Renderizar replies recursivamente */}
       {Array.isArray(comment.replies) && comment.replies.length > 0 && (
-        <div className="w-full">
+        <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]">
           {comment.replies.map(child => renderComment(child, true))}
         </div>
       )}
@@ -348,7 +345,6 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
                 </div>
               </div>
             </div>
-            {/* <div className="self-stretch h-px bg-neutral-500" /> */}
           </div>
         </div>
         {/* Comments Header */}
@@ -393,7 +389,6 @@ type PostDisplay = PostResponse & {
   username?: string;
   alreadyParticipating?: boolean;
 };
-
 
 export default function PostList() {
   const [posts, setPosts] = useState<PostDisplay[]>([]);
@@ -441,14 +436,7 @@ export default function PostList() {
             role: translateUserRole(item.user.role),
             location: item.community.name,
             type: translatePostType(item.type_post),
-            time: (() => {
-              const date = new Date(item.created_at);
-              date.setHours(date.getHours() - 3);
-              return date.toLocaleTimeString("pt-BR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-            })(),
+            time: getRelativeTime(item.created_at),
             image: item.image_url || "/publication-image.jpg",
             likes: item.likes_count,
             comments: item.comments_count,
@@ -472,7 +460,6 @@ export default function PostList() {
     loadPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
 
   const handleLike = async (post: PostDisplay) => {
     const communityId = post.community?.id || "default-community-id";
@@ -579,11 +566,7 @@ export default function PostList() {
                             >
                               {post.author}
                             </Link>
-                            <img
-                              src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/c57f1c8b88c7dbe0b50fb5cb6ba42204a5256630?placeholderIfAbsent=true"
-                              alt="Verification"
-                              className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
-                            />
+                            <CheckmarkFilled className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] text-black" aria-label="Verificado" />
                             <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs text-white whitespace-nowrap rounded bg-neutral-800">
                               <div className="self-stretch my-auto">
                                 {post.role}
