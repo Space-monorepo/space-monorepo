@@ -1,4 +1,5 @@
 import pytest
+import app.auth.security as auth_security
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 from uuid import uuid4
@@ -8,6 +9,50 @@ from app.auth.schema import TokenSchema
 from app.auth.security import AuthService
 from app.api.users.schema import LoginSchema
 from app.api.users.model import User
+
+
+@pytest.fixture
+def mock_bcrypt():
+    """
+    Fixture para mockar o módulo bcrypt de forma segura.
+    Usa monkeypatch para garantir que o mock seja revertido após o teste.
+    """
+    mock_bcrypt_module = Mock()
+
+    # Fazer o patch
+    original_bcrypt = getattr(auth_security, 'bcrypt', None)
+
+    # Aplicar o mock
+    auth_security.bcrypt = mock_bcrypt_module
+
+    # Retornar o mock para ser usado no teste
+    yield mock_bcrypt_module
+
+    # Cleanup: restaurar o módulo original
+    if original_bcrypt:
+        auth_security.bcrypt = original_bcrypt
+
+
+@pytest.fixture
+def mock_jwt():
+    """
+    Fixture para mockar o módulo jwt de forma segura.
+    Usa monkeypatch para garantir que o mock seja revertido após o teste.
+    """
+    mock_jwt_module = Mock()
+
+    # Fazer o patch
+    original_jwt = getattr(auth_security, 'jwt', None)
+
+    # Aplicar o mock
+    auth_security.jwt = mock_jwt_module
+
+    # Retornar o mock para ser usado no teste
+    yield mock_jwt_module
+
+    # Cleanup: restaurar o módulo original
+    if original_jwt:
+        auth_security.jwt = original_jwt
 
 
 @pytest.mark.unit
@@ -51,7 +96,7 @@ def test_authenticate_login_service_success():
     assert result.id == fake_user_id
     assert result.email == fake_email
     assert result.name == fake_name
-    
+
     # Verificar que o UserService foi chamado corretamente
     mock_user_service.get_by_email.assert_called_once_with(fake_email)
 
@@ -83,7 +128,7 @@ def test_authenticate_login_service_user_not_found():
 
 
 @pytest.mark.unit
-def test_create_token_service_success():
+def test_create_token_service_success(mock_jwt):
     """
     Tests the `create_token` method of AuthService.
 
@@ -99,14 +144,9 @@ def test_create_token_service_success():
     fake_exp = datetime.now(timezone.utc) + timedelta(minutes=30)
 
     mock_tm = Mock()
-    mock_jwt = Mock()
     mock_jwt.encode.return_value = fake_access_token
 
     service = AuthService(mock_tm)
-    
-    # Mock jwt module
-    import app.auth.security as auth_security
-    auth_security.jwt = mock_jwt
 
     # Act
     result = service.create_token(fake_payload)
@@ -119,7 +159,7 @@ def test_create_token_service_success():
 
 
 @pytest.mark.unit
-def test_create_token_service_with_custom_expiration():
+def test_create_token_service_with_custom_expiration(mock_jwt):
     """
     Tests the `create_token` method of AuthService with custom expiration.
 
@@ -135,14 +175,9 @@ def test_create_token_service_with_custom_expiration():
     fake_access_token = "custom_expiration_token"
 
     mock_tm = Mock()
-    mock_jwt = Mock()
     mock_jwt.encode.return_value = fake_access_token
 
     service = AuthService(mock_tm)
-    
-    # Mock jwt module
-    import app.auth.security as auth_security
-    auth_security.jwt = mock_jwt
 
     # Act
     result = service.create_token(fake_payload, exp=fake_exp)
@@ -155,7 +190,7 @@ def test_create_token_service_with_custom_expiration():
 
 
 @pytest.mark.unit
-def test_hash_password_service_success():
+def test_hash_password_service_success(mock_bcrypt):
     """
     Tests the `hash_password` method of AuthService.
 
@@ -167,19 +202,17 @@ def test_hash_password_service_success():
     # Arrange
     fake_plain_password = "plaintext_password"
     fake_salt = b"fake_salt_bytes"
-    fake_hashed_bytes = b"hashed_password_bytes"
     fake_hashed_password = "hashed_password_string"
 
     mock_tm = Mock()
-    mock_bcrypt = Mock()
     mock_bcrypt.gensalt.return_value = fake_salt
-    mock_bcrypt.hashpw.return_value = fake_hashed_bytes
+
+    # Criar um mock object que simula o comportamento dos bytes retornados pelo hashpw
+    mock_hashed_bytes = Mock()
+    mock_hashed_bytes.decode.return_value = fake_hashed_password
+    mock_bcrypt.hashpw.return_value = mock_hashed_bytes
 
     service = AuthService(mock_tm)
-    
-    # Mock bcrypt module
-    import app.auth.security as auth_security
-    auth_security.bcrypt = mock_bcrypt
 
     # Act
     result = service.hash_password(fake_plain_password)
@@ -187,11 +220,12 @@ def test_hash_password_service_success():
     # Assert
     mock_bcrypt.gensalt.assert_called_once()
     mock_bcrypt.hashpw.assert_called_once_with(fake_plain_password.encode('utf-8'), fake_salt)
-    assert result is not None
+    mock_hashed_bytes.decode.assert_called_once_with('utf-8')
+    assert result == fake_hashed_password
 
 
 @pytest.mark.unit
-def test_verify_password_service_success():
+def test_verify_password_service_success(mock_bcrypt):
     """
     Tests the `verify_password` method of AuthService.
 
@@ -205,28 +239,23 @@ def test_verify_password_service_success():
     fake_hashed_password = "hashed_password_hash"
 
     mock_tm = Mock()
-    mock_bcrypt = Mock()
     mock_bcrypt.checkpw.return_value = True
 
     service = AuthService(mock_tm)
-    
-    # Mock bcrypt module
-    import app.auth.security as auth_security
-    auth_security.bcrypt = mock_bcrypt
 
     # Act
     result = service.verify_password(fake_plain_password, fake_hashed_password)
 
     # Assert
     mock_bcrypt.checkpw.assert_called_once_with(
-        fake_plain_password.encode('utf-8'), 
+        fake_plain_password.encode('utf-8'),
         fake_hashed_password.encode('utf-8')
     )
     assert result is True
 
 
 @pytest.mark.unit
-def test_verify_password_service_failure():
+def test_verify_password_service_failure(mock_bcrypt):
     """
     Tests the `verify_password` method of AuthService when passwords don't match.
 
@@ -240,28 +269,23 @@ def test_verify_password_service_failure():
     fake_hashed_password = "incorrect_hashed_password"
 
     mock_tm = Mock()
-    mock_bcrypt = Mock()
     mock_bcrypt.checkpw.return_value = False
 
     service = AuthService(mock_tm)
-    
-    # Mock bcrypt module
-    import app.auth.security as auth_security
-    auth_security.bcrypt = mock_bcrypt
 
     # Act
     result = service.verify_password(fake_plain_password, fake_hashed_password)
 
     # Assert
     mock_bcrypt.checkpw.assert_called_once_with(
-        fake_plain_password.encode('utf-8'), 
+        fake_plain_password.encode('utf-8'),
         fake_hashed_password.encode('utf-8')
     )
     assert result is False
 
 
 @pytest.mark.unit
-def test_login_service_success():
+def test_login_service_success(mock_jwt):
     """
     Tests the `login` method of AuthService.
 
@@ -287,16 +311,11 @@ def test_login_service_success():
     fake_login_schema = LoginSchema(email=fake_email, password=fake_password)
 
     mock_tm = Mock()
-    mock_jwt = Mock()
     mock_jwt.encode.return_value = fake_access_token
 
     service = AuthService(mock_tm)
     service.authenticate_login = Mock(return_value=fake_user)
     service.create_token = Mock(return_value=Mock(spec=TokenSchema, access_token=fake_access_token))
-    
-    # Mock jwt module
-    import app.auth.security as auth_security
-    auth_security.jwt = mock_jwt
 
     # Act
     result = service.login(fake_login_schema)
