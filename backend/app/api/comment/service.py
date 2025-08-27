@@ -1,3 +1,4 @@
+from typing import List
 from uuid import UUID
 
 from app.api.comment.exceptions import (
@@ -43,8 +44,14 @@ class CommentService:
         return post
 
     @staticmethod
-    def _map_comment_to_response(comment: Comment) -> CommentResponse:
-        return CommentResponse(
+    def _map_comment_to_response(
+        comment: Comment, replies_map: dict = None
+    ) -> CommentResponse:
+        """
+        Mapeia um comentário para response.
+        Se replies_map for fornecido, inclui replies recursivamente.
+        """
+        response = CommentResponse(
             id=comment.id,
             post=PostRelated(
                 id=comment.post_id, title=comment.post.title if comment.post else None
@@ -62,6 +69,15 @@ class CommentService:
             created_at=comment.created_at,
             replies=[],
         )
+
+        # Se temos um mapa de replies, adiciona as replies recursivamente
+        if replies_map and comment.id in replies_map:
+            response.replies = [
+                CommentService._map_comment_to_response(reply, replies_map)
+                for reply in replies_map[comment.id]
+            ]
+
+        return response
 
     def create_comment(self, comment_create: CommentCreate) -> CommentResponse:
         self._get_post(comment_create.post_id)
@@ -85,13 +101,77 @@ class CommentService:
         comment = self._get_comment(comment_id)
         return self._map_comment_to_response(comment)
 
+    def _get_replies_for_comments(
+        self, comment_ids: list, status_filter=None
+    ) -> List[Comment]:
+        """Busca recursivamente todas as replies para uma lista de comentários."""
+        if not comment_ids:
+            return []
+
+        # Busca replies diretas
+        query = self.comment_repo.session.query(Comment).filter(
+            Comment.parent_id.in_(comment_ids)
+        )
+
+        if status_filter:
+            query = query.filter(Comment.status.in_(status_filter))
+
+        direct_replies = query.order_by(Comment.created_at).all()
+
+        # Busca replies das replies recursivamente
+        reply_ids = [reply.id for reply in direct_replies]
+        nested_replies = self._get_replies_for_comments(reply_ids, status_filter)
+
+        return direct_replies + nested_replies
+
     def list_comments_by_post(
-        self, post_id: UUID, params: PaginationSearchParams
+        self, post_id: UUID, params: PaginationSearchParams, include_replies: bool = True
     ) -> PaginationResponse[CommentResponse]:
         self._get_post(post_id)
-        comments, total = self.comment_repo.list_comments_by_post(post_id, params)
+
+        if not include_replies:
+            # Versão simples sem replies aninhadas
+            comments, total = self.comment_repo.list_comments_by_post(post_id, params)
+            return PaginationResponse(
+                items=[self._map_comment_to_response(comment) for comment in comments],
+                total=total,
+                has_more=total > (params.offset or 0) + (params.limit or 10),
+                current_offset=params.offset or 0,
+                current_limit=params.limit or 10,
+            )
+
+        # Versão com replies aninhadas
+        # Primeiro, busca os comentários principais paginados
+        main_comments, total = self.comment_repo.list_comments_by_post(post_id, params)
+
+        if not main_comments:
+            return PaginationResponse(
+                items=[],
+                total=total,
+                has_more=False,
+                current_offset=params.offset or 0,
+                current_limit=params.limit or 10,
+            )
+
+        # Busca todas as replies dos comentários principais
+        main_comment_ids = [comment.id for comment in main_comments]
+        all_replies = self._get_replies_for_comments(main_comment_ids, params.status)
+
+        # Organiza as replies por parent_id
+        replies_map = {}
+        for reply in all_replies:
+            if reply.parent_id not in replies_map:
+                replies_map[reply.parent_id] = []
+            replies_map[reply.parent_id].append(reply)
+
+        # Mapeia os comentários principais com suas replies
+        items = [
+            self._map_comment_to_response(comment, replies_map)
+            for comment in main_comments
+        ]
+
         return PaginationResponse(
-            items=[self._map_comment_to_response(comment) for comment in comments],
+            items=items,
             total=total,
             has_more=total > (params.offset or 0) + (params.limit or 10),
             current_offset=params.offset or 0,
