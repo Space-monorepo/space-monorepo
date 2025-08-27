@@ -28,16 +28,20 @@ class PostRelated(BaseModel):
 
 
 class CommentCreate(BaseModel):
-    post_id: uuid.UUID = Field(..., description='Post id of the comment')
-    user_id: uuid.UUID = Field(..., description='User id of the comment')
+    post_id: str = Field(
+        ..., min_length=36, max_length=36, description='Post id of the comment'
+    )
+    user_id: str = Field(
+        ..., min_length=36, max_length=36, description='User id of the comment'
+    )
     content: str = Field(
         ...,
         min_length=1,
         max_length=1000,
         description='Content of the comment',
     )
-    parent_id: uuid.UUID | None = Field(
-        None, description='Parent comment id for replies'
+    parent_id: str | None = Field(
+        None, min_length=36, max_length=36, description='Parent comment id for replies'
     )
     status: CommentStatusEnum = Field(
         CommentStatusEnum.ACTIVE, description='Status of the comment'
