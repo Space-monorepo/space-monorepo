@@ -112,16 +112,29 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
     }
   };
 
-  // Like/Unlike comentário
+  // Atualiza likes recursivamente na árvore de comentários
+  function updateCommentLikes(comments: Comment[], commentId: string, increment: number): Comment[] {
+    return comments.map(comment => {
+      if (comment.id === commentId) {
+        return { ...comment, likes_count: Math.max(0, (comment.likes_count || 0) + increment) };
+      }
+      // Atualiza filhos e replies recursivamente
+      let children = comment.children ? updateCommentLikes(comment.children, commentId, increment) : undefined;
+      let replies = comment.replies ? updateCommentLikes(comment.replies, commentId, increment) : undefined;
+      return { ...comment, children, replies };
+    });
+  }
+
+  // Like/Unlike comentário (agora atualiza recursivamente)
   const handleLikeComment = async (comment: Comment) => {
     try {
       if (!likedComments[comment.id]) {
         await likeComment(communityId, comment.id);
-        setComments(prev => prev.map(c => c.id === comment.id ? { ...c, likes_count: (c.likes_count || 0) + 1 } : c));
+        setComments(prev => updateCommentLikes(prev, comment.id, 1));
         setLikedComments(prev => ({ ...prev, [comment.id]: true }));
       } else {
         await unlikeComment(communityId, comment.id);
-        setComments(prev => prev.map(c => c.id === comment.id ? { ...c, likes_count: Math.max(0, (c.likes_count || 0) - 1) } : c));
+        setComments(prev => updateCommentLikes(prev, comment.id, -1));
         setLikedComments(prev => ({ ...prev, [comment.id]: false }));
       }
     } catch (err) {
@@ -238,37 +251,38 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
                       }
                     }}
                   />
-                  <div className="flex flex-row justify-end items-end w-full">
-                    <button
-                      className="px-3 py-2 bg-neutral-800 text-white rounded-xs font-regular"
-                      onClick={() => handleReply(comment.id)}
-                    >
-                      Enviar
-                    </button>
-                    <button
-                      className="ml-2 px-3 py-2 bg-gray-300 text-gray-700 rounded-xs font-regular hover:bg-gray-400 transition-colors"
-                      onClick={() => setReplyingTo(null)}
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                  {/* Barra de formatação igual ao adicionar comentário */}
-                  <div className="flex gap-4 items-start max-sm:gap-3 mt-2">
-                    <button type="button" aria-label="Adicionar emoji">
-                      <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
-                    </button>
-                    <button type="button" aria-label="Negrito">
-                      <TextBold size={20} className="toolbar-icon text-neutral-500" />
-                    </button>
-                    <button type="button" aria-label="Itálico">
-                      <TextItalic size={20} className="toolbar-icon text-neutral-500" />
-                    </button>
-                    <button type="button" aria-label="Lista numerada">
-                      <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
-                    </button>
-                    <button type="button" aria-label="Lista com marcadores">
-                      <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
-                    </button>
+                  <div className="flex flex-row justify-between items-end w-full mt-2">
+                    <div className="flex gap-4 items-center max-sm:gap-3">
+                      <button type="button" aria-label="Adicionar emoji">
+                        <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
+                      </button>
+                      <button type="button" aria-label="Negrito">
+                        <TextBold size={20} className="toolbar-icon text-neutral-500" />
+                      </button>
+                      <button type="button" aria-label="Itálico">
+                        <TextItalic size={20} className="toolbar-icon text-neutral-500" />
+                      </button>
+                      <button type="button" aria-label="Lista numerada">
+                        <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
+                      </button>
+                      <button type="button" aria-label="Lista com marcadores">
+                        <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
+                      </button>
+                    </div>
+                    <div className="flex flex-row items-end">
+                      <button
+                        className="px-3 py-2 bg-neutral-800 text-white rounded-xs font-regular"
+                        onClick={() => handleReply(comment.id)}
+                      >
+                        Enviar
+                      </button>
+                      <button
+                        className="ml-2 px-3 py-2 bg-gray-300 text-gray-700 rounded-xs font-regular hover:bg-gray-400 transition-colors"
+                        onClick={() => setReplyingTo(null)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -306,31 +320,32 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
                   }
                 }}
               />
-              <div className="flex flex-row justify-end items-end w-full">
-                <button
-                  className="px-3 py-2 bg-neutral-800 text-white rounded-xs font-regular"
-                  onClick={handleAddComment}
-                >
-                  Enviar
-                </button>
-              </div>
-              {/* Barra de formatação com os mesmos ícones da campanha */}
-              <div className="flex gap-4 items-start max-sm:gap-3 mt-2">
-                <button type="button" aria-label="Adicionar emoji">
-                  <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
-                </button>
-                <button type="button" aria-label="Negrito">
-                  <TextBold size={20} className="toolbar-icon text-neutral-500" />
-                </button>
-                <button type="button" aria-label="Itálico">
-                  <TextItalic size={20} className="toolbar-icon text-neutral-500" />
-                </button>
-                <button type="button" aria-label="Lista numerada">
-                  <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
-                </button>
-                <button type="button" aria-label="Lista com marcadores">
-                  <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
-                </button>
+              <div className="flex flex-row justify-between items-end w-full mt-2">
+                <div className="flex gap-4 items-center max-sm:gap-3">
+                  <button type="button" aria-label="Adicionar emoji">
+                    <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
+                  </button>
+                  <button type="button" aria-label="Negrito">
+                    <TextBold size={20} className="toolbar-icon text-neutral-500" />
+                  </button>
+                  <button type="button" aria-label="Itálico">
+                    <TextItalic size={20} className="toolbar-icon text-neutral-500" />
+                  </button>
+                  <button type="button" aria-label="Lista numerada">
+                    <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
+                  </button>
+                  <button type="button" aria-label="Lista com marcadores">
+                    <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
+                  </button>
+                </div>
+                <div className="flex flex-row items-end">
+                  <button
+                    className="px-3 py-2 bg-neutral-800 text-white rounded-xs font-regular"
+                    onClick={handleAddComment}
+                  >
+                    Enviar
+                  </button>
+                </div>
               </div>
             </div>
             {/* <div className="self-stretch h-px bg-neutral-500" /> */}
