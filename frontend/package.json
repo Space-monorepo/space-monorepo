@@ -3,12 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "check-backend": "bash ./scripts/check-backend.sh",
     "dev": "next dev --turbopack",
+    "dev:check": "npm run check-backend && npm run dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "prepare": "husky && husky install",
-    "test": "jest"
+    "test": "jest",
+    "test:e2e": "NODE_ENV=test cypress run",
+    "test:e2e:dev": "NODE_ENV=test cypress open"
   },
   "dependencies": {
     "@carbon/icons-react": "^11.59.0",
@@ -37,8 +40,6 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.8.0",
-    "@commitlint/config-conventional": "^19.8.0",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.6.3",
@@ -52,7 +53,6 @@
     "cypress": "^14.4.0",
     "eslint": "^9",
     "eslint-config-next": "15.2.1",
-    "husky": "^8.0.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "tailwindcss": "^4",

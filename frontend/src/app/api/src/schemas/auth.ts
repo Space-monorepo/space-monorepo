@@ -2,19 +2,19 @@ import { z } from 'zod';
 
 
 export const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(15, 'Password must be at least 15 characters'), 
+  email: z.string().email('Endereço de e-mail inválido'),
+  password: z.string().min(15, 'A senha deve ter pelo menos 15 caracteres'), 
 });
 
 
 export const registerSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  name: z.string().min(1, 'Name is required').max(255, 'Name is too long'),
-  password: z.string().min(15, 'Password must be at least 15 characters'), 
-  confirm_password: z.string().min(15, 'Confirm password must be at least 15 characters'),
+  email: z.string().email('Endereço de e-mail inválido'),
+  name: z.string().min(1, 'O nome é obrigatório').max(255, 'O nome é muito longo'),
+  password: z.string().min(15, 'A senha deve ter pelo menos 15 caracteres'), 
+  confirm_password: z.string().min(15, 'A confirmação de senha deve ter pelo menos 15 caracteres'),
   profile_image_url: z.string().optional(), 
 }).refine((data) => data.password === data.confirm_password, {
-  message: 'Passwords do not match',
+  message: 'As senhas não coincidem',
   path: ['confirm_password'],
 });
 
