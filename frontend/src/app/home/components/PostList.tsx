@@ -177,10 +177,13 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
                     {comment.user.name}
                   </div>
                   <CheckmarkFilled className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] text-black" aria-label="Verificado" />
+                  <div className="self-stretch my-auto text-xs font-semibold">
+                    •
+                  </div>
                   {comment.user.role && (
                     <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(comment.user.role)}`}>
                       <div className="self-stretch my-auto">
-                        {comment.user.role}
+                        {translateUserRole(comment.user.role)}
                       </div>
                     </div>
                   )}
