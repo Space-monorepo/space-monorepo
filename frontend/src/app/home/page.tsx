@@ -3,7 +3,7 @@
 import Sidebar from "@/components/ui/sidebar"
 import RightSidebar from "@/components/ui/Rightsidebar"
 import Header from "@/components/ui/header"
-import PostList from "./components/post-list"
+import PostList from "./components/PostList"
 import { useCheckTokenValidity } from "@/app/api/src/controllers/authCheckToken"
 
 export default function Home() {
