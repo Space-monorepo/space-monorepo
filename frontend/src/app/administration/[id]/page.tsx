@@ -398,11 +398,10 @@ export default function CommunityAdminPage({
             {tabs.map((tab) => (
               <button
                 key={tab}
-                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] ${
-                  activeTab === tab
-                    ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
-                    : "text-[#525252]"
-                }`}
+                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] ${activeTab === tab
+                  ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
+                  : "text-[#525252]"
+                  }`}
                 onClick={() => handleTabChange(tab)}
               >
                 {tab}
@@ -492,11 +491,10 @@ export default function CommunityAdminPage({
                   campaigns.map((campaign) => (
                     <div
                       key={campaign.id}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
-                        selectedCampaign?.id === campaign.id
-                          ? "bg-[#f4f4f4]"
-                          : ""
-                      }`}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedCampaign?.id === campaign.id
+                        ? "bg-[#f4f4f4]"
+                        : ""
+                        }`}
                       onClick={() => setSelectedCampaign(campaign)}
                     >
                       <div className="mb-2">
@@ -515,13 +513,12 @@ export default function CommunityAdminPage({
                       </div>
                       <div className="flex items-center justify-between">
                         <span
-                          className={`text-xs px-2 py-1 ${
-                            campaign.status === "Em análise"
-                              ? "bg-[#fff8e1] text-[#b28600]"
-                              : campaign.status === "Aprovado"
+                          className={`text-xs px-2 py-1 ${campaign.status === "Em análise"
+                            ? "bg-[#fff8e1] text-[#b28600]"
+                            : campaign.status === "Aprovado"
                               ? "bg-[#defbe6] text-[#0e6027]"
                               : "bg-[#fff1f1] text-[#da1e28]"
-                          }`}
+                            }`}
                         >
                           {campaign.status}
                         </span>
@@ -539,9 +536,8 @@ export default function CommunityAdminPage({
                   reports.map((report) => (
                     <div
                       key={report.id}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
-                        selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
-                      }`}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
+                        }`}
                       onClick={() => setSelectedReport(report)}
                     >
                       <div className="mb-2">
@@ -580,11 +576,10 @@ export default function CommunityAdminPage({
                   announcements.map((announcement) => (
                     <div
                       key={announcement.id}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
-                        selectedAnnouncement?.id === announcement.id
-                          ? "bg-[#f4f4f4]"
-                          : ""
-                      }`}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedAnnouncement?.id === announcement.id
+                        ? "bg-[#f4f4f4]"
+                        : ""
+                        }`}
                       onClick={() => setSelectedAnnouncement(announcement)}
                     >
                       <div className="mb-2">
@@ -734,13 +729,12 @@ export default function CommunityAdminPage({
                   <div>
                     <p className="text-sm text-[#525252]">Status:</p>
                     <span
-                      className={`inline-block px-2 py-1 text-sm ${
-                        selectedCampaign.status === "Em análise"
-                          ? "bg-[#fff8e1] text-[#b28600]"
-                          : selectedCampaign.status === "Aprovado"
+                      className={`inline-block px-2 py-1 text-sm ${selectedCampaign.status === "Em análise"
+                        ? "bg-[#fff8e1] text-[#b28600]"
+                        : selectedCampaign.status === "Aprovado"
                           ? "bg-[#defbe6] text-[#0e6027]"
                           : "bg-[#fff1f1] text-[#da1e28]"
-                      }`}
+                        }`}
                     >
                       {selectedCampaign.status}
                     </span>
@@ -872,190 +866,121 @@ export default function CommunityAdminPage({
             )}{" "}
             {/* Users Management */}
             {activeTab === "Usuários" && (
-              <div className="flex flex-col shrink-0 items-start mx-auto max-w-none w-full max-md:px-6 max-md:py-0 max-sm:px-4 max-sm:py-0 bg-white fixed top-0 right-0 bottom-0 left-[512px] overflow-y-auto mt-4">
-                {/* Header Section */}
-                <header className="flex relative flex-col gap-1 items-start self-stretch mb-12 p-6">
-                  <p className="relative gap-2.5 self-stretch text-xs font-medium flex-[1_0_0] text-neutral-500">
-                    Usuários
-                  </p>
-                  <h1 className="relative gap-2.5 self-stretch text-xl text-black flex-[1_0_0] max-sm:text-lg">
-                    Gerenciamento de Usuários
-                  </h1>
-                </header>
-
-                {/* Import Section */}
-                <section className="flex relative flex-col gap-4 items-start self-stretch px-6 py-12 border-b border-solid border-b-stone-300 flex-[1_0_0] max-sm:px-4 max-sm:py-8">
-                  <div className="flex relative flex-col gap-2 items-start self-stretch">
-                    <h2 className="relative self-stretch text-sm font-semibold leading-6 text-neutral-800 max-sm:text-sm">
-                      Importar base de dados de usuários
-                    </h2>
-                    <p className="relative text-sm text-neutral-500 w-[497px] max-md:w-full max-md:max-w-[497px] max-sm:text-sm">
-                      Tamanho máximo do arquivo é 2MB. Tipos de arquivos
-                      suportados são .jpg e .png.
-                    </p>
-                  </div>
-                  <button
-                    className="flex relative gap-8 items-center py-3 pr-16 pl-4 cursor-pointer bg-neutral-800 max-sm:justify-center max-sm:px-4 max-sm:py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleImportUsers}
-                    disabled={isUserActionLoading}
-                  >
-                    <span className="relative text-sm leading-6 text-zinc-100">
-                      {isUserActionLoading ? "Importando..." : "Importar base"}
-                    </span>
-                  </button>
-                </section>
-
-                {/* Add Moderator Section */}
-                <section className="flex relative gap-10 items-center self-stretch px-6 py-12 border-b border-solid border-b-stone-300 flex-[1_0_0] max-md:flex-col max-md:gap-4 max-md:items-start max-sm:flex-col max-sm:gap-4 max-sm:items-start max-sm:px-4 max-sm:py-8">
-                  <div className="flex relative flex-col gap-2 items-start w-[608px] max-md:w-full max-md:max-w-[608px]">
-                    <h2 className="relative self-stretch text-sm font-semibold leading-6 text-neutral-800 max-sm:text-sm">
-                      Adicionar moderador
-                    </h2>
-                    <div className="flex relative gap-8 items-center self-stretch px-4 py-2 border-b border-solid bg-zinc-100 border-b-neutral-500">
-                      <input
-                        type="email"
-                        value={newModeratorEmail}
-                        onChange={(e) => setNewModeratorEmail(e.target.value)}
-                        placeholder="Digite o email do usuário"
-                        className="relative text-sm leading-6 text-neutral-500 bg-transparent border-none outline-none flex-1"
-                        disabled={isUserActionLoading}
-                      />
-                    </div>
-                    <p className="relative text-xs leading-4 text-neutral-500 w-[496px] max-md:w-full max-md:max-w-[496px] max-sm:text-xs">
-                      Ao clicar em adicionar o usuário terá seu papel da
-                      comunidade alterado para moderador.
-                    </p>
-                  </div>
-                  <button
-                    className="flex relative gap-8 items-center px-4 py-2 cursor-pointer bg-neutral-800 max-sm:justify-center max-sm:px-4 max-sm:py-2 max-sm:w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleAddModerator}
-                    disabled={isUserActionLoading}
-                  >
-                    <span className="relative text-sm leading-6 text-zinc-100">
-                      {isUserActionLoading ? "Adicionando..." : "Adicionar"}
-                    </span>
-                    <div>
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html:
-                            '<svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg" class="add-icon" style="width: 16px; height: 16px; position: relative"> <path d="M8.5 8V4.5H7.5V8H4V9H7.5V12.5H8.5V9H12V8H8.5Z" fill="#F4F4F4"></path> </svg>',
-                        }}
-                      />
-                    </div>
-                  </button>
-                </section>
-
-                {/* Delete User Section */}
-                <section className="flex relative gap-10 items-center self-stretch px-6 py-12 border-b border-solid border-b-stone-300 flex-[1_0_0] max-md:flex-col max-md:gap-4 max-md:items-start max-sm:flex-col max-sm:gap-4 max-sm:items-start max-sm:px-4 max-sm:py-8">
-                  <div className="flex relative flex-col gap-2 items-start w-[608px] max-md:w-full max-md:max-w-[608px]">
-                    <h2 className="relative self-stretch text-sm font-semibold leading-6 text-neutral-800 max-sm:text-sm">
-                      Excluir usuário
-                    </h2>
-                    <div className="flex relative gap-8 items-center self-stretch px-4 py-2 border-b border-solid bg-zinc-100 border-b-neutral-500">
-                      <input
-                        type="email"
-                        value={excludeUserEmail}
-                        onChange={(e) => setExcludeUserEmail(e.target.value)}
-                        placeholder="Digite o email do usuário"
-                        className="relative text-sm leading-6 text-neutral-500 bg-transparent border-none outline-none flex-1"
-                        disabled={isUserActionLoading}
-                      />
-                    </div>
-                    <p className="relative text-xs leading-4 text-neutral-500 w-[496px] max-md:w-full max-md:max-w-[496px] max-sm:text-xs">
-                      A exclusão é permanente, então certifique-se de digitar o
-                      e-mail corretamente.
-                    </p>
-                  </div>
-                  <button
-                    className="flex relative gap-8 items-center px-4 py-2 bg-red-600 cursor-pointer max-sm:justify-center max-sm:px-4 max-sm:py-2 max-sm:w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleRemoveUser}
-                    disabled={isUserActionLoading}
-                  >
-                    <span className="relative text-sm leading-6 text-zinc-100">
-                      {isUserActionLoading ? "Excluindo..." : "Excluir"}
-                    </span>
-                    <div>
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html:
-                            '<svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg" class="close-icon" style="width: 16px; height: 16px; position: relative"> <path d="M12 4.86675L11.3 4.16675L8 7.46675L4.7 4.16675L4 4.86675L7.3 8.16675L4 11.4667L4.7 12.1667L8 8.86675L11.3 12.1667L12 11.4667L8.7 8.16675L12 4.86675Z" fill="#F4F4F4"></path> </svg>',
-                        }}
-                      />
-                    </div>
-                  </button>
-                </section>
-
-                {/* Members List Section */}
-                {members.length > 0 && (
-                  <section className="flex relative flex-col gap-4 items-start self-stretch px-6 py-12 max-sm:px-4 max-sm:py-8">
-                    <h3 className="relative self-stretch text-sm font-semibold leading-6 text-neutral-800 max-sm:text-sm">
-                      Membros da Comunidade ({members.length})
-                    </h3>
-                    <div className="space-y-2 max-h-[32rem] overflow-y-auto border border-[#e0e0e0] p-4 w-full bg-white rounded-lg">
-                      {members.map((member) => (
-                        <div
-                          key={member.user_id}
-                          className="flex items-center justify-between p-2 hover:bg-[#f8f8f8] bg-white"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full overflow-hidden">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={
-                                  member.user.profile_image_url ||
-                                  "/no-profile-pic.png"
-                                }
-                                alt={member.user.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm text-neutral-800">
-                                {member.user.name}
-                              </p>
-                              <p className="text-xs text-neutral-500">
-                                {member.user.email}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span
-                                  className={`text-xs px-2 py-0.5 rounded-full ${
-                                    member.status_participation === "active"
-                                      ? "bg-green-100 text-green-800"
-                                      : member.status_participation ===
-                                        "suspended"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-red-100 text-red-800"
-                                  }`}
-                                >
-                                  {member.status_participation === "active"
-                                    ? "Ativo"
-                                    : member.status_participation ===
-                                      "suspended"
-                                    ? "Suspenso"
-                                    : "Banido"}
-                                </span>
-                                <span className="text-xs text-neutral-500">
-                                  Rep: {member.reputation}
-                                </span>
-                                <span className="text-xs text-neutral-500">
-                                  Desde:{" "}
-                                  {new Date(
-                                    member.entered_in
-                                  ).toLocaleDateString("pt-BR")}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {pagination && (
-                      <p className="text-xs leading-4 text-neutral-500">
-                        {pagination.items.length} de {pagination.total} membros
+              <div className="bg-white fixed top-0 right-0 bottom-0 left-[512px] overflow-y-auto">
+                <main className="flex flex-col gap-12 items-start px-6 py-6 w-full max-w-[894px]">
+                  {/* Header Section */}
+                  <header className="flex flex-col gap-1 items-start w-full">
+                    <div className="flex gap-2.5 justify-center items-center w-full">
+                      <p className="text-xs font-medium flex-[1_0_0] text-neutral-500">
+                        Usuários
                       </p>
-                    )}
+                    </div>
+                    <div className="flex gap-2.5 justify-center items-center w-full">
+                      <h1 className="text-xl text-black flex-[1_0_0]">
+                        Gerenciamento de Usuários
+                      </h1>
+                    </div>
+                  </header>
+
+                  {/* Import Database Section */}
+                  <section className="flex flex-col gap-4 items-start px-0 py-12 w-full border-b border-solid border-b-stone-300">
+                    <div className="flex flex-col gap-2 items-start w-full">
+                      <h2 className="w-full text-sm font-semibold leading-6 text-neutral-800">
+                        Importar base de dados de usuários
+                      </h2>
+                      <p className="text-sm text-neutral-500">
+                        Tamanho máximo do arquivo é 2MB. Tipos de arquivos suportados são .jpg e .png.
+                      </p>
+                    </div>
+                    <button
+                      className="flex gap-8 items-center py-3 pr-16 pl-4 cursor-pointer bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleImportUsers}
+                      disabled={isUserActionLoading}
+                    >
+                      <span className="text-sm leading-6 text-zinc-100">
+                        {isUserActionLoading ? "Importando..." : "Importar base"}
+                      </span>
+                    </button>
                   </section>
-                )}
+
+                  {/* Add Moderator Section */}
+                  <section className="flex gap-10 items-start px-0 py-12 w-full border-b border-solid border-b-stone-300">
+                    <div className="flex flex-col flex-1 gap-2 items-start">
+                      <h2 className="w-full text-sm leading-6 text-neutral-800">
+                        Adicionar moderador
+                      </h2>
+                      <div className="flex gap-8 items-center px-4 py-2 w-full border-b border-solid bg-zinc-100 border-b-neutral-500">
+                        <input
+                          type="email"
+                          value={newModeratorEmail}
+                          onChange={(e) => setNewModeratorEmail(e.target.value)}
+                          placeholder="Digite o email do usuário"
+                          className="text-sm leading-6 text-neutral-500 bg-transparent border-none outline-none w-full placeholder:text-neutral-500"
+                          disabled={isUserActionLoading}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs leading-4 text-neutral-500">
+                        Ao clicar em adicionar o usuário terá seu papel da comunidade alterado para moderador.
+                      </p>
+                    </div>
+                    <button
+                      className="flex gap-2 items-center mt-8 px-4 py-2 cursor-pointer bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleAddModerator}
+                      disabled={isUserActionLoading}
+                    >
+                      <span className="text-sm leading-6 text-zinc-100">
+                        {isUserActionLoading ? "Adicionando..." : "Adicionar"}
+                      </span>
+                      <div>
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html:
+                              "<svg width=\"16\" height=\"17\" viewBox=\"0 0 16 17\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" class=\"add-icon\"> <path d=\"M8.5 8V4.5H7.5V8H4V9H7.5V12.5H8.5V9H12V8H8.5Z\" fill=\"#F4F4F4\"></path> </svg>",
+                          }}
+                        />
+                      </div>
+                    </button>
+                  </section>
+
+                  {/* Delete User Section */}
+                  <section className="flex gap-10 items-start px-0 py-12 w-full border-b border-solid border-b-stone-300">
+                    <div className="flex flex-col flex-1 gap-2 items-start">
+                      <h2 className="w-full text-sm leading-6 text-neutral-800">
+                        Excluir usuário
+                      </h2>
+                      <div className="flex gap-8 items-center px-4 py-2 w-full border-b border-solid bg-zinc-100 border-b-neutral-500">
+                        <input
+                          type="email"
+                          value={excludeUserEmail}
+                          onChange={(e) => setExcludeUserEmail(e.target.value)}
+                          placeholder="Digite o email do usuário"
+                          className="text-sm leading-6 text-neutral-500 bg-transparent border-none outline-none w-full placeholder:text-neutral-500"
+                          disabled={isUserActionLoading}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-neutral-500">
+                        A exclusão é permanente, então certifique-se de digitar o e-mail corretamente.
+                      </p>
+                    </div>
+                    <button
+                      className="flex gap-2 items-center mt-8 px-4 py-2 bg-red-600 cursor-pointer hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleRemoveUser}
+                      disabled={isUserActionLoading}
+                    >
+                      <span className="text-sm leading-6 text-zinc-100">
+                        {isUserActionLoading ? "Excluindo..." : "Excluir"}
+                      </span>
+                      <div>
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html:
+                              "<svg width=\"16\" height=\"17\" viewBox=\"0 0 16 17\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" class=\"close-icon\"> <path d=\"M12 4.86675L11.3 4.16675L8 7.46675L4.7 4.16675L4 4.86675L7.3 8.16675L4 11.4667L4.7 12.1667L8 8.86675L11.3 12.1667L12 11.4667L8.7 8.16675L12 4.86675Z\" fill=\"#F4F4F4\"></path> </svg>",
+                          }}
+                        />
+                      </div>
+                    </button>
+                  </section>
+                </main>
               </div>
             )}
             {/* Announcement Details */}
