@@ -118,3 +118,12 @@ class CommunityMemberRepository(BaseRepository[CommunityMember]):
         moderators = query.offset(params.offset).limit(params.limit).all()
 
         return moderators, total
+
+    def get_member_role(
+        self, user_id: UUID, community_id: UUID
+    ) -> CommunityMemberRoleEnum | None:
+        """Get the role of a user in a specific community"""
+        member = self.get_member_association(user_id, community_id)
+        if member and member.role:
+            return CommunityMemberRoleEnum(member.role)
+        return None
