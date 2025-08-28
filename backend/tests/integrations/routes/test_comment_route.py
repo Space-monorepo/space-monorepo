@@ -438,3 +438,41 @@ def test_create_comment_reply_with_invalid_parent_route(
         json=reply.model_dump(mode='json'),
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.integration
+def test_comment_includes_member_role(authenticate_client, community_member_on_db, post_on_db):
+    comment = CommentCreate(
+        post_id=post_on_db.id,
+        user_id=community_member_on_db.user_id,
+        content='Este é um comentário para testar o member_role',
+        parent_id=None,
+        status=CommentStatusEnum.ACTIVE,
+    )
+
+    response = authenticate_client.post(
+        f'/comments/{community_member_on_db.community_id}/post/{post_on_db.id}/create-comment',
+        json=comment.model_dump(mode='json'),
+    )
+    response_data = response.json()
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert 'user' in response_data
+    assert 'member_role' in response_data['user']
+    assert response_data['user']['member_role'] == community_member_on_db.role
+
+
+@pytest.mark.integration
+def test_list_comments_includes_member_role(authenticate_client, comment_on_db, community_member_on_db):
+    response = authenticate_client.get(
+        f'/comments/{community_member_on_db.community_id}/post/{comment_on_db.post_id}/list-comments'
+    )
+    response_data = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response_data['items']) > 0
+
+    comment_item = response_data['items'][0]
+    assert 'user' in comment_item
+    assert 'member_role' in comment_item['user']
+    assert comment_item['user']['member_role'] is not None
