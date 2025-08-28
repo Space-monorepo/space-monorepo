@@ -4,6 +4,8 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.api.communities.schema import CommunityMemberRoleEnum
+
 
 class CommentStatusEnum(str, Enum):
     ACTIVE = 'active'
@@ -15,7 +17,11 @@ class CommentAuthor(BaseModel):
     id: uuid.UUID
     name: str = Field(..., min_length=1, max_length=255, description='Name of the user')
     profile_image_url: str | None = None
-    model_config = ConfigDict(from_attributes=True)
+    member_role: CommunityMemberRoleEnum | None = Field(
+        None,
+        description='The role of the user in the community where the comment was made',
+    )
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
 class PostRelated(BaseModel):
@@ -93,8 +99,8 @@ class CommentResponse(BaseModel):
                     'user': {
                         'id': '456e7890-e89b-12d3-a456-426614174000',
                         'name': 'João Silva',
-                        'profile_picture': 'https://example.com/profile.jpg',
-                        'role': 'member',
+                        'profile_image_url': 'https://example.com/profile.jpg',
+                        'member_role': 'member',
                     },
                     'content': 'Este é um comentário muito interessante!',
                     'status': 'active',

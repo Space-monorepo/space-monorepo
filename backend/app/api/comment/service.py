@@ -30,6 +30,7 @@ class CommentService:
         self.comment_repo = tm.get_comment_repository()
         self.comment_likes_repo = tm.get_comment_likes_repository()
         self.post_repo = tm.get_post_repository()
+        self.member_repo = tm.get_member_repository()
 
     def _get_comment(self, comment_id: UUID) -> Comment:
         comment = self.comment_repo.get_by_id(comment_id)
@@ -43,14 +44,20 @@ class CommentService:
             raise PostNotFoundError('Post not found')
         return post
 
-    @staticmethod
     def _map_comment_to_response(
-        comment: Comment, replies_map: dict = None
+        self, comment: Comment, replies_map: dict = None
     ) -> CommentResponse:
         """
         Mapeia um comentário para response.
         Se replies_map for fornecido, inclui replies recursivamente.
         """
+        # Busca o role do usuário na comunidade do post
+        member_role = None
+        if comment.post and comment.post.community_id:
+            member_role = self.member_repo.get_member_role(
+                comment.user_id, comment.post.community_id
+            )
+
         response = CommentResponse(
             id=comment.id,
             post=PostRelated(
@@ -60,6 +67,7 @@ class CommentService:
                 id=comment.user_id,
                 name=comment.user.name,
                 profile_image_url=comment.user.profile_image_url,
+                member_role=member_role,
             ),
             content=comment.content,
             status=comment.status,
@@ -73,7 +81,7 @@ class CommentService:
         # Se temos um mapa de replies, adiciona as replies recursivamente
         if replies_map and comment.id in replies_map:
             response.replies = [
-                CommentService._map_comment_to_response(reply, replies_map)
+                self._map_comment_to_response(reply, replies_map)
                 for reply in replies_map[comment.id]
             ]
 
