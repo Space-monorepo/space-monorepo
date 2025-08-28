@@ -211,7 +211,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
                   onClick={() => handleLikeComment(comment)}
                   aria-label="Curtir"
                 />
-                <div className={`self-stretch my-auto ${likedComments[comment.id] ? 'text-blue-600' : 'text-neutral-500'}`}>
+                <div className={`self-stretch my-auto ${likedComments[comment.id] ? 'text-neutral-600' : 'text-neutral-500'}`}>
                   {comment.likes_count ?? 0}
                 </div>
               </div>
