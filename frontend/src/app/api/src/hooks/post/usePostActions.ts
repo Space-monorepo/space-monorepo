@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "react-toastify";
 import axios from "axios";
 import { API_URL, cloudinary_link } from "@/config"; // Certifique-se que este é o URL base correto da sua API
 import { fetchUserProfile } from "@/app/api/src/services/userService";
@@ -142,6 +143,14 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
       return response.data;
     } catch (error) {
       console.error("Erro ao criar anúncio:", error);
+      // Tratamento específico para erro 403 (não autorizado na comunidade)
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para publicar nesta comunidade.");
+      }
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para publicar nesta comunidade.");
+        return;
+      }
       onError?.(error);
       throw error;
     } finally {
@@ -189,6 +198,10 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
       return response.data;
     } catch (error) {
       console.error("Erro ao criar campanha:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para publicar nesta comunidade.");
+        return;
+      }
       onError?.(error);
       throw error; // Re-throw para que o componente possa tratar se necessário
     } finally {
@@ -240,6 +253,10 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
       return response.data;
     } catch (error) {
       console.error("Erro ao criar enquete:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para publicar nesta comunidade.");
+        return;
+      }
       onError?.(error);
       throw error;
     } finally {
@@ -288,6 +305,10 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
       return response.data;
     } catch (error) {
       console.error("Erro ao criar reclamação:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para publicar nesta comunidade.");
+        return;
+      }
       onError?.(error);
       throw error;
     } finally {
