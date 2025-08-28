@@ -38,7 +38,7 @@ interface Comment {
     name: string;
     profile_picture?: string;
     profile_image_url?: string;
-    role?: string;
+    member_role?: string;
   };
   content: string;
   created_at: string;
@@ -173,21 +173,27 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
             <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[301px]'}`}>
               <div className="flex gap-2 items-center w-full h-[23px]">
                 <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
-                  <div className="self-stretch my-auto text-sm text-neutral-800">
+                  <div className="self-stretch my-auto whitespace-nowrap text-sm text-neutral-800">
                     {comment.user.name}
                   </div>
-                  <CheckmarkFilled className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] text-black" aria-label="Verificado" />
-                  <div className="self-stretch my-auto text-xs font-semibold">
+                  <CheckmarkFilled
+                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getRoleBadgeClasses(comment.user.member_role).includes('bg-yellow-600') ? 'text-yellow-600' : 'text-neutral-800'}`}
+                    aria-label="Verificado"
+                  />
+                  <div className="self-stretch my-auto text-[10px] text-black font-semibold">
                     •
                   </div>
-                  {comment.user.role && (
-                    <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(comment.user.role)}`}>
+                  {comment.user.member_role && (
+                    <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(comment.user.member_role)}`}>
                       <div className="self-stretch my-auto">
-                        {translateUserRole(comment.user.role)}
+                        {translateUserRole(comment.user.member_role)}
                       </div>
                     </div>
                   )}
-                  <div className="self-stretch my-auto text-xs font-semibold">
+                  <div className="self-stretch my-auto text-[10px] text-black">
+                    •
+                  </div>
+                  <div className="self-stretch my-auto text-[10px] whitespace-nowrap font-semibold">
                     <div className="text-neutral-800">
                       {getRelativeTime(comment.created_at)}
                     </div>
@@ -295,7 +301,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
       )}
       {/* Renderizar replies recursivamente */}
       {Array.isArray(comment.replies) && comment.replies.length > 0 && (
-        <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]">
+        <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px] pl-12">
           {comment.replies.map(child => renderComment(child, true))}
         </div>
       )}
@@ -593,7 +599,7 @@ export default function PostList() {
                               className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getRoleBadgeClasses(post.role).includes('bg-yellow-600') ? 'text-yellow-600' : 'text-neutral-800'}`}
                               aria-label="Verificado"
                             />
-                            <div className="self-stretch my-auto text-xs font-semibold">
+                            <div className="self-stretch my-auto text-[10px] font-semibold">
                               •
                             </div>
                             <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(post.role)}`}>
@@ -611,7 +617,7 @@ export default function PostList() {
                             <div className="self-stretch my-auto text-neutral-500">
                               {post.type}
                             </div>
-                            <div className="self-stretch my-auto text-neutral-500">
+                            <div className="self-stretch my-auto text-[10px] text-neutral-500">
                               •
                             </div>
                             <div className="self-stretch my-auto text-neutral-500">
