@@ -19,6 +19,18 @@ import { Forum, FaceSatisfied, TextBold, TextItalic, ListNumbered, ListBulleted,
 import { getRelativeTime } from "@/lib/relativeTime";
 import { API_URL } from "@/config";
 
+// Função utilitária para classes do badge de role
+const getRoleBadgeClasses = (role?: string) => {
+  if (!role) return '';
+  if (role.toLowerCase().includes('admin')) {
+    return 'bg-yellow-600 bg-opacity-40 text-yellow-950';
+  }
+  if (role.toLowerCase().includes('líder') || role.toLowerCase().includes('leader')) {
+    return 'bg-neutral-800 text-zinc-100';
+  }
+  return 'bg-neutral-800 text-zinc-100';
+};
+
 // CommentsSection como componente interno
 interface Comment {
   id: string;
@@ -141,16 +153,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
     }
   };
 
-  const getRoleBadgeClasses = (role?: string) => {
-    if (!role) return '';
-    if (role.toLowerCase().includes('admin')) {
-      return 'bg-yellow-600 bg-opacity-40 text-yellow-950';
-    }
-    if (role.toLowerCase().includes('líder') || role.toLowerCase().includes('leader')) {
-      return 'bg-neutral-800 text-zinc-100';
-    }
-    return 'bg-neutral-800 text-zinc-100';
-  };
+  // ...
 
   const renderComment = (comment: Comment, isChild = false) => (
     <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]' : 'flex flex-wrap justify-between w-full max-md:max-w-full'}`}>
@@ -296,6 +299,23 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
     </div>
   );
 
+  // Função para contar todos os comentários recursivamente
+  function countAllComments(comments: Comment[]): number {
+    let count = 0;
+    for (const comment of comments) {
+      count += 1;
+      if (Array.isArray(comment.children) && comment.children.length > 0) {
+        count += countAllComments(comment.children);
+      }
+      if (Array.isArray(comment.replies) && comment.replies.length > 0) {
+        count += countAllComments(comment.replies);
+      }
+    }
+    return count;
+  }
+
+  const totalComments = countAllComments(comments);
+
   return (
     <>
       <main className="flex flex-col shrink-0 gap-8 items-start p-4 bg-white rounded border-solid border-[0.5px] border-stone-300 h-[907px] w-[680px] max-md:p-3 max-md:w-full max-md:max-w-[680px] max-sm:gap-6 max-sm:p-2 max-sm:w-full">
@@ -354,15 +374,15 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
           </h2>
           <div className="flex flex-col gap-2.5 justify-center items-center px-2 py-1 rounded-xs bg-neutral-800">
             <span className="self-stretch text-base leading-6 text-zinc-100 max-md:text-base max-sm:text-sm">
-              {comments.length}
+              {totalComments}
             </span>
           </div>
         </header>
 
         {/* Comments List */}
         <section
-          className="flex flex-col p-4 bg-white rounded-sm max-w-[648px] w-full"
-          style={{ maxHeight: 600, overflowY: 'auto' }}
+          className="flex flex-col p-4 bg-white rounded-sm max-w-[648px] w-full no-scrollbar"
+          style={{ maxHeight: 800, overflowY: 'auto' }}
         >
           {loading && <div>Carregando comentários...</div>}
           {error && <div className="text-red-500">{error}</div>}
@@ -566,8 +586,14 @@ export default function PostList() {
                             >
                               {post.author}
                             </Link>
-                            <CheckmarkFilled className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] text-black" aria-label="Verificado" />
-                            <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs text-white whitespace-nowrap rounded bg-neutral-800">
+                            <CheckmarkFilled
+                              className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getRoleBadgeClasses(post.role).includes('bg-yellow-600') ? 'text-yellow-600' : 'text-neutral-800'}`}
+                              aria-label="Verificado"
+                            />
+                            <div className="self-stretch my-auto text-xs font-semibold">
+                              •
+                            </div>
+                            <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(post.role)}`}>
                               <div className="self-stretch my-auto">
                                 {post.role}
                               </div>
@@ -581,6 +607,9 @@ export default function PostList() {
                           <div className="flex items-center gap-1">
                             <div className="self-stretch my-auto text-neutral-500">
                               {post.type}
+                            </div>
+                            <div className="self-stretch my-auto text-neutral-500">
+                              •
                             </div>
                             <div className="self-stretch my-auto text-neutral-500">
                               {post.time}
