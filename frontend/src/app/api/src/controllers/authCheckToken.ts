@@ -5,7 +5,7 @@ import { API_URL } from "@/config";
 import { useBypassAuth } from "../hooks/useBypassAuth";
 
 export const useCheckTokenValidity = () => {
-  const [user, setUser] = useState<{ name: string; username: string; profile_image_url: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; username: string; profile_image_url: string; member_role?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const bypass = useBypassAuth();
@@ -37,7 +37,8 @@ export const useCheckTokenValidity = () => {
           setUser({
             name: data.name,
             username: data.username,
-            profile_image_url: data.profile_image_url
+            profile_image_url: data.profile_image_url,
+            member_role: data.member_role || data.role || undefined
           });
         } else {
           Cookies.remove("token");

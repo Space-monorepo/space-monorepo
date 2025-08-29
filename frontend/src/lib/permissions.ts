@@ -19,6 +19,10 @@ export interface UserPermissions {
     canCreateBadges: boolean;
     canEditBadges: boolean;
     canDeleteBadges: boolean;
+
+    // Sidebar
+    canViewAdministrationTab: boolean;
+    canViewModerationTab: boolean;
 }
 
 export function getPermissions(role: UserRole): UserPermissions {
@@ -37,6 +41,8 @@ export function getPermissions(role: UserRole): UserPermissions {
                 canCreateBadges: true,
                 canEditBadges: true,
                 canDeleteBadges: true,
+                canViewAdministrationTab: true,
+                canViewModerationTab: true,
             };
         case "moderator":
             return {
@@ -52,6 +58,8 @@ export function getPermissions(role: UserRole): UserPermissions {
                 canCreateBadges: false,
                 canEditBadges: true,
                 canDeleteBadges: false,
+                canViewAdministrationTab: false,
+                canViewModerationTab: true,
             };
         case "member":
             return {
@@ -67,6 +75,8 @@ export function getPermissions(role: UserRole): UserPermissions {
                 canCreateBadges: false,
                 canEditBadges: false,
                 canDeleteBadges: false,
+                canViewAdministrationTab: false,
+                canViewModerationTab: false,
             };
         default:
             return {
@@ -82,6 +92,8 @@ export function getPermissions(role: UserRole): UserPermissions {
                 canCreateBadges: false,
                 canEditBadges: false,
                 canDeleteBadges: false,
+                canViewAdministrationTab: false,
+                canViewModerationTab: false,
             };
     }
 }

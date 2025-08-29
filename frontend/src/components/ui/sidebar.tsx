@@ -10,6 +10,7 @@ import { Button } from "./button";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
 import { cn } from "@/lib/utils";
+import { getSidebarPermissions } from "@/lib/sidebarPermissions";
 
 type SidebarProps = {
   variant?: "hover" | "static";
@@ -19,6 +20,8 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const pathname = usePathname();
   const { user, loading } = useCheckTokenValidity();
+
+  const sidebarPermissions = getSidebarPermissions(user);
 
   const isOpen = variant === "static" || isHovered;
 
@@ -111,7 +114,7 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
             icon={<User size={20} />}
             label="Administração"
             href="/administration"
-            active={isActive("/security")}
+            active={isActive("/administration")}
             isOpen={isOpen}
           />
         </nav>
