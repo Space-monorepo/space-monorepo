@@ -140,5 +140,14 @@ class BadgeService:
             ) from e
 
     def list_badges_for_member(self, member_id: UUID) -> list[Badge]:
-        member = self.community_service.get_member(member_id)
-        return member.badges
+        self.community_service.get_member(member_id)
+
+        session = self.badge_repo.session
+
+        badges = (
+            session.query(Badge)
+            .join(MemberBadge, Badge.id == MemberBadge.badge_id)
+            .filter(MemberBadge.member_id == member_id)
+            .all()
+        )
+        return badges
