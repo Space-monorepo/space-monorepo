@@ -4,7 +4,10 @@ from fastapi.middleware import cors
 from app.core.exceptions import add_exception_handlers
 
 from app.api.administration.routes import router as admin_router
-from app.api.badges.routes import router as badges_router
+from app.api.badges.routes import (
+    router as badges_router,
+    admin_router as badges_admin_router,
+)
 from app.api.chat.routes import router as chat_router
 from app.api.comment.routes import router as comment_router
 from app.api.communities.routes import router as communities_router
@@ -21,10 +24,10 @@ app = FastAPI(
 
 app.add_middleware(
     cors.CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=['*'],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
 routes = [
@@ -36,7 +39,8 @@ routes = [
     chat_router,
     moderation_router,
     badges_router,
-    rating_router
+    badges_admin_router,
+    rating_router,
 ]
 
 for route in routes:
