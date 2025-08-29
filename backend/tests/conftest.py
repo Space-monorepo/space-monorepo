@@ -19,7 +19,7 @@ from app.api.post.model import (
     PollPosts,
     Post,
     PostFeedback,
-    CampaignParticipants
+    CampaignParticipants,
 )
 from app.api.post.repository import PostRepository
 from app.api.post.schemas import (
@@ -65,7 +65,9 @@ def session_sql(setup_sql_db):
             session.execute(text(f'DELETE FROM {table.name}'))
     else:
         for table in reversed(Base.metadata.sorted_tables):
-            session.execute(text(f'TRUNCATE TABLE {table.name} RESTART IDENTITY CASCADE'))
+            session.execute(
+                text(f'TRUNCATE TABLE {table.name} RESTART IDENTITY CASCADE')
+            )
 
     session.commit()
     try:
@@ -380,24 +382,24 @@ def mock_post_repository(mock_db_session):
     mock_repo = MagicMock(spec=PostRepository)
     return mock_repo
 
+
 @pytest.fixture
 def badge_on_db(session_sql, community_on_db):
-
     badge = BadgeModel(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         name='Test Badge',
         description='Test Description',
-        community_id=community_on_db.id,
-        image_url='http://example.com/fixture_badge.png'
+        community_id=str(community_on_db.id),
+        image_url='http://example.com/fixture_badge.png',
     )
     session_sql.add(badge)
-    session_sql.flush()
-    session_sql.refresh(badge)
+    session_sql.flush()  # Mudança de flush para commit pode ser necessária se a sessão não persistir
+    session_sql.commit()  # Adicionado para garantir que o dado persista para o cliente de teste
     return badge
+
 
 @pytest.fixture
 def secondary_badge_on_db(session_sql, community_on_db):
-
     badge = BadgeModel(
         id=uuid.uuid4(),
         name='Secondary Badge',
@@ -416,7 +418,6 @@ def member_badge_assignment_on_db(
     community_member_on_db,
     badge_on_db,
 ):
-
     assignment = MemberBadgeModel(
         member_id=community_member_on_db.id,
         badge_id=badge_on_db.id,
@@ -444,7 +445,9 @@ def rating_on_db(session_sql, community_member_on_db):
 
 
 @pytest.fixture
-def multiple_ratings_on_db(session_sql, community_on_db, user_on_db, secondary_user_on_db):
+def multiple_ratings_on_db(
+    session_sql, community_on_db, user_on_db, secondary_user_on_db
+):
     # Create additional community member for secondary user
     secondary_member = CommunityMember(
         community_id=community_on_db.id,
