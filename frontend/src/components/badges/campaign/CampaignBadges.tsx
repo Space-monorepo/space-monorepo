@@ -10,7 +10,7 @@ interface StatusBadgeProps {
 // Componente base StatusBadge
 function StatusBadge({ children, className = "" }: StatusBadgeProps) {
   return (
-    <div className={`flex gap-2.5 justify-center items-center px-3 py-2 whitespace-nowrap rounded-sm ${className}`}>
+    <div className={`flex gap-1.5 justify-center items-center px-2 py-1 whitespace-nowrap rounded-xs text-xs ${className}`}>
       <span className="self-stretch my-auto">
         {children}
       </span>
@@ -21,7 +21,7 @@ function StatusBadge({ children, className = "" }: StatusBadgeProps) {
 // Badges individuais
 export function PendenteBadge() {
   return (
-    <StatusBadge className="bg-blue-900 bg-opacity-10 text-blue-950">
+    <StatusBadge className="bg-[#041794]/10 text-[#000D63]">
       Pendente
     </StatusBadge>
   );
@@ -29,7 +29,7 @@ export function PendenteBadge() {
 
 export function EmAnaliseBadge() {
   return (
-    <StatusBadge className="text-yellow-700 bg-yellow-800 bg-opacity-10">
+    <StatusBadge className="bg-[#814B00]/10 text-[#9A5A00]">
       Em análise
     </StatusBadge>
   );
@@ -37,7 +37,7 @@ export function EmAnaliseBadge() {
 
 export function AprovadaBadge() {
   return (
-    <StatusBadge className="bg-green-900 bg-opacity-10 text-green-950">
+    <StatusBadge className="bg-[#056800]/10 text-[#034500]">
       Aprovada
     </StatusBadge>
   );
@@ -45,7 +45,7 @@ export function AprovadaBadge() {
 
 export function RejeitadaBadge() {
   return (
-    <StatusBadge className="text-red-900 bg-red-700 bg-opacity-10">
+    <StatusBadge className="bg-[#AE0A0A]/10 text-[#870000]">
       Rejeitada
     </StatusBadge>
   );
@@ -53,7 +53,7 @@ export function RejeitadaBadge() {
 
 export function EmProgressoBadge() {
   return (
-    <StatusBadge className="bg-blue-900 bg-opacity-10 text-blue-950">
+    <StatusBadge className="bg-[#041794]/10 text-[#000D63]">
       Em progresso
     </StatusBadge>
   );
@@ -61,7 +61,7 @@ export function EmProgressoBadge() {
 
 export function CanceladaBadge() {
   return (
-    <StatusBadge className="text-red-900 bg-red-700 bg-opacity-10">
+    <StatusBadge className="bg-[#AE0A0A]/10 text-[#870000]">
       Cancelada
     </StatusBadge>
   );
@@ -69,7 +69,7 @@ export function CanceladaBadge() {
 
 export function FinalizadaBadge() {
   return (
-    <StatusBadge className="bg-zinc-100 text-neutral-800">
+    <StatusBadge className="bg-gray-100 text-gray-900">
       Finalizada
     </StatusBadge>
   );
@@ -80,7 +80,7 @@ export function StatusBadgeCampaign() {
   return (
     <main className="flex flex-col items-center px-14 pt-32 w-full bg-white pb-[522px]">
       <PendenteBadge />
-      
+
       <div className="mt-14">
         <EmAnaliseBadge />
       </div>
