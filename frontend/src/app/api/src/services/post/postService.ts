@@ -67,3 +67,30 @@ export const fetchCommunityAnnouncements = async (token: string, communityId: st
   console.log('Calling fetchPostsByType with announcement type');
   return fetchPostsByType(token, communityId, 'announcement');
 };
+
+// Função para buscar detalhes de uma campanha específica
+export const fetchCampaignDetails = async (token: string, communityId: string, postId: string): Promise<any> => {
+  console.log(`Fetching campaign details for post ${postId} in community ${communityId}`);
+  const url = `${API_URL}/posts/${communityId}/post/${postId}`;
+  console.log(`Request URL: ${url}`);
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ 
+      message: 'Erro ao carregar detalhes da campanha' 
+    }));
+    throw new Error(errorData.message || 'Erro ao carregar detalhes da campanha');
+  }
+
+  const data = await response.json();
+  console.log('Campaign details received:', data);
+  
+  return data;
+};
