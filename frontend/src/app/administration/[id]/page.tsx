@@ -10,6 +10,7 @@ import RejectCampaignModal from "@/components/modals/community/RejectCampaignMod
 import useCommunityById from "@/app/api/src/hooks/community/useCommunityById";
 import useCommunityUserActions from "@/app/api/src/hooks/community/useCommunityUserActions";
 import useCommunityPosts from "@/app/api/src/hooks/post/useCommunityPosts";
+import useCampaignDetails from "@/app/api/src/hooks/post/useCampaignDetails";
 import { PostResponse } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
 import {
@@ -30,13 +31,13 @@ type UserInfo = {
 };
 
 type Campaign = {
-  id: number;
+  id: string;
   title: string;
   leader: string;
   user: UserInfo;
   participants: number;
   date: string;
-  status: "Em análise" | "Aprovado" | "Rejeitado";
+  status: "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada";
   description?: string;
   accesses?: number;
   likes?: number;
@@ -117,6 +118,15 @@ export default function CommunityAdminPage({
     fetchCommunityPosts,
   } = useCommunityPosts();
 
+  // Hook para buscar detalhes específicos de campanhas
+  const {
+    campaignDetails,
+    loading: campaignDetailsLoading,
+    error: campaignDetailsError,
+    fetchCampaignDetailsById,
+    clearDetails,
+  } = useCampaignDetails();
+
   // Estados existentes
   const [activeTab, setActiveTab] = useState("Campanhas");
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
@@ -154,9 +164,33 @@ export default function CommunityAdminPage({
     loadMembersRef.current = loadMembers;
   }, [loadMembers]);
   const tabs = ["Campanhas", "Denúncias", "Usuários", "Anúncios"];
+  
+  // Função para mapear status da API para status do frontend
+  const mapApiStatusToFrontendStatus = (apiStatus: string): "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada" => {
+    switch (apiStatus.toLowerCase()) {
+      case 'active':
+        return "Em análise";
+      case 'approved':
+        return "Aprovado";
+      case 'rejected':
+        return "Rejeitado";
+      case 'pending':
+        return "Pendente";
+      case 'in_progress':
+        return "Em progresso";
+      case 'cancelled':
+        return "Cancelada";
+      case 'completed':
+      case 'finished':
+        return "Finalizada";
+      default:
+        return "Em análise";
+    }
+  };
+
   // Funções auxiliares para converter dados da API para o formato do componente
   const convertPostToCampaign = (post: PostResponse): Campaign => ({
-    id: parseInt(post.id) || 0,
+    id: post.id,
     title: post.title,
     leader: post.user.name,
     user: {
@@ -167,11 +201,11 @@ export default function CommunityAdminPage({
     },
     participants: 0, // Zerar participantes temporariamente
     date: new Date(post.created_at).toLocaleDateString("pt-BR"),
-    status: post.status === "active" ? "Em análise" : "Aprovado",
+    status: mapApiStatusToFrontendStatus(post.status),
     description: post.content,
     accesses: 0,
-    likes: 0,
-    comments: 0,
+    likes: post.likes_count || 0,
+    comments: post.comments_count || 0,
     image: post.image_url || undefined,
   });
 
@@ -233,6 +267,7 @@ export default function CommunityAdminPage({
     setSelectedCampaign(null);
     setSelectedReport(null);
     setSelectedAnnouncement(null);
+    clearDetails(); // Limpar detalhes da campanha
 
     // Set the first item of the active tab as selected
     if (tab === "Campanhas" && campaigns.length > 0) {
@@ -244,9 +279,29 @@ export default function CommunityAdminPage({
     }
   };
 
+  // Função para buscar detalhes da campanha quando selecionada
+  const handleCampaignSelection = async (campaign: Campaign) => {
+    setSelectedCampaign(campaign);
+    if (id) {
+      try {
+        await fetchCampaignDetailsById(id, campaign.id);
+      } catch (error) {
+        console.error("Erro ao buscar detalhes da campanha:", error);
+        toast.error("Erro ao carregar detalhes da campanha");
+      }
+    }
+  };
+
   // Initialize default selected items if none are selected
   if (activeTab === "Campanhas" && !selectedCampaign && campaigns.length > 0) {
-    setSelectedCampaign(campaigns[0]);
+    const firstCampaign = campaigns[0];
+    setSelectedCampaign(firstCampaign);
+    // Buscar detalhes da primeira campanha automaticamente
+    if (id) {
+      fetchCampaignDetailsById(id, firstCampaign.id).catch(error => {
+        console.error("Erro ao buscar detalhes da campanha inicial:", error);
+      });
+    }
   } else if (
     activeTab === "Denúncias" &&
     !selectedReport &&
@@ -526,7 +581,7 @@ export default function CommunityAdminPage({
                         ? "bg-[#f4f4f4]"
                         : ""
                         }`}
-                      onClick={() => setSelectedCampaign(campaign)}
+                      onClick={() => handleCampaignSelection(campaign)}
                     >
                       <div className="mb-2">
                         <h3 className="font-medium text-sm mb-1">
@@ -741,7 +796,7 @@ export default function CommunityAdminPage({
                                 Número de acessos:
                               </span>
                               <span className="self-stretch my-auto text-neutral-500">
-                                {selectedCampaign.accesses || 0} acessos
+                                {campaignDetails?.views_count || selectedCampaign.accesses || 0} acessos
                               </span>
                             </div>
                             <div className="flex gap-2 items-center mt-4">
@@ -749,7 +804,7 @@ export default function CommunityAdminPage({
                                 Participantes:
                               </span>
                               <span className="self-stretch my-auto text-neutral-500">
-                                {selectedCampaign.participants} pessoas
+                                {campaignDetails?.participants_count || selectedCampaign.participants || 0} pessoas
                               </span>
                             </div>
                           </div>
@@ -759,7 +814,7 @@ export default function CommunityAdminPage({
                                 Curtidas:
                               </span>
                               <span className="self-stretch my-auto text-neutral-500">
-                                {selectedCampaign.likes || 0} curtidas
+                                {campaignDetails?.likes_count || selectedCampaign.likes || 0} curtidas
                               </span>
                             </div>
                             <div className="flex gap-2 items-center mt-4 w-full">
@@ -767,7 +822,7 @@ export default function CommunityAdminPage({
                                 Comentários:
                               </span>
                               <span className="self-stretch my-auto text-neutral-500">
-                                {selectedCampaign.comments || 0} comentários
+                                {campaignDetails?.comments_count || selectedCampaign.comments || 0} comentários
                               </span>
                             </div>
                           </div>
@@ -777,7 +832,14 @@ export default function CommunityAdminPage({
                         <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
                           Status:
                         </span>
-                        {getCampaignStatusBadge(selectedCampaign.status)}
+                        {campaignDetailsLoading ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neutral-800"></div>
+                            <span className="text-sm text-neutral-500">Carregando...</span>
+                          </div>
+                        ) : (
+                          getCampaignStatusBadge(selectedCampaign.status)
+                        )}
                       </div>
                       {selectedCampaign.status === "Em análise" && (
                         <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
