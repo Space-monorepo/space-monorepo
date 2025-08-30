@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import { useCampaignParticipation } from "@/app/api/src/hooks/post/useCampaignParticipation";
 import Link from "next/link";
@@ -420,11 +420,18 @@ type PostDisplay = PostResponse & {
 };
 
 export default function PostList() {
-  const [posts, setPosts] = useState<PostDisplay[]>([]);
+  const [allPosts, setAllPosts] = useState<PostDisplay[]>([]);
+  const [displayedPosts, setDisplayedPosts] = useState<PostDisplay[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [showNoCommunitiesMessage, setShowNoCommunitiesMessage] = useState(false);
   const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(null);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
+  const postsPerPage = 3;
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
 
   const {
     likePost,
@@ -435,58 +442,120 @@ export default function PostList() {
 
   const { participating, loading: loadingParticipation, checkParticipation, participate } = useCampaignParticipation();
 
-  useEffect(() => {
-    const loadPosts = async () => {
-      const token = getTokenFromCookies();
-      if (!token) {
-        setError(new Error("Usuário não autenticado."));
-        setLoading(false);
-        return;
+  // Função para carregar posts iniciais
+  const loadInitialPosts = async () => {
+    const token = getTokenFromCookies();
+    if (!token) {
+      setError(new Error("Usuário não autenticado."));
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const communityId = "default-community-id";
+      const feedData: PostsListFeed = await fetchPostsByCommunity(
+        token,
+        communityId
+      );
+
+      // Checar participação em paralelo usando hook
+      const fetchedPosts = await Promise.all(feedData.items.map(async (item: PostResponse): Promise<PostDisplay> => {
+        let alreadyParticipating = false;
+        if (translatePostType(item.type_post) === 'Campanha') {
+          alreadyParticipating = await checkParticipation(item.community.id, item.id);
+        }
+        return {
+          ...item,
+          author: item.user.name,
+          username: item.user.username || item.user.id,
+          avatar: item.user.profile_picture || "/no-profile-pic.png",
+          role: translateUserRole(item.user.role),
+          location: item.community.name,
+          type: translatePostType(item.type_post),
+          time: getRelativeTime(item.created_at),
+          image: item.image_url || "/publication-image.jpg",
+          likes: item.likes_count,
+          comments: item.comments_count,
+          shares: item.report_count,
+          liked: false,
+          alreadyParticipating,
+        };
+      }));
+
+      setAllPosts(fetchedPosts);
+
+      // Mostrar apenas os primeiros 3 posts
+      setDisplayedPosts(fetchedPosts.slice(0, postsPerPage));
+      setCurrentPage(1);
+
+      if (fetchedPosts.length <= postsPerPage) {
+        setHasMorePosts(false);
       }
 
-      try {
-        const communityId = "default-community-id";
-        const feedData: PostsListFeed = await fetchPostsByCommunity(
-          token,
-          communityId
-        );
+      if (fetchedPosts.length === 0) {
+        setShowNoCommunitiesMessage(true);
+      }
+    } catch (err) {
+      setError(err as Error);
+      console.error("Erro ao buscar posts:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        // Checar participação em paralelo usando hook
-        const fetchedPosts = await Promise.all(feedData.items.map(async (item: PostResponse): Promise<PostDisplay> => {
-          let alreadyParticipating = false;
-          if (translatePostType(item.type_post) === 'Campanha') {
-            alreadyParticipating = await checkParticipation(item.community.id, item.id);
-          }
-          return {
-            ...item,
-            author: item.user.name,
-            username: item.user.username || item.user.id,
-            avatar: item.user.profile_picture || "/no-profile-pic.png",
-            role: translateUserRole(item.user.role),
-            location: item.community.name,
-            type: translatePostType(item.type_post),
-            time: getRelativeTime(item.created_at),
-            image: item.image_url || "/publication-image.jpg",
-            likes: item.likes_count,
-            comments: item.comments_count,
-            shares: item.report_count,
-            liked: false,
-            alreadyParticipating,
-          };
-        }));
-        setPosts(fetchedPosts);
-        if (fetchedPosts.length === 0) {
-          setShowNoCommunitiesMessage(true);
+  // Função para carregar mais posts
+  const loadMorePosts = useCallback(async () => {
+    if (loadingMore || !hasMorePosts) return;
+
+    setLoadingMore(true);
+
+    // Simular delay para melhor UX
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const startIndex = currentPage * postsPerPage;
+    const endIndex = startIndex + postsPerPage;
+    const newPosts = allPosts.slice(startIndex, endIndex);
+
+    if (newPosts.length > 0) {
+      setDisplayedPosts(prev => [...prev, ...newPosts]);
+      setCurrentPage(prev => prev + 1);
+
+      if (endIndex >= allPosts.length) {
+        setHasMorePosts(false);
+      }
+    } else {
+      setHasMorePosts(false);
+    }
+
+    setLoadingMore(false);
+  }, [loadingMore, hasMorePosts, currentPage, allPosts]);
+
+  // Configurar Intersection Observer para scroll infinito
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMorePosts && !loadingMore) {
+          loadMorePosts();
         }
-      } catch (err) {
-        setError(err as Error);
-        console.error("Erro ao buscar posts:", err);
-      } finally {
-        setLoading(false);
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadingRef.current) {
+      observer.observe(loadingRef.current);
+    }
+
+    observerRef.current = observer;
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
       }
     };
+  }, [loadMorePosts, hasMorePosts, loadingMore]);
 
-    loadPosts();
+  useEffect(() => {
+    loadInitialPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -495,12 +564,12 @@ export default function PostList() {
     try {
       if (!post.liked) {
         await likePost(communityId, post.id);
-        setPosts(posts.map((p) =>
+        setDisplayedPosts(posts => posts.map((p) =>
           p.id === post.id ? { ...p, likes: p.likes + 1, liked: true } : p
         ));
       } else {
         await unlikePost(communityId, post.id);
-        setPosts(posts.map((p) =>
+        setDisplayedPosts(posts => posts.map((p) =>
           p.id === post.id ? { ...p, likes: Math.max(0, p.likes - 1), liked: false } : p
         ));
       }
@@ -517,7 +586,7 @@ export default function PostList() {
     const communityId = post.community?.id || "default-community-id";
     await sharePost(communityId, post.id);
     // Quando implementar no backend, incremente shares
-    // setPosts(posts.map((p) =>
+    // setDisplayedPosts(posts => posts.map((p) =>
     //   p.id === post.id ? { ...p, shares: p.shares + 1 } : p
     // ));
   };
@@ -526,7 +595,7 @@ export default function PostList() {
   const handleParticipateCampaign = async (post: PostDisplay) => {
     try {
       await participate(post.community?.id || "default-community-id", post.id);
-      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
+      setDisplayedPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
       toast.success('Você agora faz parte da campanha!');
     } catch (err) {
       toast.error('Erro ao participar da campanha');
@@ -570,7 +639,7 @@ export default function PostList() {
   return (
     <div className="flex-1 p-4 overflow-auto pr-72 flex justify-center">
       <main className="overflow-hidden max-w-[680px] w-full space-y-6">
-        {posts.map((post) => (
+        {displayedPosts.map((post) => (
           <React.Fragment key={post.id}>
             <article
               className="flex flex-col justify-center px-6 py-4 w-full bg-white rounded border-solid shadow-sm border-[0.5px] border-stone-300 max-md:px-5 max-md:max-w-full"
@@ -734,6 +803,30 @@ export default function PostList() {
             )}
           </React.Fragment>
         ))}
+
+        {/* Loading indicator para scroll infinito */}
+        {hasMorePosts && (
+          <div
+            ref={loadingRef}
+            className="flex justify-center items-center py-8"
+          >
+            {loadingMore ? (
+              <div className="flex items-center gap-2 text-neutral-500">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-neutral-500"></div>
+                <span>Carregando mais posts...</span>
+              </div>
+            ) : (
+              <div className="h-8"></div> // Espaçador invisível para trigger do observer
+            )}
+          </div>
+        )}
+
+        {/* Mensagem quando não há mais posts
+        {!hasMorePosts && displayedPosts.length > 0 && (
+          <div className="flex justify-center items-center py-8 text-neutral-500">
+            <span>Você chegou ao final dos posts</span>
+          </div>
+        )} */}
       </main>
     </div>
   );
