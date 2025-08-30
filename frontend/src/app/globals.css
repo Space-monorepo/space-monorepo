@@ -112,3 +112,22 @@ main {
 }
 
 /* Se o SelectTrigger for de alguma lib específica, ajuste o seletor conforme necessário */
+
+/* Esconde a scrollbar da tela inteira */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari e Edge */
+}
+
+body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari e Edge */
+}
