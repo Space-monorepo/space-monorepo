@@ -22,7 +22,7 @@ import {
   CanceladaBadge,
   FinalizadaBadge
 } from "@/components/badges/campaign/CampaignBadges";
-import { LeveBadge, ModeradaBadge, CriticaBadge } from "@/components/badges/complaints/DenunciaBadges";
+import { LeveBadge, ModeradaBadge, CriticaBadge } from "@/components/badges/complaints/ComplaintsBadges";
 
 type UserInfo = {
   id: string;

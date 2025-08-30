@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { Incomplete, CircleDash, CheckmarkFilled, Time, Renew, CheckmarkOutline } from "@carbon/icons-react";
 
 // Interface para o componente base StatusBadge
 interface StatusBadgeProps {
@@ -45,11 +46,7 @@ export function CriticaBadge() {
 export function PendenteBadge() {
     return (
         <StatusBadge className="bg-zinc-100 text-neutral-900 mt-4">
-            <img
-                src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/2efb89be383c3d2b1892a33a44a365ae6b569917?placeholderIfAbsent=true"
-                alt=""
-                className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square mr-1"
-            />
+            <Time size={16} className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square mr-1" />
             Pendente
         </StatusBadge>
     );
@@ -58,11 +55,7 @@ export function PendenteBadge() {
 export function EmApuracaoBadge() {
     return (
         <StatusBadge className="bg-zinc-100 text-neutral-800 mt-4">
-            <img
-                src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/f120d585c27b43e6290c996678692721d61ba205?placeholderIfAbsent=true"
-                alt=""
-                className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square mr-1"
-            />
+            <Renew size={16} className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square mr-1" />
             Em apuração
         </StatusBadge>
     );
@@ -71,11 +64,7 @@ export function EmApuracaoBadge() {
 export function ResolvidaBadge() {
     return (
         <StatusBadge className="bg-zinc-100 text-neutral-800 mt-4 mb-0">
-            <img
-                src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/a45823c370b0390f0ec1fdb6cb1a1259f169e95c?placeholderIfAbsent=true"
-                alt=""
-                className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square mr-1"
-            />
+            <CheckmarkOutline size={16} className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square mr-1" />
             Resolvida
         </StatusBadge>
     );
