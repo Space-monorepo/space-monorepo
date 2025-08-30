@@ -169,8 +169,8 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
       </div>
       <div className="flex-1 shrink my-auto basis-0 min-w-60 max-md:max-w-full">
         <div className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
-          <div className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? 'w-[360px]' : 'w-[301px]'}`}>
-            <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[301px]'}`}>
+          <div className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
+            <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
               <div className="flex gap-2 items-center w-full h-[23px]">
                 <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                   <div className="self-stretch my-auto whitespace-nowrap text-sm text-neutral-800">
@@ -591,7 +591,7 @@ export default function PostList() {
                           <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                             <Link
                               href={`/profile/${post.username || post.user.id}`}
-                              className="self-stretch my-auto text-sm text-neutral-800 hover:text-blue-600 transition-colors hover:underline"
+                              className="self-stretch my-auto text-sm text-neutral-800 hover:text-blue-600 whitespace-nowrap transition-colors hover:underline"
                             >
                               {post.author}
                             </Link>
@@ -608,7 +608,7 @@ export default function PostList() {
                               </div>
                             </div>
                           </div>
-                          <div className="self-stretch my-auto text-xs leading-none text-justify text-neutral-800">
+                          <div className="self-stretch my-auto text-xs leading-none text-justify whitespace-nowrap text-neutral-800">
                             {post.location}
                           </div>
                         </div>
