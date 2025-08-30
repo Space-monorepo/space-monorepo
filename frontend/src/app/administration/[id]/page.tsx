@@ -603,7 +603,7 @@ export default function CommunityAdminPage({
             </div>
           )}
           {/* Right Section - Details */}
-          <div className="flex-1 bg-gray-100 px-6 py-8 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto">
+          <div className="flex-1 bg-gray-100 px-6 py-8 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             {/* Loading State for Details */}
             {postsLoading && activeTab !== "Usuários" && (
               <div className="bg-white p-6 text-center">
@@ -647,117 +647,148 @@ export default function CommunityAdminPage({
                   )}
               </>
             )}{" "}
-            {/* Campaign Details */}
+            {/* Campaign Details - Updated with Figma Layout */}
             {activeTab === "Campanhas" && selectedCampaign && !postsLoading && (
-              <div className="bg-white p-6">
-                {/* Author info */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={
-                        selectedCampaign.user.profile_picture ||
-                        "/no-profile-pic.png"
-                      }
-                      alt={selectedCampaign.user.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>{" "}
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {selectedCampaign.leader}
-                    </span>
-                    <div className="w-1 h-1 rounded-full bg-[#525252]"></div>
-                    <span className="text-xs px-2 py-1 bg-[#393939] text-white">
-                      {translateUserRole(
-                        selectedCampaign.user.role || "leader"
+              <div className="max-w-full">
+                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                  <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
+                    <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                      <div className="w-full max-md:max-w-full">
+                        <div className="flex justify-between items-start w-full max-md:max-w-full">
+                          <div className="flex items-center min-w-60">
+                            <img
+                              src={selectedCampaign.user.profile_picture || "/no-profile-pic.png"}
+                              alt={`${selectedCampaign.user.name} profile picture`}
+                              className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                            />
+                            <div className="self-stretch my-auto min-w-60 w-[342px]">
+                              <div className="flex gap-2 items-center w-full h-[23px]">
+                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                  <span className="self-stretch my-auto text-sm text-neutral-800">
+                                    {selectedCampaign.leader}
+                                  </span>
+                                  <img
+                                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/0915c1f8d702c90f4deafed21adc581f37a91002?placeholderIfAbsent=true"
+                                    alt="Verification badge"
+                                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
+                                  />
+                                  <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-zinc-100">
+                                    <span className="self-stretch my-auto text-zinc-100">
+                                      {translateUserRole(selectedCampaign.user.role || "leader")}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                          <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                            <span className="self-stretch my-auto font-semibold text-neutral-800">
+                              Título:{" "}
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-800">
+                              {selectedCampaign.title}
+                            </span>
+                          </div>
+                          <div className="mt-2 w-full max-md:max-w-full">
+                            <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                              Descrição:
+                            </h3>
+                            <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                              {selectedCampaign.description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </header>
+                    <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
+                      <div className="w-full text-sm leading-none max-md:max-w-full">
+                        <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
+                          <div className="flex flex-col items-start">
+                            <div className="flex gap-2 items-center">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Data publicada:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedCampaign.date}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center self-stretch mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Número de acessos:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedCampaign.accesses || 0} acessos
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Participantes:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedCampaign.participants} pessoas
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col w-[198px]">
+                            <div className="flex gap-2 items-center self-start">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Curtidas:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedCampaign.likes || 0} curtidas
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4 w-full">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Comentários:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedCampaign.comments || 0} comentários
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 items-center self-start mt-10">
+                        <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
+                          Status:
+                        </span>
+                        <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-2 my-auto text-xs leading-none rounded-sm ${selectedCampaign.status === "Em análise"
+                            ? "text-[#814B00] bg-yellow-500 bg-opacity-10"
+                            : selectedCampaign.status === "Aprovado"
+                              ? "text-green-700 bg-green-800 bg-opacity-10"
+                              : "text-red-700 bg-red-800 bg-opacity-10"
+                          }`}>
+                          <span className="self-stretch my-auto">
+                            {selectedCampaign.status}
+                          </span>
+                        </div>
+                      </div>
+                      {selectedCampaign.status === "Em análise" && (
+                        <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                          <button
+                            onClick={() => setIsRejectModalOpen(true)}
+                            className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                          >
+                            <span className="self-stretch my-auto text-neutral-800">
+                              Rejeitar
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => setIsApproveModalOpen(true)}
+                            className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                          >
+                            <span className="self-stretch my-auto text-zinc-100">
+                              Aprovar
+                            </span>
+                          </button>
+                        </div>
                       )}
-                    </span>
-                  </div>
+                    </section>
+                  </article>
                 </div>
-
-                {/* Campaign content */}
-                <div className="space-y-4 mb-8">
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Título:</p>
-                    <h2 className="text-lg font-medium">
-                      {selectedCampaign.title}
-                    </h2>
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Descrição:</p>
-                    <p className="text-[#161616] whitespace-pre-line leading-relaxed">
-                      {selectedCampaign.description}
-                    </p>
-                  </div>
-                  {selectedCampaign.image && (
-                    <div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={selectedCampaign.image || "/placeholder.svg"}
-                        alt="Campaign"
-                        className="w-full max-w-md"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8">
-                  <div>
-                    <p className="text-sm text-[#525252]">Data publicada:</p>
-                    <p className="font-medium">{selectedCampaign.date}</p>
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252]">Curtidas:</p>
-                    <p className="font-medium">0 curtidas</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Número de acessos:</p>
-                    <p className="font-medium">0 acessos</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Comentários:</p>
-                    <p className="font-medium">0 comentários</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Participantes:</p>
-                    <p className="font-medium">
-                      {selectedCampaign.participants} pessoas
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Status:</p>
-                    <span
-                      className={`inline-block px-2 py-1 text-sm ${selectedCampaign.status === "Em análise"
-                        ? "bg-[#fff8e1] text-[#b28600]"
-                        : selectedCampaign.status === "Aprovado"
-                          ? "bg-[#defbe6] text-[#0e6027]"
-                          : "bg-[#fff1f1] text-[#da1e28]"
-                        }`}
-                    >
-                      {selectedCampaign.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                {selectedCampaign.status === "Em análise" && (
-                  <div className="flex gap-4">
-                    <button
-                      className="flex-1 py-3 px-4 border border-[#e0e0e0] hover:bg-[#f8f8f8] transition-colors"
-                      onClick={() => setIsRejectModalOpen(true)}
-                    >
-                      Rejeitar
-                    </button>
-                    <button
-                      className="flex-1 py-3 px-4 bg-[#161616] text-white hover:bg-[#262626] transition-colors"
-                      onClick={() => setIsApproveModalOpen(true)}
-                    >
-                      Aprovar
-                    </button>
-                  </div>
-                )}
               </div>
             )}
             {/* Report Details */}
