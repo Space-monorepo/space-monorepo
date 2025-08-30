@@ -12,6 +12,15 @@ import useCommunityUserActions from "@/app/api/src/hooks/community/useCommunityU
 import useCommunityPosts from "@/app/api/src/hooks/post/useCommunityPosts";
 import { PostResponse } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
+import {
+  PendenteBadge,
+  EmAnaliseBadge,
+  AprovadaBadge,
+  RejeitadaBadge,
+  EmProgressoBadge,
+  CanceladaBadge,
+  FinalizadaBadge
+} from "@/components/badges/campaign/CampaignBadges";
 
 type UserInfo = {
   id: string;
@@ -294,6 +303,28 @@ export default function CommunityAdminPage({
         return "bg-[#f4f4f4] text-[#525252]";
     }
   };
+
+  // Função para mapear status da campanha para o componente de badge correto
+  const getCampaignStatusBadge = (status: string) => {
+    switch (status) {
+      case "Em análise":
+        return <EmAnaliseBadge />;
+      case "Aprovado":
+        return <AprovadaBadge />;
+      case "Rejeitado":
+        return <RejeitadaBadge />;
+      case "Pendente":
+        return <PendenteBadge />;
+      case "Em progresso":
+        return <EmProgressoBadge />;
+      case "Cancelada":
+        return <CanceladaBadge />;
+      case "Finalizada":
+        return <FinalizadaBadge />;
+      default:
+        return <PendenteBadge />;
+    }
+  };
   // Handlers para gerenciamento de usuários
   const handleAddModerator = async () => {
     if (!newModeratorEmail.trim()) {
@@ -512,16 +543,7 @@ export default function CommunityAdminPage({
                         </p>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span
-                          className={`text-xs px-2 py-1 ${campaign.status === "Em análise"
-                            ? "bg-[#fff8e1] text-[#b28600]"
-                            : campaign.status === "Aprovado"
-                              ? "bg-[#defbe6] text-[#0e6027]"
-                              : "bg-[#fff1f1] text-[#da1e28]"
-                            }`}
-                        >
-                          {campaign.status}
-                        </span>
+                        {getCampaignStatusBadge(campaign.status)}
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-[#525252]">0</span>
                           <Eye className="h-3 w-3 text-[#525252]" />
@@ -755,16 +777,7 @@ export default function CommunityAdminPage({
                         <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
                           Status:
                         </span>
-                        <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-2 my-auto text-xs leading-none rounded-sm ${selectedCampaign.status === "Em análise"
-                            ? "text-[#814B00] bg-yellow-500 bg-opacity-10"
-                            : selectedCampaign.status === "Aprovado"
-                              ? "text-green-700 bg-green-800 bg-opacity-10"
-                              : "text-red-700 bg-red-800 bg-opacity-10"
-                          }`}>
-                          <span className="self-stretch my-auto">
-                            {selectedCampaign.status}
-                          </span>
-                        </div>
+                        {getCampaignStatusBadge(selectedCampaign.status)}
                       </div>
                       {selectedCampaign.status === "Em análise" && (
                         <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
