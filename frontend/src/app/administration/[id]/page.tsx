@@ -22,6 +22,7 @@ import {
   CanceladaBadge,
   FinalizadaBadge
 } from "@/components/badges/campaign/CampaignBadges";
+import { LeveBadge, ModeradaBadge, CriticaBadge } from "@/components/badges/complaints/DenunciaBadges";
 
 type UserInfo = {
   id: string;
@@ -164,7 +165,7 @@ export default function CommunityAdminPage({
     loadMembersRef.current = loadMembers;
   }, [loadMembers]);
   const tabs = ["Campanhas", "Denúncias", "Usuários", "Anúncios"];
-  
+
   // Função para mapear status da API para status do frontend
   const mapApiStatusToFrontendStatus = (apiStatus: string): "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada" => {
     switch (apiStatus.toLowerCase()) {
@@ -449,6 +450,20 @@ export default function CommunityAdminPage({
     setEmailsToImport("");
   };
 
+  // Função para mapear severidade para o badge correto
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case "Leve":
+        return <LeveBadge />;
+      case "Moderada":
+        return <ModeradaBadge />;
+      case "Crítica":
+        return <CriticaBadge />;
+      default:
+        return <LeveBadge />;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 text-[#161616]">
       <Sidebar variant="static" />
@@ -632,13 +647,7 @@ export default function CommunityAdminPage({
                         </p>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span
-                          className={`text-xs px-2 py-1 ${getSeverityColor(
-                            report.severity
-                          )}`}
-                        >
-                          {report.severity}
-                        </span>
+                        <div className="mr-2">{getSeverityBadge(report.severity)}</div>
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-[#525252]">0</span>
                           <Eye className="h-3 w-3 text-[#525252]" />
@@ -866,110 +875,111 @@ export default function CommunityAdminPage({
                 </div>
               </div>
             )}
-            {/* Report Details */}
+            {/* Report Details - Layout idêntico ao de campanha */}
             {activeTab === "Denúncias" && selectedReport && (
-              <div className="bg-white p-6">
-                {/* Report header */}{" "}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={
-                        selectedReport.user.profile_picture ||
-                        "/no-profile-pic.png"
-                      }
-                      alt={selectedReport.user.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>{" "}
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {selectedReport.user.name}
-                    </span>
-                    <div className="w-1 h-1 rounded-full bg-[#525252]"></div>
-                    <span className="text-xs px-2 py-1 bg-[#393939] text-white">
-                      {selectedReport.user.role || "Membro"}
-                    </span>
-                  </div>
-                </div>
-                {/* Report content */}
-                <div className="space-y-4 mb-8">
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Nível:</p>
-                    <span
-                      className={`px-2 py-1 text-sm ${getSeverityColor(
-                        selectedReport.severity
-                      )}`}
-                    >
-                      {selectedReport.severity}
-                    </span>
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Título:</p>
-                    <h2 className="text-lg font-medium">
-                      {selectedReport.title}
-                    </h2>
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Descrição:</p>
-                    <p className="text-[#161616] whitespace-pre-line leading-relaxed">
-                      {selectedReport.description}
-                    </p>
-                  </div>
-                  {selectedReport.image && (
-                    <div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={selectedReport.image || "/placeholder.svg"}
-                        alt="Report"
-                        className="w-full max-w-md"
-                      />
-                    </div>
-                  )}
-                </div>
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8">
-                  <div>
-                    <p className="text-sm text-[#525252]">Data publicada:</p>
-                    <p className="font-medium">{selectedReport.date}</p>{" "}
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252]">Curtidas:</p>
-                    <p className="font-medium">0 curtidas</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Número de acessos:</p>
-                    <p className="font-medium">0 acessos</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Comentários:</p>
-                    <p className="font-medium">0 comentários</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Confirmações:</p>
-                    <p className="font-medium">
-                      {selectedReport.confirmations} pessoas
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Status:</p>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 text-sm bg-[#fff8e1] text-[#b28600]">
-                      <div className="w-2 h-2 rounded-full bg-[#b28600]"></div>
-                      Em apuração
-                    </span>
-                  </div>
-                </div>
-                {/* Action buttons */}
-                <div className="flex gap-4">
-                  <button className="flex-1 py-3 px-4 border border-[#e0e0e0] hover:bg-[#f8f8f8] transition-colors">
-                    Dissolver
-                  </button>
-                  <button className="flex-1 py-3 px-4 bg-[#161616] text-white hover:bg-[#262626] transition-colors">
-                    Resolver
-                  </button>
+              <div className="max-w-full">
+                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                  <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
+                    <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                      <div className="w-full max-md:max-w-full">
+                        <div className="flex justify-between items-start w-full max-md:max-w-full">
+                          <div className="flex items-center min-w-60">
+                            <img
+                              src={selectedReport.user.profile_picture || "/no-profile-pic.png"}
+                              alt={selectedReport.user.name}
+                              className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                            />
+                            <div className="self-stretch my-auto min-w-60 w-[342px]">
+                              <div className="flex gap-2 items-center w-full h-[23px]">
+                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                  <span className="self-stretch my-auto text-sm text-neutral-800">
+                                    {selectedReport.user.name}
+                                  </span>
+                                  <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-zinc-100">
+                                    <span className="self-stretch my-auto text-zinc-100">
+                                      {selectedReport.user.role || "Membro"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                          <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                            <span className="self-stretch my-auto font-semibold text-neutral-800">
+                              Título: {" "}
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-800">
+                              {selectedReport.title}
+                            </span>
+                          </div>
+                          <div className="mt-2 w-full max-md:max-w-full">
+                            <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                              Descrição:
+                            </h3>
+                            <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                              {selectedReport.description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </header>
+                    <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
+                      <div className="w-full text-sm leading-none max-md:max-w-full">
+                        <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8">
+                          <div>
+                            <span className="font-medium text-neutral-800">Nível:</span>
+                            <span className="ml-2">{getSeverityBadge(selectedReport.severity)}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-neutral-800">Data publicada:</span>
+                            <span className="ml-2 text-neutral-500">{selectedReport.date}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-neutral-800">Número de acessos:</span>
+                            <span className="ml-2 text-neutral-500">0 acessos</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-neutral-800">Curtidas:</span>
+                            <span className="ml-2 text-neutral-500">0 curtidas</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-neutral-800">Comentários:</span>
+                            <span className="ml-2 text-neutral-500">0 comentários</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-neutral-800">Confirmações:</span>
+                            <span className="ml-2 text-neutral-500">{selectedReport.confirmations} pessoas</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-neutral-800">Status:</span>
+                            <span className="ml-2">{getSeverityBadge(selectedReport.severity)}</span>
+                          </div>
+                        </div>
+                        {selectedReport.image && (
+                          <div className="flex flex-col items-center mb-8">
+                            <img
+                              src={selectedReport.image || "/placeholder.svg"}
+                              alt="Report"
+                              className="w-full max-w-md"
+                            />
+                          </div>
+                        )}
+                        <div className="flex gap-4 mt-8">
+                          <button className="flex-1 py-3 px-4 border border-[#e0e0e0] hover:bg-[#f8f8f8] transition-colors">
+                            Dissolver
+                          </button>
+                          <button className="flex-1 py-3 px-4 bg-[#161616] text-white hover:bg-[#262626] transition-colors">
+                            Resolver
+                          </button>
+                        </div>
+                      </div>
+                    </section>
+                  </article>
                 </div>
               </div>
-            )}{" "}
+            )}
             {/* Users Management */}
             {activeTab === "Usuários" && (
               <div className="bg-white fixed top-0 right-0 bottom-0 left-[512px] overflow-y-auto">
