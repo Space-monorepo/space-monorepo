@@ -59,6 +59,9 @@ type Report = {
   severity: "Crítica" | "Moderada" | "Leve";
   confirmations: number;
   image?: string;
+  likes?: number;
+  comments?: number;
+  accesses?: number;
 };
 
 type Announcement = {
@@ -228,6 +231,9 @@ export default function CommunityAdminPage({
     severity: "Moderada" as const, // Placeholder - ajustar conforme API
     confirmations: post.report_count || 0,
     image: post.image_url || undefined,
+    likes: post.likes_count || 0,
+    comments: post.comments_count || 0,
+    accesses: 0,
   });
 
   const convertPostToAnnouncement = (post: PostResponse): Announcement => ({
@@ -461,6 +467,27 @@ export default function CommunityAdminPage({
         return <CriticaBadge />;
       default:
         return <LeveBadge />;
+    }
+  };
+
+  // Handlers para ações de denúncia
+  const handleDissolveReport = () => {
+    if (selectedReport) {
+      toast.info('Funcionalidade de dissolver denúncia em desenvolvimento');
+      // Aqui você pode implementar a lógica para dissolver a denúncia
+      // Por exemplo: updateReportStatus(selectedReport.id, 'Arquivado')
+    }
+  };
+
+  const handleResolveReport = () => {
+    if (selectedReport) {
+      toast.success('Denúncia marcada como resolvida');
+      // Aqui você pode implementar a lógica para resolver a denúncia
+      // Por exemplo: updateReportStatus(selectedReport.id, 'Resolvido')
+      setSelectedReport({
+        ...selectedReport,
+        status: 'Resolvido'
+      });
     }
   };
 
@@ -875,19 +902,19 @@ export default function CommunityAdminPage({
                 </div>
               </div>
             )}
-            {/* Report Details - Layout idêntico ao de campanha */}
-            {activeTab === "Denúncias" && selectedReport && (
+            {/* Report Details - Updated with Figma Layout */}
+            {activeTab === "Denúncias" && selectedReport && !postsLoading && (
               <div className="max-w-full">
-                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                <div className="px-4 pt-4 pb-72 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
                   <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
-                    <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                    <div className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
                       <div className="w-full max-md:max-w-full">
                         <div className="flex justify-between items-start w-full max-md:max-w-full">
                           <div className="flex items-center min-w-60">
                             <img
                               src={selectedReport.user.profile_picture || "/no-profile-pic.png"}
-                              alt={selectedReport.user.name}
                               className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                              alt={`${selectedReport.user.name} avatar`}
                             />
                             <div className="self-stretch my-auto min-w-60 w-[342px]">
                               <div className="flex gap-2 items-center w-full h-[23px]">
@@ -895,9 +922,14 @@ export default function CommunityAdminPage({
                                   <span className="self-stretch my-auto text-sm text-neutral-800">
                                     {selectedReport.user.name}
                                   </span>
+                                  <img
+                                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/0915c1f8d702c90f4deafed21adc581f37a91002?placeholderIfAbsent=true"
+                                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
+                                    alt="Verified"
+                                  />
                                   <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-zinc-100">
                                     <span className="self-stretch my-auto text-zinc-100">
-                                      {selectedReport.user.role || "Membro"}
+                                      {translateUserRole(selectedReport.user.role || "member")}
                                     </span>
                                   </div>
                                 </div>
@@ -905,77 +937,117 @@ export default function CommunityAdminPage({
                             </div>
                           </div>
                         </div>
-                        <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
-                          <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
-                            <span className="self-stretch my-auto font-semibold text-neutral-800">
-                              Título: {" "}
+                        <div className="flex flex-col mt-6 w-full max-md:max-w-full">
+                          <div className="flex gap-2 items-center self-start whitespace-nowrap">
+                            <span className="self-stretch my-auto text-sm font-semibold leading-none text-neutral-800">
+                              Nível:
                             </span>
-                            <span className="self-stretch my-auto text-neutral-800">
-                              {selectedReport.title}
-                            </span>
+                            <div className="flex gap-2.5 items-start self-stretch my-auto">
+                              {getSeverityBadge(selectedReport.severity)}
+                            </div>
                           </div>
-                          <div className="mt-2 w-full max-md:max-w-full">
+                          <div className="flex flex-wrap gap-4 items-center mt-2 w-full text-sm text-neutral-800 max-md:max-w-full">
+                            <h2 className="self-stretch my-auto font-semibold leading-6 text-neutral-800">
+                              Título:
+                            </h2>
+                            <p className="self-stretch my-auto leading-8 text-neutral-800">
+                              {selectedReport.title}
+                            </p>
+                          </div>
+                          <div className="mt-2 w-full text-sm text-neutral-800 max-md:max-w-full">
                             <h3 className="font-semibold leading-6 text-justify text-neutral-800">
                               Descrição:
                             </h3>
                             <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
-                              {selectedReport.description}
+                              {selectedReport.description || "Descrição não disponível."}
                             </p>
                           </div>
                         </div>
                       </div>
-                    </header>
-                    <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
-                      <div className="w-full text-sm leading-none max-md:max-w-full">
-                        <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8">
-                          <div>
-                            <span className="font-medium text-neutral-800">Nível:</span>
-                            <span className="ml-2">{getSeverityBadge(selectedReport.severity)}</span>
+                    </div>
+                    <div className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
+                      <section className="w-full text-sm leading-none max-md:max-w-full">
+                        <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                          <div className="flex flex-col items-start">
+                            <div className="flex gap-2 items-center">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Data publicada:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedReport.date}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center self-stretch mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Número de acessos:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedReport.accesses || 0} acessos
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Confirmações:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedReport.confirmations} pessoas
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-medium text-neutral-800">Data publicada:</span>
-                            <span className="ml-2 text-neutral-500">{selectedReport.date}</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-neutral-800">Número de acessos:</span>
-                            <span className="ml-2 text-neutral-500">0 acessos</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-neutral-800">Curtidas:</span>
-                            <span className="ml-2 text-neutral-500">0 curtidas</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-neutral-800">Comentários:</span>
-                            <span className="ml-2 text-neutral-500">0 comentários</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-neutral-800">Confirmações:</span>
-                            <span className="ml-2 text-neutral-500">{selectedReport.confirmations} pessoas</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-neutral-800">Status:</span>
-                            <span className="ml-2">{getSeverityBadge(selectedReport.severity)}</span>
+                          <div className="flex flex-col w-[198px]">
+                            <div className="flex gap-2 items-center self-start">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Curtidas:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedReport.likes || 0} curtidas
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4 w-full">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Comentários:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedReport.comments || 0} comentários
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        {selectedReport.image && (
-                          <div className="flex flex-col items-center mb-8">
-                            <img
-                              src={selectedReport.image || "/placeholder.svg"}
-                              alt="Report"
-                              className="w-full max-w-md"
-                            />
-                          </div>
-                        )}
-                        <div className="flex gap-4 mt-8">
-                          <button className="flex-1 py-3 px-4 border border-[#e0e0e0] hover:bg-[#f8f8f8] transition-colors">
-                            Dissolver
-                          </button>
-                          <button className="flex-1 py-3 px-4 bg-[#161616] text-white hover:bg-[#262626] transition-colors">
-                            Resolver
-                          </button>
+                      </section>
+                      <div className="flex gap-2 items-center self-start mt-10 text-neutral-800">
+                        <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
+                          Status:
+                        </span>
+                        <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-2 my-auto text-xs leading-none rounded-sm bg-zinc-100">
+                          <img
+                            src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/8c1af7523fbdfb5b8097ae5cb54b499951078f51?placeholderIfAbsent=true"
+                            className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square"
+                            alt=""
+                          />
+                          <span className="self-stretch my-auto text-neutral-800">
+                            {selectedReport.status}
+                          </span>
                         </div>
                       </div>
-                    </section>
+                      <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                        <button
+                          onClick={handleDissolveReport}
+                          className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                        >
+                          <span className="self-stretch my-auto text-neutral-800">
+                            Dissolver
+                          </span>
+                        </button>
+                        <button
+                          onClick={handleResolveReport}
+                          className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                        >
+                          <span className="self-stretch my-auto text-zinc-100">
+                            Resolver
+                          </span>
+                        </button>
+                      </div>
+                    </div>
                   </article>
                 </div>
               </div>

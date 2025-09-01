@@ -29,7 +29,7 @@ export function LeveBadge() {
 
 export function ModeradaBadge() {
     return (
-        <StatusBadge className="bg-yellow-800/10 text-yellow-700 mt-4">
+        <StatusBadge className="bg-yellow-800/10 text-yellow-700">
             Moderada
         </StatusBadge>
     );
@@ -37,7 +37,7 @@ export function ModeradaBadge() {
 
 export function CriticaBadge() {
     return (
-        <StatusBadge className="bg-red-700/10 text-red-900 mt-4">
+        <StatusBadge className="bg-red-700/10 text-red-900">
             Crítica
         </StatusBadge>
     );
@@ -45,7 +45,7 @@ export function CriticaBadge() {
 
 export function PendenteBadge() {
     return (
-        <StatusBadge className="bg-zinc-100 text-neutral-900 mt-4">
+        <StatusBadge className="bg-zinc-100 text-neutral-900">
             <Time size={16} className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square mr-1" />
             Pendente
         </StatusBadge>
@@ -54,7 +54,7 @@ export function PendenteBadge() {
 
 export function EmApuracaoBadge() {
     return (
-        <StatusBadge className="bg-zinc-100 text-neutral-800 mt-4">
+        <StatusBadge className="bg-zinc-100 text-neutral-800">
             <Renew size={16} className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square mr-1" />
             Em apuração
         </StatusBadge>
@@ -63,7 +63,7 @@ export function EmApuracaoBadge() {
 
 export function ResolvidaBadge() {
     return (
-        <StatusBadge className="bg-zinc-100 text-neutral-800 mt-4 mb-0">
+        <StatusBadge className="bg-zinc-100 text-neutral-800 mb-0">
             <CheckmarkOutline size={16} className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square mr-1" />
             Resolvida
         </StatusBadge>
