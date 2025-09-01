@@ -470,25 +470,17 @@ export default function CommunityAdminPage({
     }
   };
 
+  // Estados para modais de denúncia
+  const [isDissolveModalOpen, setIsDissolveModalOpen] = useState(false);
+  const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
+
   // Handlers para ações de denúncia
   const handleDissolveReport = () => {
-    if (selectedReport) {
-      toast.info('Funcionalidade de dissolver denúncia em desenvolvimento');
-      // Aqui você pode implementar a lógica para dissolver a denúncia
-      // Por exemplo: updateReportStatus(selectedReport.id, 'Arquivado')
-    }
+    setIsDissolveModalOpen(true);
   };
 
   const handleResolveReport = () => {
-    if (selectedReport) {
-      toast.success('Denúncia marcada como resolvida');
-      // Aqui você pode implementar a lógica para resolver a denúncia
-      // Por exemplo: updateReportStatus(selectedReport.id, 'Resolvido')
-      setSelectedReport({
-        ...selectedReport,
-        status: 'Resolvido'
-      });
-    }
+    setIsResolveModalOpen(true);
   };
 
   return (
@@ -1269,6 +1261,27 @@ export default function CommunityAdminPage({
         onReject={handleRejectCampaign}
         campaignTitle={selectedCampaign?.title || ""}
         campaignAuthor={selectedCampaign?.leader || ""}
+      />
+
+      {/* Modais de denúncia */}
+      <RejectCampaignModal
+        isOpen={isDissolveModalOpen}
+        onClose={() => setIsDissolveModalOpen(false)}
+        onReject={(subject, reason) => {
+          setIsDissolveModalOpen(false);
+        }}
+        campaignTitle={selectedReport?.title || ""}
+        campaignAuthor={selectedReport?.reporter || ""}
+      />
+
+      <ApproveCampaignModal
+        isOpen={isResolveModalOpen}
+        onClose={() => setIsResolveModalOpen(false)}
+        onApprove={(subject, message) => {
+          setIsResolveModalOpen(false);
+        }}
+        campaignTitle={selectedReport?.title || ""}
+        campaignAuthor={selectedReport?.reporter || ""}
       />
     </div>
   );
