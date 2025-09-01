@@ -65,6 +65,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fetchUser();
     }, [router]);
 
+    // Verificação periódica do token para logout automático
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const token = Cookies.get("token");
+            if (!token) {
+                logout();
+            }
+        }, 30000); // 30 segundos
+        return () => clearInterval(interval);
+    }, []);
+
     const logout = () => {
         Cookies.remove("token");
         setUser(null);
