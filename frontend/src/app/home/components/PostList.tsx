@@ -167,7 +167,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
           <div className="flex mt-2 w-px bg-zinc-300 min-h-[78px]" />
         )}
       </div>
-      <div className="flex-1 shrink my-auto basis-0 min-w-60 max-md:max-w-full">
+      <div className="flex-1 shrink basis-0 min-w-60 max-md:max-w-full">
         <div className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
           <div className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
             <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
