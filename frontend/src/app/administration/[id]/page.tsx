@@ -1165,82 +1165,118 @@ export default function CommunityAdminPage({
                 </main>
               </div>
             )}
-            {/* Announcement Details */}
-            {activeTab === "Anúncios" && selectedAnnouncement && (
-              <div className="bg-white p-6">
-                {/* Author info */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={
-                        selectedAnnouncement.user.profile_picture ||
-                        "/no-profile-pic.png"
-                      }
-                      alt={selectedAnnouncement.user.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {selectedAnnouncement.author}
-                    </span>
-                    <div className="w-1 h-1 rounded-full bg-[#525252]"></div>
-                    <span className="text-xs px-2 py-1 bg-black text-white">
-                      {selectedAnnouncement.user.role}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Announcement content */}
-                <div className="space-y-4 mb-8">
-                  {" "}
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Título:</p>
-                    <h2 className="text-lg font-medium">
-                      {selectedAnnouncement.title}
-                    </h2>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Descrição:</p>
-                    <p className="text-[#161616] whitespace-pre-line leading-relaxed mb-4">
-                      {selectedAnnouncement.description}
-                    </p>
-                    <p className="text-[#161616] mb-4">Atenciosamente,</p>
-                    <p className="text-[#161616]">
-                      Equipe de Administração da Comunidade
-                    </p>
-                  </div>
-                  {selectedAnnouncement.image && (
-                    <div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={selectedAnnouncement.image || "/placeholder.svg"}
-                        alt="Announcement"
-                        className="w-full max-w-md"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div>
-                    <p className="text-sm text-[#525252]">Data publicada:</p>
-                    <p className="font-medium">{selectedAnnouncement.date}</p>
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252]">Curtidas:</p>
-                    <p className="font-medium">0 curtidas</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Número de acessos:</p>
-                    <p className="font-medium">0 acessos</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Comentários:</p>
-                    <p className="font-medium">0 comentários</p>
-                  </div>
+            {/* Announcement Details - Updated with Figma Layout */}
+            {activeTab === "Anúncios" && selectedAnnouncement && !postsLoading && (
+              <div className="max-w-full">
+                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                  <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
+                    <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                      <div className="w-full max-md:max-w-full">
+                        <div className="flex justify-between items-start w-full max-md:max-w-full">
+                          <div className="flex items-center min-w-60">
+                            <img
+                              src={selectedAnnouncement.user.profile_picture || "/no-profile-pic.png"}
+                              alt={`${selectedAnnouncement.user.name} profile picture`}
+                              className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]"
+                            />
+                            <div className="self-stretch my-auto min-w-60 w-[342px]">
+                              <div className="flex gap-2 items-center w-full h-[23px]">
+                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto min-w-60">
+                                  <h2 className="self-stretch my-auto text-sm text-neutral-800">
+                                    {selectedAnnouncement.author}
+                                  </h2>
+                                  <img
+                                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/053d988ba4cfa8562519f55304901c8878c52e86?placeholderIfAbsent=true"
+                                    alt="Verification badge"
+                                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
+                                  />
+                                  <span className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-yellow-600 bg-opacity-40 text-yellow-950">
+                                    {translateUserRole(selectedAnnouncement.user.role || "admin")}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <section className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                          <div className="flex flex-wrap gap-4 items-center w-full max-md:max-w-full">
+                            <h3 className="self-stretch my-auto font-semibold leading-6 text-neutral-800">
+                              Título:{" "}
+                            </h3>
+                            <p className="self-stretch my-auto leading-8 text-neutral-800">
+                              {selectedAnnouncement.title}
+                            </p>
+                          </div>
+                          <div className="mt-2 w-full max-md:max-w-full">
+                            <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                              Descrição:
+                            </h3>
+                            <div className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                              {selectedAnnouncement.description ? (
+                                selectedAnnouncement.description.split('\n').map((paragraph, index) => (
+                                  <React.Fragment key={index}>
+                                    {paragraph}
+                                    {index < selectedAnnouncement.description!.split('\n').length - 1 && <br />}
+                                  </React.Fragment>
+                                ))
+                              ) : (
+                                "Descrição não disponível."
+                              )}
+                            </div>
+                          </div>
+                        </section>
+                        {selectedAnnouncement.image && (
+                          <img
+                            src={selectedAnnouncement.image}
+                            alt="Announcement illustration"
+                            className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
+                          />
+                        )}
+                      </div>
+                    </header>
+                    <footer className="flex flex-col justify-center py-8 pr-4 pl-8 w-full text-sm leading-none max-md:pl-5 max-md:max-w-full">
+                      <div className="w-full max-w-[698px] max-md:max-w-full">
+                        <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                          <div className="flex flex-col">
+                            <div className="flex gap-2 items-center self-start">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Data publicada:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedAnnouncement.date}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Número de acessos:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedAnnouncement.views || 0} acessos
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col w-[198px]">
+                            <div className="flex gap-2 items-center self-start">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Curtidas:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                0 curtidas
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4 w-full">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Comentários:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                0 comentários
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </footer>
+                  </article>
                 </div>
               </div>
             )}
