@@ -153,7 +153,7 @@ export default function ApproveCampaignModal({
         <footer className="flex flex-wrap items-center w-full text-sm leading-6 whitespace-nowrap max-md:max-w-full">
           <button
             onClick={onClose}
-            className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-200 min-w-60 text-neutral-800 w-[462px] max-md:pr-5 max-md:max-w-full hover:bg-neutral-300 transition-colors"
+            className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-200 min-w-60 text-neutral-800 w-[462px] max-md:pr-5 max-md:max-w-full hover:bg-neutral-300 transition-colors"
           >
             <span className="self-stretch my-auto text-neutral-800">
               Cancelar
@@ -161,7 +161,7 @@ export default function ApproveCampaignModal({
           </button>
           <button
             onClick={() => onApprove(subject, message)}
-            className="flex flex-1 shrink gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 basis-0 bg-neutral-800 min-w-60 text-zinc-100 max-md:pr-5 max-md:max-w-full hover:bg-neutral-700 transition-colors"
+            className="flex flex-1 cursor-pointer shrink gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 basis-0 bg-neutral-800 min-w-60 text-zinc-100 max-md:pr-5 max-md:max-w-full hover:bg-neutral-700 transition-colors"
           >
             <span className="self-stretch my-auto text-zinc-100">
               Aprovar
