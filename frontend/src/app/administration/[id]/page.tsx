@@ -23,6 +23,8 @@ import {
   FinalizadaBadge
 } from "@/components/badges/campaign/CampaignBadges";
 import { LeveBadge, ModeradaBadge, CriticaBadge } from "@/components/badges/complaints/ComplaintsBadges";
+import RejectComplaintModal from "@/components/modals/community/RejectComplaintModal";
+import ApproveComplaintModal from "@/components/modals/community/ApproveComplaintModal";
 
 type UserInfo = {
   id: string;
@@ -871,7 +873,7 @@ export default function CommunityAdminPage({
                         <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
                           <button
                             onClick={() => setIsRejectModalOpen(true)}
-                            className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                            className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
                           >
                             <span className="self-stretch my-auto text-neutral-800">
                               Rejeitar
@@ -879,7 +881,7 @@ export default function CommunityAdminPage({
                           </button>
                           <button
                             onClick={() => setIsApproveModalOpen(true)}
-                            className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                            className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
                           >
                             <span className="self-stretch my-auto text-zinc-100">
                               Aprovar
@@ -1022,7 +1024,7 @@ export default function CommunityAdminPage({
                       <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
                         <button
                           onClick={handleDissolveReport}
-                          className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                          className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
                         >
                           <span className="self-stretch my-auto text-neutral-800">
                             Dissolver
@@ -1030,7 +1032,7 @@ export default function CommunityAdminPage({
                         </button>
                         <button
                           onClick={handleResolveReport}
-                          className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                          className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
                         >
                           <span className="self-stretch my-auto text-zinc-100">
                             Resolver
@@ -1262,24 +1264,24 @@ export default function CommunityAdminPage({
       />
 
       {/* Modais de denúncia */}
-      <RejectCampaignModal
+      <RejectComplaintModal
         isOpen={isDissolveModalOpen}
         onClose={() => setIsDissolveModalOpen(false)}
         onReject={(subject, reason) => {
           setIsDissolveModalOpen(false);
         }}
-        campaignTitle={selectedReport?.title || ""}
-        campaignAuthor={selectedReport?.reporter || ""}
+        complaintTitle={selectedReport?.title || ""}
+        complaintAuthor={selectedReport?.reporter || ""}
       />
 
-      <ApproveCampaignModal
+      <ApproveComplaintModal
         isOpen={isResolveModalOpen}
         onClose={() => setIsResolveModalOpen(false)}
         onApprove={(subject, message) => {
           setIsResolveModalOpen(false);
         }}
-        campaignTitle={selectedReport?.title || ""}
-        campaignAuthor={selectedReport?.reporter || ""}
+        complaintTitle={selectedReport?.title || ""}
+        complaintAuthor={selectedReport?.reporter || ""}
       />
     </div>
   );
