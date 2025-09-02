@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Filter, SortDesc, Eye, Plus } from "lucide-react";
+import { ArrowLeft, Filter, Eye } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
@@ -26,6 +26,7 @@ import {
 import { LeveBadge, ModeradaBadge, CriticaBadge } from "@/components/badges/complaints/ComplaintsBadges";
 import RejectComplaintModal from "@/components/modals/community/RejectComplaintModal";
 import ApproveComplaintModal from "@/components/modals/community/ApproveComplaintModal";
+import { ChevronSort, Email } from "@carbon/icons-react";
 
 type UserInfo = {
   id: string;
@@ -77,6 +78,8 @@ type Announcement = {
   views?: number;
   description?: string;
   image?: string;
+  likes?: number;
+  comments?: number;
 };
 
 export default function CommunityAdminPage({
@@ -251,7 +254,9 @@ export default function CommunityAdminPage({
     },
     date: new Date(post.created_at).toLocaleDateString("pt-BR"),
     status: post.status === "active" ? "Publicado" : "Rascunho",
-    views: 0,
+    views: 0, // Não existe campo de views no backend, manter 0 ou ajustar se backend mudar
+    likes: post.likes_count ?? 0,
+    comments: post.comments_count ?? 0,
     description: post.content,
     image: post.image_url || undefined,
   });
@@ -539,15 +544,16 @@ export default function CommunityAdminPage({
               {/* Header with filters */}
               <div className="sticky top-0 p-4 border-b border-[#e0e0e0] flex items-center gap-2 bg-white z-20">
                 <button className="p-2 hover:bg-[#f4f4f4]">
+                  //TODO: colocar icone do carbon do filter
                   <Filter className="h-4 w-4 text-[#525252]" />
                 </button>
                 <button className="p-2 hover:bg-[#f4f4f4]">
-                  <SortDesc className="h-4 w-4 text-[#525252]" />
+                  <ChevronSort className="h-4 w-4 text-[#525252]" />
                 </button>
                 {activeTab === "Anúncios" && (
-                  <button className="ml-auto px-3 py-1.5 bg-[#161616] text-white text-sm hover:bg-[#262626] flex items-center gap-1">
+                  <button className="ml-auto px-3 min-w-[138px] min-h-[56px] py-1.5 bg-[#161616] text-white text-sm hover:bg-[#262626] flex items-center gap-10">
                     Anunciar
-                    <Plus className="h-4 w-4" />
+                    <Email className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -701,7 +707,7 @@ export default function CommunityAdminPage({
                         </p>{" "}
                       </div>
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-[#525252]">0</span>
+                        <span className="text-xs text-[#525252]">{announcement.views || 0}</span>
                         <Eye className="h-3 w-3 text-[#525252]" />
                       </div>
                     </div>
@@ -1261,7 +1267,7 @@ export default function CommunityAdminPage({
                                 Curtidas:
                               </span>
                               <span className="self-stretch my-auto text-neutral-500">
-                                0 curtidas
+                                {selectedAnnouncement.likes || 0} curtidas
                               </span>
                             </div>
                             <div className="flex gap-2 items-center mt-4 w-full">
@@ -1269,7 +1275,7 @@ export default function CommunityAdminPage({
                                 Comentários:
                               </span>
                               <span className="self-stretch my-auto text-neutral-500">
-                                0 comentários
+                                {selectedAnnouncement.comments || 0} comentários
                               </span>
                             </div>
                           </div>
