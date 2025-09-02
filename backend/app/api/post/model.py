@@ -75,6 +75,7 @@ class CampaignParticipants(Base):
         UUIDColumn, ForeignKey('campaign_posts.post_id'), nullable=False
     )
     user_id = Column(UUIDColumn, ForeignKey('users.id'), nullable=False)
+    member_id = Column(UUIDColumn, ForeignKey('community_members.id'), nullable=False)
     joined_at = Column(DateTime, nullable=False, default=func.now())
 
 

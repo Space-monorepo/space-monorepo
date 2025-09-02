@@ -1,6 +1,5 @@
 from uuid import UUID
 
-from app.api.communities.exceptions import CommunityMemberNotFoundError
 from app.api.communities.schema import CommunityMemberResponse
 from app.api.communities.service import CommunityService
 from app.api.post.exceptions import (
@@ -38,6 +37,7 @@ from app.utils.schema import PaginationResponse, PaginationSearchParams
 # TODO: Fazer verificação de quem pode editar (update) cada elemento do post
 
 
+# ruff: noqa: PLR0904
 class PostService:
     REPORT_THRESHOLD = 30
 
@@ -161,33 +161,21 @@ class PostService:
             raise PostLikesNotFoundError('Post likes not found')
         return like
 
-    def like_post(self, post_id: UUID, user_id: UUID) -> PostResponse:
+    def like_post(self, post_id: UUID, member_id: UUID) -> PostResponse:
         post = self._get_post(post_id)
-        member = self.community_service.get_member_association(
-            user_id, post.community_id
-        )
-        if not member:
-            raise CommunityMemberNotFoundError('Community member not found')
-
         post.likes_count += 1
+
         try:
-            self.post_likes_repo.save(PostLikes(post_id=post_id, member_id=member.id))
+            self.post_likes_repo.save(PostLikes(post_id=post_id, member_id=member_id))
             post = self.post_repo.save(post)
             return self._map_post_to_response(post)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error liking post') from e
 
-    def unlike_post(self, post_id: UUID, user_id: UUID) -> PostResponse:
+    def unlike_post(self, post_id: UUID, member_id: UUID) -> PostResponse:
         try:
             post = self._get_post(post_id)
-            member = self.community_service.get_member_association(
-                user_id, post.community_id
-            )
-            if not member:
-                raise CommunityMemberNotFoundError('Community member not found')
-
-            like = self.get_like(post_id, member.id)
-
+            like = self.get_like(post_id, member_id)
             post.likes_count -= 1
             self.post_likes_repo.delete(like)
             post = self.post_repo.save(post)
@@ -256,14 +244,18 @@ class PostService:
             current_limit=params.limit or 10,
         )
 
-    def participate_campaign(self, post_id: UUID, user_id: UUID) -> CampaignParticipants:
+    def participate_campaign(
+        self, post_id: UUID, member_id: UUID
+    ) -> CampaignParticipants:
         try:
             campaign = self.campaign_repo.get_by_id(post_id)
             campaign.current_participants += 1
             self.campaign_repo.save(campaign)
+            member = self.community_service.get_member(member_id)
             campaign_participants = CampaignParticipants(
                 campaign_id=post_id,
-                user_id=user_id,
+                member_id=member.id,
+                user_id=member.user_id,
             )
             participant_saved = self.campaign_participants_repo.save(
                 campaign_participants
@@ -273,6 +265,14 @@ class PostService:
             raise UnexpectedPostError(
                 'Unexpected error participating in campaign'
             ) from e
+
+    def list_participants_campaign(self, post_id: UUID) -> list[CommunityMemberResponse]:
+        self._get_post(post_id)
+        participants = self.campaign_participants_repo.list_by_post(post_id)
+        return [
+            self.community_service._map_member_to_response(participant)
+            for participant in participants
+        ]
 
     def create_complaint(self, post: PostCreate) -> ComplaintResponse:
         try:
@@ -296,6 +296,18 @@ class PostService:
             return poll
         except Exception as e:
             raise UnexpectedPostError('Unexpected error getting poll') from e
+
+    def list_poll_options(self, post_id: UUID) -> list[PollOptionResponse]:
+        self._get_post(post_id)
+        poll_options = self.poll_options_repo.list_by_post(post_id)
+        return [
+            PollOptionResponse(
+                id=option.id,
+                answer=option.answer,
+                votes_count=option.votes_count,
+            )
+            for option in poll_options
+        ]
 
     def create_poll(self, poll_create: PollCreate) -> PollResponse:
         try:

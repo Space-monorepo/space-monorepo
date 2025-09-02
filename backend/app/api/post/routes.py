@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.communities.model import CommunityMember
 from app.api.communities.schema import CommunityMemberResponse
 from app.api.post.schemas import (
     CampaignParticipantsResponse,
@@ -13,7 +14,6 @@ from app.api.post.schemas import (
     PostUpdate,
 )
 from app.api.post.service import PostService
-from app.api.users.model import User
 from app.api.users.schema import UserResponse
 from app.auth.deps import get_current_user, require_post_owner, require_roles
 from app.core.database import get_db
@@ -31,7 +31,7 @@ router = APIRouter(prefix='/posts', tags=['posts'])
 def get_post(
     post_id: str,
     session: Session = Depends(get_db),
-    _: UserResponse = Depends(require_roles(['member'])),
+    _: CommunityMember = Depends(require_roles(['member'])),
 ) -> PostResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).get_post(post_id)
@@ -46,7 +46,7 @@ def list_posts_by_user(
     user_id: str,
     params: PaginationSearchParams = Depends(PaginationSearchParams),
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['member'])),
+    _: CommunityMember = Depends(require_roles(['member'])),
 ) -> PaginationResponse[PostResponse]:
     with TransactionManager(session) as tm:
         return PostService(tm).list_posts_by_user(user_id, params)
@@ -61,7 +61,7 @@ def list_posts_by_community(
     community_id: str,
     params: PaginationSearchParams = Depends(PaginationSearchParams),
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin', 'moderator'])),
+    _: CommunityMember = Depends(require_roles(['admin', 'moderator'])),
 ) -> PaginationResponse[PostResponse]:
     with TransactionManager(session) as tm:
         posts = PostService(tm).list_posts_by_community(community_id, params)
@@ -76,7 +76,7 @@ def list_posts_by_community(
 def create_post(
     post: PostCreate,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['member'])),
+    _: CommunityMember = Depends(require_roles(['member'])),
 ) -> PostResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).create_post(post)
@@ -102,15 +102,13 @@ def update_post(
     post_id: str,
     post: PostUpdate,
     session: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(['member'])),
+    current_member: CommunityMember = Depends(require_roles(['member'])),
 ) -> PostResponse:
-    if post.content and not require_post_owner(post_id, session, current_user):
+    if post.content and not require_post_owner(post_id, session, current_member):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
         )
-    if post.status and not require_roles(['admin', 'moderator'])(
-        community_id, session, current_user
-    ):
+    if post.status and current_member.role not in {'admin', 'moderator'}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
         )
@@ -122,8 +120,12 @@ def update_post(
 def delete_post(
     post_id: str,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['member'])),
+    current_member: CommunityMember = Depends(require_roles(['member'])),
 ):
+    if not require_post_owner(post_id, session, current_member):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
+        )
     with TransactionManager(session) as tm:
         PostService(tm).delete_post(post_id)
 
@@ -136,10 +138,10 @@ def delete_post(
 def like_post(
     post_id: str,
     session: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(['member'])),
+    current_member: CommunityMember = Depends(require_roles(['member'])),
 ) -> PostResponse:
     with TransactionManager(session) as tm:
-        return PostService(tm).like_post(post_id, current_user.id)
+        return PostService(tm).like_post(post_id, current_member.id)
 
 
 @router.post(
@@ -150,10 +152,10 @@ def like_post(
 def unlike_post(
     post_id: str,
     session: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(['member'])),
+    current_member: CommunityMember = Depends(require_roles(['member'])),
 ) -> PostResponse:
     with TransactionManager(session) as tm:
-        return PostService(tm).unlike_post(post_id, current_user.id)
+        return PostService(tm).unlike_post(post_id, current_member.id)
 
 
 @router.get(
@@ -164,7 +166,7 @@ def unlike_post(
 def list_likes_post(
     post_id: str,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['member'])),
+    _: CommunityMember = Depends(require_roles(['member'])),
 ) -> list[CommunityMemberResponse]:
     with TransactionManager(session) as tm:
         return PostService(tm).list_likes_post(post_id)
@@ -178,7 +180,7 @@ def list_likes_post(
 def report_post(
     post_id: str,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['member'])),
+    _: CommunityMember = Depends(require_roles(['member'])),
 ) -> PostResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).report_post(post_id)
@@ -192,7 +194,7 @@ def report_post(
 def create_campaign(
     post: PostCreate,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['member'])),
+    _: CommunityMember = Depends(require_roles(['member'])),
 ) -> CampaignResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).create_campaign(post)
@@ -204,11 +206,11 @@ def create_campaign(
 def participate_campaign(
     post_id: str,
     session: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(['member'])),
+    current_member: CommunityMember = Depends(require_roles(['member'])),
 ) -> CampaignParticipantsResponse:
     with TransactionManager(session) as tm:
         campaign_participants = PostService(tm).participate_campaign(
-            post_id, current_user.id
+            post_id, current_member.id
         )
         return CampaignParticipantsResponse.model_validate(campaign_participants)
 
@@ -235,7 +237,7 @@ def list_user_campaigns(
 def create_complaint(
     post: PostCreate,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['member'])),
+    _: CommunityMember = Depends(require_roles(['member'])),
 ) -> ComplaintResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).create_complaint(post)
@@ -249,7 +251,7 @@ def create_complaint(
 def create_poll(
     poll: PollCreate,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin', 'moderator'])),
+    _: CommunityMember = Depends(require_roles(['admin', 'moderator'])),
 ) -> PollResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).create_poll(poll)
@@ -263,7 +265,7 @@ def create_poll(
 def vote_poll(
     poll_option_id: str,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['member'])),
+    _: CommunityMember = Depends(require_roles(['member'])),
 ) -> PollResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).vote_poll(poll_option_id)
