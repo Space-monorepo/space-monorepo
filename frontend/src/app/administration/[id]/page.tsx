@@ -107,7 +107,7 @@ export default function CommunityAdminPage({
       // O toast já é exibido no hook, mas podemos adicionar lógica extra aqui se necessário
     },
     onError: (error) => {
-      console.error("Erro na ação do usuário:", error);
+      toast.error("Erro ao realizar ação: " + error.message);
       // O toast de erro já é exibido no hook
     },
   });
@@ -151,7 +151,6 @@ export default function CommunityAdminPage({
   // Buscar dados da comunidade quando o componente monta ou o ID muda
   useEffect(() => {
     if (id) {
-      console.log("ID da comunidade:", id); // Aqui você tem acesso ao ID
       fetchCommunity(id);
       fetchCommunityPosts(id);
     }
@@ -293,7 +292,6 @@ export default function CommunityAdminPage({
       try {
         await fetchCampaignDetailsById(id, campaign.id);
       } catch (error) {
-        console.error("Erro ao buscar detalhes da campanha:", error);
         toast.error("Erro ao carregar detalhes da campanha");
       }
     }
@@ -306,7 +304,7 @@ export default function CommunityAdminPage({
     // Buscar detalhes da primeira campanha automaticamente
     if (id) {
       fetchCampaignDetailsById(id, firstCampaign.id).catch(error => {
-        console.error("Erro ao buscar detalhes da campanha inicial:", error);
+        toast.error("Erro ao carregar detalhes da campanha");
       });
     }
   } else if (
@@ -518,7 +516,7 @@ export default function CommunityAdminPage({
             {tabs.map((tab) => (
               <button
                 key={tab}
-                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] ${activeTab === tab
+                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${activeTab === tab
                   ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
                   : "text-[#525252]"
                   }`}
@@ -959,7 +957,7 @@ export default function CommunityAdminPage({
                     </div>
                     <div className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
                       <section className="w-full text-sm leading-none max-md:max-w-full">
-                        <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                        <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
                           <div className="flex flex-col items-start">
                             <div className="flex gap-2 items-center">
                               <span className="self-stretch my-auto font-medium text-neutral-800">
