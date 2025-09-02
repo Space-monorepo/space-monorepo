@@ -88,12 +88,12 @@ def test_list_posts_by_community_route(authenticate_client, posts_on_db):
 
 
 @pytest.mark.integration
-def test_update_post_route(authenticate_client, post_on_db):
+def test_update_post_route(authenticate_client, post_on_db, community_member_on_db):
     post_update = PostUpdate(
         content='Updated content',
     )
 
-    response = authenticate_client.patch(
+    response = authenticate_client.patch( 
         f'/posts/{post_on_db.community_id}/post/{post_on_db.id}',
         json=post_update.model_dump(mode='json'),
     )
@@ -103,7 +103,7 @@ def test_update_post_route(authenticate_client, post_on_db):
 
 
 @pytest.mark.integration
-def test_update_post_status_route(authenticate_client, post_on_db):
+def test_update_post_status_route(authenticate_client, post_on_db, community_member_on_db):
     post_update = PostUpdate(
         status=PostStatusEnum.SUSPENDED,
     )

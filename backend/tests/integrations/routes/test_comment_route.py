@@ -211,7 +211,7 @@ def test_unlike_comment_route(
 
     like_db = session_sql.query(CommentLikes).filter(
         CommentLikes.comment_id == comment_on_db.id,
-        CommentLikes.user_id == community_member_on_db.user_id
+        CommentLikes.member_id == community_member_on_db.id
     ).first()
     assert like_db is None
 
@@ -229,9 +229,7 @@ def test_list_likes_comment_route(authenticate_client, comment_on_db, community_
     response_data = response.json()
     assert response.status_code == status.HTTP_200_OK
     assert len(response_data) == 1
-    assert response_data[0]['comment_id'] == str(comment_on_db.id)
-    assert response_data[0]['user_id'] == str(community_member_on_db.user_id)
-    assert 'created_at' in response_data[0]
+    assert response_data[0]['id'] == str(community_member_on_db.id)
 
 
 @pytest.mark.integration
@@ -246,21 +244,6 @@ def test_report_comment_route(session_sql, authenticate_client, comment_on_db, c
 
     comment_db = session_sql.query(Comment).filter(Comment.id == comment_on_db.id).first()
     assert comment_db.report_count == original_report_count + 1
-
-
-@pytest.mark.integration
-def test_list_user_liked_comments_route(authenticate_client, comment_on_db, community_member_on_db):
-    response = authenticate_client.post(
-        f'/comments/{community_member_on_db.community_id}/comment/{comment_on_db.id}/like'
-    )
-    assert response.status_code == status.HTTP_200_OK
-
-    response = authenticate_client.get('/comments/list-user-liked-comments')
-    response_data = response.json()
-    assert response.status_code == status.HTTP_200_OK
-    assert len(response_data['items']) > 0
-    assert response_data['items'][0]['id'] == str(comment_on_db.id)
-    assert response_data['total'] > 0
 
 
 @pytest.mark.integration

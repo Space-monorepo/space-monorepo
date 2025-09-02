@@ -77,7 +77,7 @@ class PostCreate(BaseModel):
     content: str = Field(
         ...,
         min_length=1,
-        max_length=255,
+        max_length=2000,
         description='Content of the post, required for certain types.',
     )
     image_url: str | None = Field(
@@ -238,6 +238,7 @@ class CampaignResponse(BaseModel):
 class CampaignParticipantsResponse(BaseModel):
     campaign_id: uuid.UUID = Field(..., description='Campaign id of the participant')
     user_id: uuid.UUID = Field(..., description='User id of the participant')
+    member_id: uuid.UUID = Field(..., description='Member id of the participant')
     joined_at: datetime = Field(..., description='Joined at of the participant')
 
     model_config = ConfigDict(
@@ -247,6 +248,7 @@ class CampaignParticipantsResponse(BaseModel):
                 {
                     'campaign_id': '123',
                     'user_id': '456',
+                    'member_id': '789',
                     'joined_at': '2021-01-01T00:00:00Z',
                 }
             ]

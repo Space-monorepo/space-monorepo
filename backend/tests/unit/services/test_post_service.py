@@ -609,11 +609,10 @@ def test_like_post_service_success():
     service.community_service = mock_community_service
 
     # Act
-    result = service.like_post(fake_post_id, fake_user_id)
+    result = service.like_post(fake_post_id, fake_member_id)
 
     # Assert
     mock_post_repo.get_by_id.assert_called_once_with(fake_post_id)
-    mock_community_service.get_member_association.assert_called_once_with(fake_user_id, fake_community_id)
     mock_post_likes_repo.save.assert_called_once()
     mock_post_repo.save.assert_called_once_with(fake_existing_post)
     assert fake_existing_post.likes_count == 1  # Verificar que foi incrementado
@@ -700,7 +699,6 @@ def test_unlike_post_service_success():
     mock_post_likes_repo.delete.return_value = True
 
     mock_community_service = Mock()
-    mock_community_service.get_member_association.return_value = fake_member_association
 
     service = PostService(mock_tm)
     service.post_repo = mock_post_repo
@@ -708,11 +706,10 @@ def test_unlike_post_service_success():
     service.community_service = mock_community_service
 
     # Act
-    result = service.unlike_post(fake_post_id, fake_user_id)
+    result = service.unlike_post(fake_post_id, fake_member_id)
 
     # Assert
     mock_post_repo.get_by_id.assert_called_once_with(fake_post_id)
-    mock_community_service.get_member_association.assert_called_once_with(fake_user_id, fake_community_id)
     mock_post_likes_repo.get_by_id.assert_called_once_with(fake_post_id, fake_member_id)
     mock_post_likes_repo.delete.assert_called_once_with(fake_existing_like)
     mock_post_repo.save.assert_called_once_with(fake_existing_post)
@@ -895,13 +892,13 @@ def test_participate_campaign_service_success():
     Tests the `participate_campaign` method of PostService.
 
     Scenario:
-    - Given a valid campaign post ID and user ID
+    - Given a valid campaign post ID and member ID
     - When the service adds user to campaign participants
     - Then it should increment participants count and return participant record
     """
     # Arrange
     fake_post_id = uuid4()
-    fake_user_id = uuid4()
+    fake_member_id = uuid4()
 
     fake_campaign = Mock(spec=CampaignPost)
     fake_campaign.post_id = fake_post_id
@@ -917,7 +914,7 @@ def test_participate_campaign_service_success():
 
     fake_saved_participant = Mock()
     fake_saved_participant.campaign_id = fake_post_id
-    fake_saved_participant.user_id = fake_user_id
+    fake_saved_participant.member_id = fake_member_id
     fake_saved_participant.joined_at = datetime.now(timezone.utc)
 
     mock_tm = Mock()
@@ -928,15 +925,25 @@ def test_participate_campaign_service_success():
     mock_campaign_participants_repo = Mock()
     mock_campaign_participants_repo.save.return_value = fake_saved_participant
 
+    # Mock do member retornado pelo community_service.get_member
+    fake_member = Mock()
+    fake_member.id = fake_member_id
+    fake_member.user_id = uuid4()  # Pode ser qualquer UUID para user_id
+
+    mock_community_service = Mock()
+    mock_community_service.get_member.return_value = fake_member
+
     service = PostService(mock_tm)
     service.campaign_repo = mock_campaign_repo
     service.campaign_participants_repo = mock_campaign_participants_repo
+    service.community_service = mock_community_service
 
     # Act
-    result = service.participate_campaign(fake_post_id, fake_user_id)
+    result = service.participate_campaign(fake_post_id, fake_member_id)
 
     # Assert
     mock_campaign_repo.get_by_id.assert_called_once_with(fake_post_id)
+    mock_community_service.get_member.assert_called_once_with(fake_member_id)
     mock_campaign_repo.save.assert_called_once_with(fake_campaign)
     mock_campaign_participants_repo.save.assert_called_once()
     
@@ -946,12 +953,13 @@ def test_participate_campaign_service_success():
     # Verificar o CampaignParticipants criado
     saved_participant_call = mock_campaign_participants_repo.save.call_args[0][0]
     assert saved_participant_call.campaign_id == fake_post_id
-    assert saved_participant_call.user_id == fake_user_id
+    assert saved_participant_call.member_id == fake_member_id
+    assert saved_participant_call.user_id == fake_member.user_id
     
     # Verificar o resultado
     assert result is not None
     assert result.campaign_id == fake_post_id
-    assert result.user_id == fake_user_id
+    assert result.member_id == fake_member_id
 
 
 @pytest.mark.unit

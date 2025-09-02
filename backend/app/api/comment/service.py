@@ -11,12 +11,13 @@ from app.api.comment.model import Comment, CommentLikes
 from app.api.comment.schema import (
     CommentAuthor,
     CommentCreate,
-    CommentLikeResponse,
     CommentResponse,
     CommentStatusEnum,
     CommentUpdate,
     PostRelated,
 )
+from app.api.communities.schema import CommunityMemberResponse
+from app.api.communities.service import CommunityService
 from app.api.post.exceptions import PostNotFoundError
 from app.core.transaction import TransactionManager
 from app.utils.schema import PaginationResponse, PaginationSearchParams
@@ -31,6 +32,7 @@ class CommentService:
         self.comment_likes_repo = tm.get_comment_likes_repository()
         self.post_repo = tm.get_post_repository()
         self.member_repo = tm.get_member_repository()
+        self.community_service = CommunityService(tm)
 
     def _get_comment(self, comment_id: UUID) -> Comment:
         comment = self.comment_repo.get_by_id(comment_id)
@@ -241,26 +243,26 @@ class CommentService:
         except Exception as e:
             raise UnexpectedCommentError('Unexpected error deleting comment') from e
 
-    def get_like(self, comment_id: UUID, user_id: UUID) -> CommentLikes:
-        like = self.comment_likes_repo.get_by_comment_and_user(comment_id, user_id)
+    def get_like(self, comment_id: UUID, member_id: UUID) -> CommentLikes:
+        like = self.comment_likes_repo.get_by_comment_and_member(comment_id, member_id)
         if not like:
             raise CommentLikesNotFoundError('Comment likes not found')
         return like
 
-    def like_comment(self, comment_id: UUID, user_id: UUID) -> CommentResponse:
+    def like_comment(self, comment_id: UUID, member_id: UUID) -> CommentResponse:
         comment = self._get_comment(comment_id)
         comment.likes_count += 1
         try:
-            like = CommentLikes(comment_id=comment_id, user_id=user_id)
+            like = CommentLikes(comment_id=comment_id, member_id=member_id)
             self.comment_likes_repo.save(like)
             comment = self.comment_repo.save(comment)
             return self._map_comment_to_response(comment)
         except Exception as e:
             raise UnexpectedCommentError('Unexpected error liking comment') from e
 
-    def unlike_comment(self, comment_id: UUID, user_id: UUID) -> CommentResponse:
+    def unlike_comment(self, comment_id: UUID, member_id: UUID) -> CommentResponse:
         comment = self._get_comment(comment_id)
-        like = self.get_like(comment_id, user_id)
+        like = self.get_like(comment_id, member_id)
 
         try:
             if comment.likes_count > 0:
@@ -271,17 +273,15 @@ class CommentService:
         except Exception as e:
             raise UnexpectedCommentError('Unexpected error unliking comment') from e
 
-    def list_likes_comment(self, comment_id: UUID) -> list[CommentLikeResponse]:
+    def list_likes_comment(self, comment_id: UUID) -> list[CommunityMemberResponse]:
         self._get_comment(comment_id)
-        likes = self.comment_likes_repo.list_by_comment(comment_id)
-        return [
-            CommentLikeResponse(
-                comment_id=like.comment_id,
-                user_id=like.user_id,
-                created_at=like.created_at,
+        members = self.comment_likes_repo.list_by_comment(comment_id)
+        members_response = []
+        for member in members:
+            members_response.append(
+                self.community_service._map_member_to_response(member)
             )
-            for like in likes
-        ]
+        return members_response
 
     def report_comment(self, comment_id: UUID) -> CommentResponse:
         comment = self._get_comment(comment_id)
@@ -298,17 +298,3 @@ class CommentService:
             return self._map_comment_to_response(comment)
         except Exception as e:
             raise UnexpectedCommentError('Unexpected error reporting comment') from e
-
-    def list_user_liked_comments(
-        self, user_id: UUID, params: PaginationSearchParams
-    ) -> PaginationResponse[CommentResponse]:
-        comments, total = self.comment_likes_repo.list_user_liked_comments(
-            user_id, params
-        )
-        return PaginationResponse(
-            items=[self._map_comment_to_response(comment) for comment in comments],
-            total=total,
-            has_more=total > (params.offset or 0) + (params.limit or 10),
-            current_offset=params.offset or 0,
-            current_limit=params.limit or 10,
-        )

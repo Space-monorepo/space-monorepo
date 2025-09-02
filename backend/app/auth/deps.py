@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.transaction import TransactionManager
 from app.api.post.service import PostService
+from app.api.communities.model import CommunityMember
 from app.api.users.model import User
 from app.api.users.service import UserService
 
@@ -44,7 +45,7 @@ def require_roles(allowed_roles: list[str]):
         community_id: str,
         session: Session = Depends(get_db),
         user: User = Depends(get_current_user),
-    ) -> User:
+    ) -> CommunityMember:
         with TransactionManager(session) as tm:
             try:
                 member = CommunityService(tm).get_member_association(user.id, community_id)
@@ -53,12 +54,12 @@ def require_roles(allowed_roles: list[str]):
                     status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
                 )
         if allowed_roles == ['member']:
-            return user
+            return member
         if member.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
             )
-        return user
+        return member
 
     return role_checker
 
@@ -66,26 +67,26 @@ def require_roles(allowed_roles: list[str]):
 def require_post_owner(
     post_id: str,
     session: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-) -> User:
+    member: CommunityMember = Depends(require_roles(['member'])),
+) -> CommunityMember:
     with TransactionManager(session) as tm:
         post = PostService(tm).get_post(post_id)
-    if str(post.user.id) != str(user.id):
+    if str(post.user.id) != str(member.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
         )
-    return user
+    return member
 
 
 def require_comment_owner(
     comment_id: str,
     session: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-) -> User:
+    member: CommunityMember = Depends(require_roles(['member'])),
+) -> CommunityMember:
     with TransactionManager(session) as tm:
         comment = CommentService(tm).get_comment(comment_id)
-    if str(comment.user.id) != str(user.id):
+    if str(comment.user.id) != str(member.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
         )
-    return user
+    return member

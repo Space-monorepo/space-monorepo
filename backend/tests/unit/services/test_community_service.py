@@ -719,6 +719,7 @@ def test_create_member_service_success():
 
     # Create a properly configured member mock that will be returned by save()
     fake_saved_member = Mock(spec=CommunityMember)
+    fake_saved_member.id = uuid4()  # Add missing id attribute with proper UUID
     fake_saved_member.user_id = fake_user_id
     fake_saved_member.community_id = fake_community_id
     fake_saved_member.role = CommunityMemberRoleEnum.MEMBER
@@ -753,8 +754,8 @@ def test_create_member_service_success():
     mock_member_repo.save.assert_called_once()
     # Verify the real _map_member_to_response was executed by checking the result
     assert result is not None
-    assert str(result.user_id) == fake_user_id
-    assert str(result.community_id) == fake_community_id
+    assert str(result.user.id) == fake_user_id
+    assert str(result.community.id) == fake_community_id
     assert result.role == CommunityMemberRoleEnum.MEMBER
     assert result.reputation == 10
     assert result.status_participation == CommunityMemberStatusEnum.ACTIVE

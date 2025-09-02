@@ -297,10 +297,11 @@ def campaign_post_on_db(session_sql, post_on_db):
 
 
 @pytest.fixture
-def campaign_participants_on_db(session_sql, campaign_post_on_db, user_on_db):
+def campaign_participants_on_db(session_sql, campaign_post_on_db, community_member_on_db):
     campaign_participants = CampaignParticipants(
         campaign_id=campaign_post_on_db.post_id,
-        user_id=user_on_db.id,
+        user_id=community_member_on_db.user_id,
+        member_id=community_member_on_db.id,
     )
 
     session_sql.add(campaign_participants)

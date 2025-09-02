@@ -119,8 +119,7 @@ class CommunityMemberUpdate(BaseModel):
 
 
 class CommunityMemberResponse(BaseModel):
-    user_id: uuid.UUID
-    community_id: uuid.UUID
+    id: uuid.UUID
     user: UserResponse
     community: CommunityRelated
     role: CommunityMemberRoleEnum
@@ -134,8 +133,7 @@ class CommunityMemberResponse(BaseModel):
         json_schema_extra={
             'examples': [
                 {
-                    'user_id': '123e4567-e89b-12d3-a456-426614174002',
-                    'community_id': '123e4567-e89b-12d3-a456-426614174001',
+                    'id': '123e4567-e89b-12d3-a456-426614174002',
                     'user': {
                         'id': '123e4567-e89b-12d3-a456-426614174002',
                         'email': 'member@example.com',

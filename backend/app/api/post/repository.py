@@ -347,6 +347,18 @@ class CampaignParticipantsRepository(BaseRepository[CampaignParticipants]):
         )
         return True
 
+    def list_by_post(self, post_id: UUID) -> list[CommunityMember]:
+        community_members = (
+            self.session.query(CommunityMember)
+            .join(
+                CampaignParticipants,
+                CommunityMember.id == CampaignParticipants.member_id,
+            )
+            .filter(CampaignParticipants.campaign_id == post_id)
+            .all()
+        )
+        return community_members
+
 
 class PostLikesRepository(BaseRepository[PostLikes]):
     def __init__(self, session: Session):

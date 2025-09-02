@@ -77,8 +77,8 @@ def test_list_community_members_route(authenticate_client, community_on_db, comm
     assert 'items' in response_data
     assert 'total' in response_data
     assert len(response_data['items']) > 0
-    assert response_data['items'][0]['user_id'] == str(community_member_on_db.user_id)
-    assert response_data['items'][0]['community_id'] == str(community_member_on_db.community_id)
+    assert response_data['items'][0]['user']['id'] == str(community_member_on_db.user_id)
+    assert response_data['items'][0]['community']['id'] == str(community_member_on_db.community_id)
     assert response_data['items'][0]['role'] == community_member_on_db.role
 
 
@@ -104,6 +104,6 @@ def test_list_community_moderators_route(authenticate_client, community_on_db, c
     assert 'items' in response_data
     assert 'total' in response_data
     assert len(response_data['items']) > 0
-    assert response_data['items'][0]['user_id'] == str(community_member_on_db.user_id)
-    assert response_data['items'][0]['community_id'] == str(community_member_on_db.community_id)
+    assert response_data['items'][0]['user']['id'] == str(community_member_on_db.user_id)
+    assert response_data['items'][0]['community']['id'] == str(community_member_on_db.community_id)
     assert response_data['items'][0]['role'] == community_member_on_db.role
