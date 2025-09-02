@@ -80,4 +80,8 @@ class CommunityMember(Base):
 
     liked_posts = relationship('Post', secondary='post_likes', back_populates='likes')
 
+    liked_comments = relationship(
+        'Comment', secondary='comment_likes', back_populates='liked_by', viewonly=True
+    )
+
     badges = relationship('Badge', secondary='member_badges', back_populates='members')

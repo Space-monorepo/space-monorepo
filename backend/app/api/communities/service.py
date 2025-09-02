@@ -32,8 +32,7 @@ class CommunityService:
     @staticmethod
     def _map_member_to_response(member: CommunityMember) -> CommunityMemberResponse:
         return CommunityMemberResponse(
-            user_id=member.user_id,
-            community_id=member.community_id,
+            id=member.id,
             user=member.user,
             community=CommunityRelated(
                 id=member.community.id, name=member.community.name

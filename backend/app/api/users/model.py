@@ -48,11 +48,3 @@ class User(Base):
     comments = relationship(
         'Comment', back_populates='user', cascade='all, delete-orphan'
     )
-
-    liked_comments = relationship(
-        'Comment', secondary='comment_likes', back_populates='liked_by', viewonly=True
-    )
-
-    comment_likes = relationship(
-        'CommentLikes', back_populates='user', cascade='all, delete-orphan'
-    )
