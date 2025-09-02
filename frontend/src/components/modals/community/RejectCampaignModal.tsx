@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/app/api/src/auth/useAuth";
 import { Attachment, FaceActivated, TextBold, TextItalic, Close } from "@carbon/icons-react";
 
 type RejectCampaignModalProps = {
@@ -8,14 +9,11 @@ type RejectCampaignModalProps = {
   onClose: () => void;
   onReject: (subject: string, reason: string) => void;
   campaignTitle: string;
-  campaignAuthor: string;
 };
 
-export default function RejectCampaignModal({
-  isOpen,
-  onClose,
-  onReject,
-}: RejectCampaignModalProps) {
+export default function RejectCampaignModal(props: RejectCampaignModalProps) {
+  const { isOpen, onClose, onReject, campaignTitle } = props;
+  const { user } = useAuth();
   const [subject, setSubject] = useState("");
   const [reason, setReason] = useState("");
 
@@ -123,13 +121,13 @@ export default function RejectCampaignModal({
                   <div className="w-6 h-6 rounded-2xl overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src="/ProfilePic1.svg"
-                      alt="Briann Gomes"
+                      src={user?.profile_image_url || "/no-profile-pic.png"}
+                      alt={user?.name || "Usuário"}
                       className="object-contain w-full h-full"
                     />
                   </div>
                   <span className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800">
-                    Briann Gomes
+                    {user?.name || "Usuário"}
                   </span>
                 </div>
               </div>

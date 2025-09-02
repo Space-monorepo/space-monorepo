@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
 import ApproveCampaignModal from "@/components/modals/community/ApproveCampaignModal";
 import RejectCampaignModal from "@/components/modals/community/RejectCampaignModal";
+import { useAuth } from "@/app/api/src/auth/useAuth";
 import useCommunityById from "@/app/api/src/hooks/community/useCommunityById";
 import useCommunityUserActions from "@/app/api/src/hooks/community/useCommunityUserActions";
 import useCommunityPosts from "@/app/api/src/hooks/post/useCommunityPosts";
@@ -83,6 +84,7 @@ export default function CommunityAdminPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { user } = useAuth();
   const { id } = React.use(params);
   // Hook para buscar dados da comunidade específica
   const {
@@ -1252,7 +1254,6 @@ export default function CommunityAdminPage({
         onClose={() => setIsApproveModalOpen(false)}
         onApprove={handleApproveCampaign}
         campaignTitle={selectedCampaign?.title || ""}
-        campaignAuthor={selectedCampaign?.leader || ""}
       />
 
       <RejectCampaignModal
@@ -1260,7 +1261,6 @@ export default function CommunityAdminPage({
         onClose={() => setIsRejectModalOpen(false)}
         onReject={handleRejectCampaign}
         campaignTitle={selectedCampaign?.title || ""}
-        campaignAuthor={selectedCampaign?.leader || ""}
       />
 
       {/* Modais de denúncia */}
@@ -1271,7 +1271,6 @@ export default function CommunityAdminPage({
           setIsDissolveModalOpen(false);
         }}
         complaintTitle={selectedReport?.title || ""}
-        complaintAuthor={selectedReport?.reporter || ""}
       />
 
       <ApproveComplaintModal
@@ -1281,7 +1280,6 @@ export default function CommunityAdminPage({
           setIsResolveModalOpen(false);
         }}
         complaintTitle={selectedReport?.title || ""}
-        complaintAuthor={selectedReport?.reporter || ""}
       />
     </div>
   );
