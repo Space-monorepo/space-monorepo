@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.comment.model import Comment, CommentLikes
 from app.api.comment.schema import CommentStatusEnum
+from app.api.communities.model import CommunityMember
 from app.core.repository import BaseRepository
 from app.utils.schema import PaginationSearchParams
 
@@ -108,7 +109,7 @@ class CommentLikesRepository(BaseRepository[CommentLikes]):
         self.session.flush()
         self.session.refresh(model)
         self.logger.debug(
-            f'Model {self.model.__qualname__} with comment_id {model.comment_id} and user_id {model.user_id} saved successfully'
+            f'Model {self.model.__qualname__} with comment_id {model.comment_id} and member_id {model.member_id} saved successfully'
         )
         return model
 
@@ -117,50 +118,38 @@ class CommentLikesRepository(BaseRepository[CommentLikes]):
         self.session.delete(model)
         self.session.flush()
         self.logger.debug(
-            f'Model {self.model.__qualname__} with comment_id {model.comment_id} and user_id {model.user_id} deleted successfully'
+            f'Model {self.model.__qualname__} with comment_id {model.comment_id} and member_id {model.member_id} deleted successfully'
         )
         return True
 
-    def get_by_comment_and_user(
-        self, comment_id: UUID, user_id: UUID
+    def get_by_comment_and_member(
+        self, comment_id: UUID, member_id: UUID
     ) -> CommentLikes | None:
         like = (
             self.session.query(CommentLikes)
             .filter(
-                CommentLikes.comment_id == comment_id, CommentLikes.user_id == user_id
+                CommentLikes.comment_id == comment_id,
+                CommentLikes.member_id == member_id,
             )
             .first()
         )
         if like:
             self.logger.debug(
-                f'Model {CommentLikes.__qualname__} with comment_id {comment_id} and user_id {user_id} retrieved successfully'
+                f'Model {CommentLikes.__qualname__} with comment_id {comment_id} and member_id {member_id} retrieved successfully'
             )
         else:
             self.logger.warning(
-                f'Model {CommentLikes.__qualname__} with comment_id {comment_id} and user_id {user_id} not found'
+                f'Model {CommentLikes.__qualname__} with comment_id {comment_id} and member_id {member_id} not found'
             )
         return like
 
-    def list_by_comment(self, comment_id: UUID) -> List[CommentLikes]:
+    def list_by_comment(self, comment_id: UUID) -> List[CommunityMember]:
         likes = (
-            self.session.query(CommentLikes)
+            self.session.query(CommunityMember)
+            .join(CommentLikes, CommunityMember.id == CommentLikes.member_id)
             .filter(CommentLikes.comment_id == comment_id)
             .all()
         )
 
         self.logger.debug(f'Retrieved {len(likes)} likes for comment {comment_id}')
         return likes
-
-    def list_user_liked_comments(
-        self, user_id: UUID, params: PaginationSearchParams
-    ) -> tuple[List[Comment], int]:
-        query = (
-            self.session.query(Comment)
-            .join(CommentLikes, CommentLikes.comment_id == Comment.id)
-            .filter(CommentLikes.user_id == user_id)
-        )
-
-        total = query.count()
-        query = query.order_by(desc(CommentLikes.created_at))
-        comments = query.offset(params.offset).limit(params.limit).all()
-        return comments, total

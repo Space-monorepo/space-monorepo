@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.api.administration.schema import ImportMembers, MemberRoleUpdate
 from app.api.administration.service import AdministrationService
+from app.api.communities.model import CommunityMember
 from app.api.communities.schema import (
     CommunityMemberResponse,
     CommunityResponse,
@@ -17,7 +18,6 @@ from app.api.post.schemas import (
     PostFeedbackCreate,
     PostFeedbackResponse,
 )
-from app.api.users.model import User
 from app.auth.deps import get_db, require_roles
 from app.core.transaction import TransactionManager
 from app.utils.schema import PaginationResponse, PaginationSearchParams
@@ -34,7 +34,7 @@ def import_users_to_community(
     members: ImportMembers,
     community_id: str,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin'])),
+    _: CommunityMember = Depends(require_roles(['admin'])),
 ) -> list[CommunityMemberResponse]:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).import_users_to_community(
@@ -51,7 +51,7 @@ def list_all_members_from_community(
     community_id: str,
     params: PaginationSearchParams = Depends(PaginationSearchParams),
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin'])),
+    _: CommunityMember = Depends(require_roles(['admin'])),
 ) -> PaginationResponse[CommunityMemberResponse]:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).list_all_members_from_community(
@@ -68,7 +68,7 @@ def update_member_role(
     member_id: UUID,
     role_update: MemberRoleUpdate,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin'])),
+    _: CommunityMember = Depends(require_roles(['admin'])),
 ) -> CommunityMemberResponse:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).update_member_role(
@@ -83,7 +83,7 @@ def update_member_role(
 def remove_member_from_community(
     member_id: UUID,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin'])),
+    _: CommunityMember = Depends(require_roles(['admin'])),
 ) -> None:
     with TransactionManager(session) as tm:
         AdministrationService(tm).remove_member_from_community(member_id)
@@ -97,11 +97,11 @@ def remove_member_from_community(
 def list_user_admin_communities(
     params: PaginationSearchParams = Depends(PaginationSearchParams),
     session: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(['admin'])),
+    current_member: CommunityMember = Depends(require_roles(['admin'])),
 ) -> PaginationResponse[CommunityResponse]:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).list_user_admin_communities(
-            current_user.id, params
+            current_member.user_id, params
         )
 
 
@@ -114,7 +114,7 @@ def update_campaign(
     post_id: str,
     campaign_update: CampaignUpdate,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin'])),
+    _: CommunityMember = Depends(require_roles(['admin'])),
 ) -> CampaignResponse:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).update_campaign(post_id, campaign_update)
@@ -129,7 +129,7 @@ def list_all_campaigns_from_community(
     community_id: str,
     params: PaginationSearchParams = Depends(PaginationSearchParams),
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin'])),
+    _: CommunityMember = Depends(require_roles(['admin'])),
 ) -> PaginationResponse[CampaignResponse]:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).list_all_campaigns_from_community(
@@ -146,7 +146,7 @@ def update_complaint(
     post_id: str,
     complaint_update: ComplaintUpdate,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin'])),
+    _: CommunityMember = Depends(require_roles(['admin'])),
 ) -> ComplaintResponse:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).update_complaint(post_id, complaint_update)
@@ -161,7 +161,7 @@ def list_all_complaints_from_community(
     community_id: str,
     params: PaginationSearchParams = Depends(PaginationSearchParams),
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin'])),
+    _: CommunityMember = Depends(require_roles(['admin'])),
 ) -> PaginationResponse[ComplaintResponse]:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).list_all_complaints_from_community(
@@ -177,7 +177,7 @@ def list_all_complaints_from_community(
 def create_post_feedback(
     post: PostFeedbackCreate,
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin'])),
+    _: CommunityMember = Depends(require_roles(['admin'])),
 ) -> PostFeedbackResponse:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).create_post_feedback(post)
@@ -192,7 +192,7 @@ def list_feedbacks_from_post(
     post_id: str,
     params: PaginationSearchParams = Depends(PaginationSearchParams),
     session: Session = Depends(get_db),
-    _: User = Depends(require_roles(['admin'])),
+    _: CommunityMember = Depends(require_roles(['admin'])),
 ) -> PaginationResponse[PostFeedbackResponse]:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).list_feedbacks_from_post(post_id, params)

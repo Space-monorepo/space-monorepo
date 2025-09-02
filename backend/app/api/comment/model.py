@@ -48,7 +48,7 @@ class Comment(Base):
         'Comment', back_populates='parent', cascade='all, delete-orphan'
     )
     liked_by = relationship(
-        'User',
+        'CommunityMember',
         secondary='comment_likes',
         back_populates='liked_comments',
         viewonly=True,  # Torna este relacionamento somente leitura
@@ -64,10 +64,10 @@ class CommentLikes(Base):
     comment_id = Column(
         UUIDColumn, ForeignKey('comments.id'), nullable=False, primary_key=True
     )
-    user_id = Column(
-        UUIDColumn, ForeignKey('users.id'), nullable=False, primary_key=True
+    member_id = Column(
+        UUIDColumn, ForeignKey('community_members.id'), nullable=False, primary_key=True
     )
     created_at = Column(DateTime, nullable=False, default=func.now())
 
     comment = relationship('Comment', back_populates='likes')
-    user = relationship('User', back_populates='comment_likes')
+    member = relationship('CommunityMember')
