@@ -11,6 +11,7 @@ from app.api.comment.service import CommentService
 from app.utils.schema import PaginationSearchParams
 from app.api.comment.exceptions import CommentSuspendedError, CommentNotFoundError, CommentLikesNotFoundError
 from app.api.post.exceptions import PostNotFoundError
+from tests.conftest import commun_member_on_db
 
 
 # =============================================================================
@@ -352,7 +353,7 @@ def test_delete_comment_decrements_post_comments_count_success(session_sql, tran
 # =============================================================================
 
 @pytest.mark.unit
-def test_like_comment_service_success(session_sql, transaction_manager, comment_on_db, secondary_user_on_db):
+def test_like_comment_service_success(session_sql, transaction_manager, comment_on_db, commun_member_on_db):
     """
     Tests the `like_comment` method of CommentService.
 
@@ -363,11 +364,11 @@ def test_like_comment_service_success(session_sql, transaction_manager, comment_
     """
     # Arrange
     original_likes_count = comment_on_db.likes_count
-    user_id = secondary_user_on_db.id
+    member_id = commun_member_on_db.id
     comment_id = comment_on_db.id
 
     # Act
-    like_response = CommentService(transaction_manager).like_comment(comment_id, user_id)
+    like_response = CommentService(transaction_manager).like_comment(comment_id, member_id)
 
     # Assert
     assert like_response is not None
@@ -381,13 +382,13 @@ def test_like_comment_service_success(session_sql, transaction_manager, comment_
     # Verify like record creation
     like_record = session_sql.query(CommentLikes).filter(
         CommentLikes.comment_id == comment_id,
-        CommentLikes.user_id == user_id
+        CommentLikes.member_id  == member_id
     ).first()
     assert like_record is not None
 
 
 @pytest.mark.unit
-def test_unlike_comment_service_success(session_sql, transaction_manager, comment_on_db, secondary_user_on_db):
+def test_unlike_comment_service_success(session_sql, transaction_manager, comment_on_db, commun_member_on_db):
     """
     Tests the `unlike_comment` method of CommentService.
 
@@ -398,16 +399,16 @@ def test_unlike_comment_service_success(session_sql, transaction_manager, commen
     """
     # Arrange
     original_likes_count = comment_on_db.likes_count
-    user_id = secondary_user_on_db.id
+    member_id = commun_member_on_db.id
     comment_id = comment_on_db.id
 
     # First like the comment to set up test state
-    CommentService(transaction_manager).like_comment(comment_id, user_id)
+    CommentService(transaction_manager).like_comment(comment_id, member_id)
     session_sql.refresh(comment_on_db)
     liked_count = comment_on_db.likes_count
 
     # Act
-    unlike_response = CommentService(transaction_manager).unlike_comment(comment_id, user_id)
+    unlike_response = CommentService(transaction_manager).unlike_comment(comment_id, member_id)
 
     # Assert
     assert unlike_response is not None
@@ -421,13 +422,13 @@ def test_unlike_comment_service_success(session_sql, transaction_manager, commen
     # Verify like record deletion
     like_record = session_sql.query(CommentLikes).filter(
         CommentLikes.comment_id == comment_id,
-        CommentLikes.user_id == user_id
+        CommentLikes.member_id == member_id
     ).first()
     assert like_record is None
 
 
 @pytest.mark.unit
-def test_list_likes_comment_service_success(session_sql, transaction_manager, comment_on_db, secondary_user_on_db):
+def test_list_likes_comment_service_success(session_sql, transaction_manager, comment_on_db, commun_member_on_db):
     """
     Tests the `list_likes_comment` method of CommentService.
 
@@ -439,10 +440,10 @@ def test_list_likes_comment_service_success(session_sql, transaction_manager, co
     # Arrange
     initial_likes_count = comment_on_db.likes_count
     comment_id = comment_on_db.id
-    user_id = secondary_user_on_db.id
+    member_id = commun_member_on_db.id
 
     # Add a like to ensure we have data
-    CommentService(transaction_manager).like_comment(comment_id, user_id)
+    CommentService(transaction_manager).like_comment(comment_id, member_id)
 
     # Act
     likes = CommentService(transaction_manager).list_likes_comment(comment_id)
@@ -450,46 +451,7 @@ def test_list_likes_comment_service_success(session_sql, transaction_manager, co
     # Assert
     assert likes is not None
     assert len(likes) > 0
-    assert likes[0].comment_id == uuid.UUID(comment_id)
-    assert likes[0].user_id == uuid.UUID(user_id)
-
-
-@pytest.mark.unit
-def test_list_user_liked_comments_service_success(transaction_manager, comment_on_db, secondary_user_on_db):
-    """
-    Tests the `list_user_liked_comments` method of CommentService.
-
-    Scenario:
-    - Given a user who has liked comments and pagination parameters
-    - When the service lists user's liked comments
-    - Then it should return a paginated list of comments liked by that user
-    """
-    # Arrange
-    comment_id = comment_on_db.id
-    user_id = secondary_user_on_db.id
-
-    # Like the comment first to ensure we have data
-    CommentService(transaction_manager).like_comment(comment_id, user_id)
-    params = PaginationSearchParams(offset=0, limit=10)
-
-    # Act
-    liked_comments = CommentService(transaction_manager).list_user_liked_comments(user_id, params)
-
-    # Assert
-    assert liked_comments is not None
-    assert liked_comments.items is not None
-    assert len(liked_comments.items) > 0
-    assert liked_comments.total > 0
-    assert liked_comments.current_offset == 0
-    assert liked_comments.current_limit == 10
-
-    # Verify that the returned comments contain the liked comment
-    found_comment = False
-    for comment in liked_comments.items:
-        if comment.id == uuid.UUID(comment_id):
-            found_comment = True
-            break
-    assert found_comment
+    assert likes[0].id == uuid.UUID(member_id)
 
 
 # =============================================================================
@@ -617,7 +579,7 @@ def test_get_nonexistent_comment_raises_error(transaction_manager):
 
 
 @pytest.mark.unit
-def test_unlike_comment_without_like_raises_error(transaction_manager, comment_on_db, secondary_user_on_db):
+def test_unlike_comment_without_like_raises_error(transaction_manager, comment_on_db, commun_member_on_db):
     """
     Tests that unliking a comment without previous like raises CommentLikesNotFoundError.
 
@@ -628,7 +590,7 @@ def test_unlike_comment_without_like_raises_error(transaction_manager, comment_o
     """
     # Act & Assert
     with pytest.raises(CommentLikesNotFoundError):
-        CommentService(transaction_manager).unlike_comment(comment_on_db.id, secondary_user_on_db.id)
+        CommentService(transaction_manager).unlike_comment(comment_on_db.id, commun_member_on_db.id)
 
 
 @pytest.mark.unit

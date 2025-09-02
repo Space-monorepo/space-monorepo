@@ -269,16 +269,19 @@ def test_campaign_response_schema():
 def test_campaign_participants_response_schema():
     campaign_id = uuid.uuid4()
     user_id = uuid.uuid4()
+    member_id = uuid.uuid4()
     created_at = datetime.now()
 
     campaign_participants_response = CampaignParticipantsResponse(
         campaign_id=campaign_id,
         user_id=user_id,
+        member_id=member_id,
         joined_at=created_at,
     )
     assert campaign_participants_response.model_dump() == {
         'campaign_id': campaign_id,
         'user_id': user_id,
+        'member_id': member_id,
         'joined_at': created_at,
     }
 

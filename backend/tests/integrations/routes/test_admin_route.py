@@ -30,8 +30,8 @@ def test_import_users_to_community_route(
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json() is not None
     assert len(response.json()) == 1
-    assert response.json()[0]['user_id'] == str(secondary_user_on_db.id)
-    assert response.json()[0]['community_id'] == str(community_member_on_db.community_id)
+    assert response.json()[0]['user']['id'] == str(secondary_user_on_db.id)
+    assert response.json()[0]['community']['id'] == str(community_member_on_db.community_id)
     assert response.json()[0]['role'] == CommunityMemberRoleEnum.MEMBER
 
 
@@ -45,8 +45,8 @@ def test_list_all_members_from_community_route(
     assert response.json() is not None
     assert response.json()['items'] is not None
     assert len(response.json()['items']) == 1
-    assert response.json()['items'][0]['user_id'] == str(community_member_on_db.user_id)
-    assert response.json()['items'][0]['community_id'] == str(
+    assert response.json()['items'][0]['user']['id'] == str(community_member_on_db.user_id)
+    assert response.json()['items'][0]['community']['id'] == str(
         community_member_on_db.community_id
     )
     assert response.json()['items'][0]['role'] == CommunityMemberRoleEnum.ADMIN

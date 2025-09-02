@@ -187,6 +187,7 @@ def test_community_member_update_schema():
 
 @pytest.mark.unit
 def test_community_member_response_schema():
+    id = uuid.uuid4()
     user_id = uuid.uuid4()
     community_id = uuid.uuid4()
     entered_in = datetime.now()
@@ -212,8 +213,7 @@ def test_community_member_response_schema():
     )
 
     member_response = CommunityMemberResponse(
-        user_id=user_id,
-        community_id=community_id,
+        id=id,
         user=user,
         community=community,
         role=CommunityMemberRoleEnum.ADMIN,
@@ -223,8 +223,7 @@ def test_community_member_response_schema():
     )
 
     assert member_response.model_dump() == {
-        "user_id": user_id,
-        "community_id": community_id,
+        "id": id,
         "user": user.model_dump(),
         "community": community.model_dump(),
         "role": "admin",
