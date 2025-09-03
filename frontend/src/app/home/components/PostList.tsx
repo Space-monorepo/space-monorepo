@@ -18,18 +18,8 @@ import { translatePostType } from "@/lib/postTypeTranslations";
 import { Forum, FaceSatisfied, TextBold, TextItalic, ListNumbered, ListBulleted, CheckmarkFilled, OverflowMenuHorizontal, ArrowUp } from "@carbon/icons-react";
 import { getRelativeTime } from "@/lib/relativeTime";
 import { API_URL } from "@/config";
-
-// Função utilitária para classes do badge de role
-const getRoleBadgeClasses = (role?: string) => {
-  if (!role) return '';
-  if (role.toLowerCase().includes('admin')) {
-    return 'bg-yellow-600 bg-opacity-40 text-yellow-950';
-  }
-  if (role.toLowerCase().includes('líder') || role.toLowerCase().includes('leader')) {
-    return 'bg-neutral-800 text-zinc-100';
-  }
-  return 'bg-neutral-800 text-zinc-100';
-};
+import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
+import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 
 // CommentsSection como componente interno
 interface Comment {
@@ -177,7 +167,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
                     {comment.user.name}
                   </div>
                   <CheckmarkFilled
-                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getRoleBadgeClasses(comment.user.member_role).includes('bg-yellow-600') ? 'text-yellow-600' : 'text-neutral-800'}`}
+                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(comment.user.member_role)}`}
                     aria-label="Verificado"
                   />
                   <div className="self-stretch my-auto text-[10px] text-black font-semibold">
@@ -665,7 +655,7 @@ export default function PostList() {
                               {post.author}
                             </Link>
                             <CheckmarkFilled
-                              className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getRoleBadgeClasses(post.role).includes('bg-yellow-600') ? 'text-yellow-600' : 'text-neutral-800'}`}
+                              className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(post.role)}`}
                               aria-label="Verificado"
                             />
                             <div className="self-stretch my-auto text-[10px] font-semibold">
