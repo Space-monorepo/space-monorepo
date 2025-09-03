@@ -24,9 +24,10 @@ import {
   FinalizadaBadge
 } from "@/components/badges/campaign/CampaignBadges";
 import { LeveBadge, ModeradaBadge, CriticaBadge } from "@/components/badges/complaints/ComplaintsBadges";
+import ModalAnnouncement from "@/components/modals/posts/ModalAnnouncement";
 import RejectComplaintModal from "@/components/modals/community/RejectComplaintModal";
 import ApproveComplaintModal from "@/components/modals/community/ApproveComplaintModal";
-import { ChevronSort, Email } from "@carbon/icons-react";
+import { ChevronSort, Email, FilterEdit } from "@carbon/icons-react";
 
 type UserInfo = {
   id: string;
@@ -148,6 +149,7 @@ export default function CommunityAdminPage({
     useState<Announcement | null>(null);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
   const [newModeratorEmail, setNewModeratorEmail] = useState("");
   const [excludeUserEmail, setExcludeUserEmail] = useState("");
   // Estados para importação em lote
@@ -544,14 +546,17 @@ export default function CommunityAdminPage({
               {/* Header with filters */}
               <div className="sticky top-0 p-4 border-b border-[#e0e0e0] flex items-center gap-2 bg-white z-20">
                 <button className="p-2 hover:bg-[#f4f4f4]">
-                  //TODO: colocar icone do carbon do filter
-                  <Filter className="h-4 w-4 text-[#525252]" />
+                  <FilterEdit className="h-4 w-4 text-[#525252]" />
                 </button>
                 <button className="p-2 hover:bg-[#f4f4f4]">
                   <ChevronSort className="h-4 w-4 text-[#525252]" />
                 </button>
                 {activeTab === "Anúncios" && (
-                  <button className="ml-auto px-3 min-w-[138px] min-h-[56px] py-1.5 bg-[#161616] text-white text-sm hover:bg-[#262626] flex items-center gap-10">
+                  <button
+                    className="ml-auto cursor-pointer px-3 min-w-[138px] min-h-[56px] py-1.5 bg-[#161616]
+                     text-white text-sm hover:bg-[#262626] flex items-center gap-10"
+                    onClick={() => setIsAnnouncementModalOpen(true)}
+                  >
                     Anunciar
                     <Email className="h-4 w-4" />
                   </button>
@@ -1305,6 +1310,13 @@ export default function CommunityAdminPage({
         campaignTitle={selectedCampaign?.title || ""}
       />
 
+      {/* Modal de anúncio */}
+      {isAnnouncementModalOpen && (
+        <ModalAnnouncement
+          onClose={() => setIsAnnouncementModalOpen(false)}
+          communityId={id}
+        />
+      )}
       {/* Modais de denúncia */}
       <RejectComplaintModal
         isOpen={isDissolveModalOpen}
