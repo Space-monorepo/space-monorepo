@@ -2,7 +2,7 @@ describe('Login Form', () => {
   beforeEach(() => {
     // Visita a página de login antes de cada teste
     // A baseUrl 'http://localhost:3000' é prefixada automaticamente
-    cy.visit('/web/pages/login');
+    cy.visit('/login');
   });
 
   it('should allow a user to log in with valid credentials', () => {
