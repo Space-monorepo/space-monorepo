@@ -16,6 +16,7 @@ import { PostResponse, PostsListFeed } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
 import { translatePostType } from "@/lib/postTypeTranslations";
 import { Forum, FaceSatisfied, TextBold, TextItalic, ListNumbered, ListBulleted, CheckmarkFilled, OverflowMenuHorizontal, ArrowUp } from "@carbon/icons-react";
+import useReportPost from "@/app/api/src/hooks/post/useReportPost";
 import { getRelativeTime } from "@/lib/relativeTime";
 import { API_URL } from "@/config";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
@@ -193,7 +194,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
             </div>
           </div>
           <div className="flex gap-4 items-center self-stretch my-auto w-5 min-h-5">
-            <OverflowMenuHorizontal className="object-contain self-stretch my-auto w-5 aspect-square cursor-pointer hover:opacity-70 transition-opacity text-neutral-500" aria-label="Menu" />
+            {/* Menu de opções para comentários pode ser implementado aqui se necessário */}
           </div>
         </div>
         <div className="px-3 mt-2 w-full max-md:max-w-full">
@@ -411,6 +412,9 @@ type PostDisplay = PostResponse & {
 
 export default function PostList() {
   const [allPosts, setAllPosts] = useState<PostDisplay[]>([]);
+  // Estado para menu de opções do post (custom, sem MUI)
+  const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
+  const { reportPost } = useReportPost();
   const [displayedPosts, setDisplayedPosts] = useState<PostDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -690,15 +694,39 @@ export default function PostList() {
                       <button
                         className="p-1 hover:bg-gray-100 rounded-full transition-colors"
                         title="Salvar nos favoritos"
-                      // Aqui você pode adicionar lógica de bookmark real se desejar
                       >
                         <Bookmark
                           className={`h-4 w-4 text-gray-500`}
                         />
                       </button>
-                      <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-                        <OverflowMenuVertical className="h-4 w-4 text-gray-500" />
-                      </button>
+                      <div className="relative">
+                        <button
+                          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                          onClick={() => setOpenMenuPostId(openMenuPostId === post.id ? null : post.id)}
+                          aria-label="Mais opções"
+                        >
+                          <OverflowMenuVertical className="h-4 w-4 text-gray-500" />
+                        </button>
+                        {openMenuPostId === post.id && (
+                          <div
+                            className="absolute right-0 z-20 mt-2 w-40 bg-white border border-gray-200 rounded shadow-lg animate-fade-in"
+                            tabIndex={-1}
+                            onBlur={() => setOpenMenuPostId(null)}
+                          >
+                            <button
+                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 rounded"
+                              onClick={async () => {
+                                setOpenMenuPostId(null);
+                                try {
+                                  await reportPost(post.community?.id || 'default-community-id', post.id);
+                                } catch { }
+                              }}
+                            >
+                              Reportar post
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </header>
 
