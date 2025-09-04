@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/app/api/src/auth/useAuth";
 import { Attachment, FaceActivated, TextBold, TextItalic, Close } from "@carbon/icons-react";
 
@@ -11,11 +11,19 @@ type ApproveCampaignModalProps = {
   campaignTitle: string;
 };
 
-export default function ApproveCampaignModal(props: ApproveCampaignModalProps) {
-  const { isOpen, onClose, onApprove, campaignTitle } = props;
+export default function ApproveCampaignModal(props: ApproveCampaignModalProps & { loading?: boolean }) {
+  const { isOpen, onClose, onApprove, campaignTitle, loading } = props;
   const { user } = useAuth();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+
+  // Limpar campos ao abrir/fechar
+  useEffect(() => {
+    if (!isOpen) {
+      setSubject("");
+      setMessage("");
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -31,6 +39,7 @@ export default function ApproveCampaignModal(props: ApproveCampaignModalProps) {
             onClick={onClose}
             className="shrink-0 w-5 aspect-square hover:opacity-70 transition-opacity"
             aria-label="Fechar"
+            disabled={loading}
           >
             <Close className="w-full h-full text-neutral-800" />
           </button>
@@ -152,6 +161,7 @@ export default function ApproveCampaignModal(props: ApproveCampaignModalProps) {
           <button
             onClick={onClose}
             className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-200 min-w-60 text-neutral-800 w-[462px] max-md:pr-5 max-md:max-w-full hover:bg-neutral-300 transition-colors"
+            disabled={loading}
           >
             <span className="self-stretch my-auto text-neutral-800">
               Cancelar
@@ -160,9 +170,10 @@ export default function ApproveCampaignModal(props: ApproveCampaignModalProps) {
           <button
             onClick={() => onApprove(subject, message)}
             className="flex flex-1 cursor-pointer shrink gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 basis-0 bg-neutral-800 min-w-60 text-zinc-100 max-md:pr-5 max-md:max-w-full hover:bg-neutral-700 transition-colors"
+            disabled={loading}
           >
             <span className="self-stretch my-auto text-zinc-100">
-              Aprovar
+              {loading ? "Aprovando..." : "Aprovar"}
             </span>
           </button>
         </footer>

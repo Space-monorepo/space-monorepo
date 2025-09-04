@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
 import ApproveCampaignModal from "@/components/modals/community/ApproveCampaignModal";
 import RejectCampaignModal from "@/components/modals/community/RejectCampaignModal";
+import { useCampaignAdminActions } from "@/app/api/src/hooks/post/useCampaignAdminActions";
 import { useAuth } from "@/app/api/src/auth/useAuth";
 import useCommunityById from "@/app/api/src/hooks/community/useCommunityById";
 import useCommunityUserActions from "@/app/api/src/hooks/community/useCommunityUserActions";
@@ -308,6 +309,37 @@ export default function CommunityAdminPage({
     }
   };
 
+  // Hook para aprovar/rejeitar campanha
+  const { approveCampaign, rejectCampaign, loading: adminActionLoading } = useCampaignAdminActions();
+
+  // Handler para aprovação real
+  const handleApproveCampaign = async (subject: string, message: string) => {
+    if (!selectedCampaign) return;
+    try {
+      await approveCampaign(id, selectedCampaign.id, subject, message);
+      setSelectedCampaign({ ...selectedCampaign, status: "Aprovado" });
+      toast.success("Campanha aprovada com sucesso!");
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao aprovar campanha");
+    } finally {
+      setIsApproveModalOpen(false);
+    }
+  };
+
+  // Handler para rejeição real
+  const handleRejectCampaign = async (subject: string, reason: string) => {
+    if (!selectedCampaign) return;
+    try {
+      await rejectCampaign(id, selectedCampaign.id, subject, reason);
+      setSelectedCampaign({ ...selectedCampaign, status: "Rejeitado" });
+      toast.success("Campanha rejeitada com sucesso!");
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao rejeitar campanha");
+    } finally {
+      setIsRejectModalOpen(false);
+    }
+  };
+
   // Initialize default selected items if none are selected
   if (activeTab === "Campanhas" && !selectedCampaign && campaigns.length > 0) {
     const firstCampaign = campaigns[0];
@@ -331,37 +363,7 @@ export default function CommunityAdminPage({
   ) {
     setSelectedAnnouncement(announcements[0]);
   }
-  const handleApproveCampaign = (subject: string, message: string) => {
-    console.log("Approving campaign with:", {
-      subject,
-      message,
-      communityId: id,
-    });
-    if (selectedCampaign) {
-      const updatedCampaign = {
-        ...selectedCampaign,
-        status: "Aprovado" as const,
-      };
-      setSelectedCampaign(updatedCampaign);
-    }
-    setIsApproveModalOpen(false);
-  };
-
-  const handleRejectCampaign = (subject: string, reason: string) => {
-    console.log("Rejecting campaign with:", {
-      subject,
-      reason,
-      communityId: id,
-    });
-    if (selectedCampaign) {
-      const updatedCampaign = {
-        ...selectedCampaign,
-        status: "Rejeitado" as const,
-      };
-      setSelectedCampaign(updatedCampaign);
-    }
-    setIsRejectModalOpen(false);
-  };
+  // Removidas as versões duplicadas dos handlers (mantendo apenas as assíncronas reais)
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "Crítica":
@@ -1301,6 +1303,7 @@ export default function CommunityAdminPage({
         onClose={() => setIsApproveModalOpen(false)}
         onApprove={handleApproveCampaign}
         campaignTitle={selectedCampaign?.title || ""}
+        loading={adminActionLoading}
       />
 
       <RejectCampaignModal
@@ -1308,6 +1311,7 @@ export default function CommunityAdminPage({
         onClose={() => setIsRejectModalOpen(false)}
         onReject={handleRejectCampaign}
         campaignTitle={selectedCampaign?.title || ""}
+        loading={adminActionLoading}
       />
 
       {/* Modal de anúncio */}

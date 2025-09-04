@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/app/api/src/auth/useAuth";
 import { Attachment, FaceActivated, TextBold, TextItalic, Close } from "@carbon/icons-react";
 
@@ -11,11 +11,19 @@ type RejectCampaignModalProps = {
   campaignTitle: string;
 };
 
-export default function RejectCampaignModal(props: RejectCampaignModalProps) {
-  const { isOpen, onClose, onReject, campaignTitle } = props;
+export default function RejectCampaignModal(props: RejectCampaignModalProps & { loading?: boolean }) {
+  const { isOpen, onClose, onReject, campaignTitle, loading } = props;
   const { user } = useAuth();
   const [subject, setSubject] = useState("");
   const [reason, setReason] = useState("");
+
+  // Limpar campos ao abrir/fechar
+  useEffect(() => {
+    if (!isOpen) {
+      setSubject("");
+      setReason("");
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -31,6 +39,7 @@ export default function RejectCampaignModal(props: RejectCampaignModalProps) {
             onClick={onClose}
             className="shrink-0 w-5 aspect-square hover:opacity-70 transition-opacity"
             aria-label="Fechar"
+            disabled={loading}
           >
             <Close className="w-full h-full text-neutral-800" />
           </button>
@@ -150,6 +159,7 @@ export default function RejectCampaignModal(props: RejectCampaignModalProps) {
           <button
             onClick={onClose}
             className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-200 min-w-60 text-neutral-800 w-[462px] max-md:pr-5 max-md:max-w-full hover:bg-neutral-300 transition-colors"
+            disabled={loading}
           >
             <span className="self-stretch my-auto text-neutral-800">
               Cancelar
@@ -158,9 +168,10 @@ export default function RejectCampaignModal(props: RejectCampaignModalProps) {
           <button
             onClick={() => onReject(subject, reason)}
             className="flex flex-1 cursor-pointer shrink gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 basis-0 bg-red-700 min-w-60 text-zinc-100 max-md:pr-5 max-md:max-w-full hover:bg-red-800 transition-colors"
+            disabled={loading}
           >
             <span className="self-stretch my-auto text-zinc-100">
-              Rejeitar e relatar
+              {loading ? "Rejeitando..." : "Rejeitar e relatar"}
             </span>
           </button>
         </footer>
