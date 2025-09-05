@@ -162,6 +162,13 @@ export default function CommunityAdminPage({
   const [hasLoadedMembers, setHasLoadedMembers] = useState(false);
   const loadMembersRef = useRef(loadMembers);
 
+  // Estados para a aba Comunidades
+  const [dropdown1Value, setDropdown1Value] = useState('Opção 1');
+  const [dropdown1Open, setDropdown1Open] = useState(false);
+  const [dropdown2Value, setDropdown2Value] = useState('Opção 2');
+  const [dropdown2Open, setDropdown2Open] = useState(false);
+  const [toggleChecked, setToggleChecked] = useState(false);
+
   // Buscar dados da comunidade quando o componente monta ou o ID muda
   useEffect(() => {
     if (id) {
@@ -180,7 +187,7 @@ export default function CommunityAdminPage({
   useEffect(() => {
     loadMembersRef.current = loadMembers;
   }, [loadMembers]);
-  const tabs = ["Campanhas", "Denúncias", "Usuários", "Anúncios"];
+  const tabs = ["Campanhas", "Denúncias", "Usuários", "Anúncios", "Comunidade"];
 
   // Função para mapear status da API para status do frontend
   const mapApiStatusToFrontendStatus = (apiStatus: string): "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada" => {
@@ -498,6 +505,118 @@ export default function CommunityAdminPage({
     setIsResolveModalOpen(true);
   };
 
+  // Componentes inline para a aba Comunidades
+  const SectionHeader = ({ title }: { title: string }) => (
+    <header className="w-full text-xl leading-none text-black max-md:max-w-full">
+      <h2 className="max-md:max-w-full">{title}</h2>
+      <div className="flex mt-4 w-full bg-stone-300 min-h-px max-md:max-w-full" />
+    </header>
+  );
+
+  const ConfigurationItem = ({
+    description,
+    value,
+    children
+  }: {
+    description: string;
+    value?: string;
+    children?: React.ReactNode;
+  }) => (
+    <div className="flex flex-wrap gap-10 justify-between items-center mt-2 w-full max-md:max-w-full">
+      <div className="self-stretch my-auto text-xs leading-none text-justify text-neutral-500 max-md:max-w-full">
+        {description}
+      </div>
+      {value && (
+        <div className="self-stretch my-auto text-sm leading-none text-center text-neutral-800 w-[60px]">
+          {value}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+
+  const DropdownSelect = ({
+    options,
+    value,
+    onChange,
+    isOpen,
+    onToggle,
+    variant = 'primary'
+  }: {
+    options: string[];
+    value: string;
+    onChange: (value: string) => void;
+    isOpen: boolean;
+    onToggle: () => void;
+    variant?: 'primary' | 'secondary';
+  }) => {
+    const textColorClass = variant === 'primary' ? 'text-neutral-800' : 'text-neutral-500';
+
+    return (
+      <div className="relative">
+        <button
+          className={`flex gap-2.5 justify-center items-center self-stretch p-2.5 my-auto text-sm leading-none text-justify ${textColorClass}`}
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+        >
+          <span className="self-stretch my-auto">{value}</span>
+          <img
+            src={variant === 'primary'
+              ? "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/d24654308878f16b516227be8c8c92bf44fa5a86?placeholderIfAbsent=true"
+              : "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/4522605e2ac1a433252df88a4bc4955a89e0cbd3?placeholderIfAbsent=true"
+            }
+            className="object-contain shrink-0 self-stretch my-auto w-6 aspect-square"
+            alt="Dropdown arrow"
+          />
+        </button>
+
+        {isOpen && (
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-10 min-w-full">
+            <ul role="listbox" className="py-1">
+              {options.map((option, index) => (
+                <li key={index}>
+                  <button
+                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${textColorClass}`}
+                    onClick={() => {
+                      onChange(option);
+                      onToggle();
+                    }}
+                    role="option"
+                    aria-selected={value === option}
+                  >
+                    {option}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const ToggleSwitch = ({
+    checked,
+    onChange
+  }: {
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+  }) => (
+    <button
+      className="flex gap-2.5 items-center self-stretch px-1.5 py-1 my-auto w-12 rounded-2xl border border-solid bg-neutral-800 border-zinc-900"
+      onClick={() => onChange(!checked)}
+      role="switch"
+      aria-checked={checked}
+      aria-label="Toggle switch"
+    >
+      <div
+        className={`flex self-stretch my-auto w-4 h-4 rounded-full min-h-4 transition-all duration-200 ${checked ? 'bg-white ml-auto' : 'bg-gray-200'
+          }`}
+      />
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-gray-100 text-[#161616]">
       <Sidebar variant="static" />
@@ -547,7 +666,7 @@ export default function CommunityAdminPage({
         {/* Main Content Area */}
         <div className="ml-[512px] flex-1">
           {/* Middle Section - Content List (only for Campanhas, Denúncias, Anúncios) */}
-          {activeTab !== "Usuários" && (
+          {activeTab !== "Usuários" && activeTab !== "Comunidade" && (
             <div className="w-80 fixed top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
               {/* Header with filters */}
               <div className="sticky top-0 p-4 border-b border-[#e0e0e0] flex items-center gap-2 bg-white z-20">
@@ -729,7 +848,7 @@ export default function CommunityAdminPage({
           {/* Right Section - Details */}
           <div className="flex-1 bg-gray-100 px-6 py-8 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             {/* Loading State for Details */}
-            {postsLoading && activeTab !== "Usuários" && (
+            {postsLoading && activeTab !== "Usuários" && activeTab !== "Comunidade" && (
               <div className="bg-white p-6 text-center">
                 <div className="flex items-center justify-center mb-4">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#161616]"></div>
@@ -738,7 +857,7 @@ export default function CommunityAdminPage({
               </div>
             )}
             {/* No Selection State */}
-            {!postsLoading && activeTab !== "Usuários" && (
+            {!postsLoading && activeTab !== "Usuários" && activeTab !== "Comunidade" && (
               <>
                 {activeTab === "Campanhas" &&
                   !selectedCampaign &&
@@ -1176,6 +1295,120 @@ export default function CommunityAdminPage({
                 </main>
               </div>
             )}
+
+            {/* Communities Settings Tab */}
+            {activeTab === "Comunidade" && (
+              <div className="bg-white fixed top-0 right-0 bottom-0 left-[512px]">
+                <main className="flex flex-col justify-center p-20 bg-white max-md:px-5 max-md:max-w-full">
+                  <div className="w-full max-w-[894px] min-h-[832px] max-md:max-w-full">
+                    <div className="w-full max-md:max-w-full">
+                      <div className="w-full whitespace-nowrap max-md:max-w-full">
+                        <nav className="text-xs font-medium text-neutral-500">
+                          Configurações
+                        </nav>
+                        <div className="mt-1 w-full text-xl text-black max-md:max-w-full">
+                          <SectionHeader title="Publicações" />
+                        </div>
+                      </div>
+
+                      <section className="flex justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
+                        <div className="self-stretch my-auto min-w-60 w-[894px] max-md:max-w-full">
+                          <h3 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                            Denúncia
+                          </h3>
+                          <ConfigurationItem
+                            description="Limite de confirmações para denúncia leve"
+                            value="30"
+                          />
+                          <ConfigurationItem
+                            description="Limite de confirmações para denúncia moderada"
+                            value="50"
+                          />
+                          <ConfigurationItem
+                            description="Limite de confirmações para denúncia crítica"
+                            value="100"
+                          />
+                        </div>
+                        <div className="flex gap-2.5 self-stretch py-2.5 my-auto min-h-9" />
+                      </section>
+
+                      <section className="flex justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
+                        <div className="flex-1 shrink self-stretch my-auto w-full basis-0 min-w-60 max-md:max-w-full">
+                          <h3 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                            Campanha
+                          </h3>
+                          <ConfigurationItem
+                            description="Número mínimo de participantes necessários para que a campanha seja analisada"
+                            value="30"
+                          />
+                        </div>
+                      </section>
+                    </div>
+
+                    <section className="mt-20 w-full max-md:mt-10 max-md:max-w-full">
+                      <SectionHeader title="Exemplo 1" />
+                      <div className="mt-12 w-full max-md:mt-10 max-md:max-w-full">
+                        <div className="flex flex-wrap gap-10 justify-between items-center w-full max-md:max-w-full">
+                          <div className="self-stretch my-auto min-w-60 w-[680px] max-md:max-w-full">
+                            <h4 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                              Item 1
+                            </h4>
+                            <p className="mt-2 text-xs leading-none text-justify text-neutral-500 max-md:max-w-full">
+                              Descrição
+                            </p>
+                          </div>
+                          <DropdownSelect
+                            options={['Opção 1', 'Opção 2', 'Opção 3']}
+                            value={dropdown1Value}
+                            onChange={setDropdown1Value}
+                            isOpen={dropdown1Open}
+                            onToggle={() => setDropdown1Open(!dropdown1Open)}
+                            variant="primary"
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-10 justify-between items-center mt-6 w-full max-md:max-w-full">
+                          <div className="self-stretch my-auto min-w-60 w-[680px] max-md:max-w-full">
+                            <h4 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                              Item 2
+                            </h4>
+                            <p className="mt-2 text-xs leading-none text-justify text-neutral-500 max-md:max-w-full">
+                              Descrição
+                            </p>
+                          </div>
+                          <DropdownSelect
+                            options={['Opção 2', 'Opção 1', 'Opção 3']}
+                            value={dropdown2Value}
+                            onChange={setDropdown2Value}
+                            isOpen={dropdown2Open}
+                            onToggle={() => setDropdown2Open(!dropdown2Open)}
+                            variant="secondary"
+                          />
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="mt-20 w-full max-md:mt-10 max-md:max-w-full">
+                      <SectionHeader title="Exemplo 2" />
+                      <div className="flex flex-wrap gap-10 justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
+                        <div className="self-stretch my-auto min-w-60 w-[680px] max-md:max-w-full">
+                          <h4 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                            Item 1
+                          </h4>
+                          <p className="mt-2 text-xs leading-none text-justify text-neutral-500 max-md:max-w-full">
+                            Descrição
+                          </p>
+                        </div>
+                        <ToggleSwitch
+                          checked={toggleChecked}
+                          onChange={setToggleChecked}
+                        />
+                      </div>
+                    </section>
+                  </div>
+                </main>
+              </div>
+            )}
+
             {/* Announcement Details - Updated with Figma Layout */}
             {activeTab === "Anúncios" && selectedAnnouncement && !postsLoading && (
               <div className="max-w-full">
