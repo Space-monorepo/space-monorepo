@@ -5,7 +5,7 @@ import { ArrowLeft, Filter, Eye } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
-import { CheckmarkFilled } from "@carbon/icons-react";
+import { CheckmarkFilled, Search } from "@carbon/icons-react";
 // import removido, já existe acima
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
@@ -1143,10 +1143,9 @@ export default function CommunityAdminPage({
                           Status:
                         </span>
                         <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-2 my-auto text-xs leading-none rounded-sm bg-zinc-100">
-                          <img
-                            src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/8c1af7523fbdfb5b8097ae5cb54b499951078f51?placeholderIfAbsent=true"
-                            className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square"
-                            alt=""
+                          <Search
+                            className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square text-neutral-800"
+                            aria-label="Status"
                           />
                           <span className="self-stretch my-auto text-neutral-800">
                             {selectedReport.status}
