@@ -90,14 +90,13 @@ export default function AdministrationPage() {
                       <div className="flex justify-between items-start w-full max-sm:items-center">
                         <div className="w-12 h-12 flex items-center justify-center max-sm:w-10 max-sm:h-10">
                           <Image
-                            src={`/icons/community/${
-                              [
+                            src={`/icons/community/${[
                                 "Coffee.png",
                                 "Lantern.png",
                                 "Myrobot.png",
                                 "Reindeer.png",
                               ][Math.floor(Math.random() * 4)]
-                            }`}
+                              }`}
                             alt="Community icon"
                             width={52}
                             height={52}
@@ -107,7 +106,7 @@ export default function AdministrationPage() {
                         <button
                           type="button"
                           aria-label="Menu options"
-                          className="p-1"
+                          className="p-1 cursor-pointer hover:bg-gray-200 rounded-full transition max-sm:hidden"
                         >
                           <OverflowMenuHorizontal size={20} />
                         </button>
@@ -141,7 +140,7 @@ export default function AdministrationPage() {
                           <button
                             type="button"
                             aria-label="View community details"
-                            className="p-1"
+                            className="p-1 cursor-pointer hover:bg-gray-200 rounded-full transition"
                           >
                             <ArrowRight size={20} />
                           </button>
