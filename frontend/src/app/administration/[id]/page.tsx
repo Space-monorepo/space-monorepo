@@ -5,6 +5,10 @@ import { ArrowLeft, Filter, Eye } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
+import { CheckmarkFilled } from "@carbon/icons-react";
+// import removido, já existe acima
+import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
+import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import ApproveCampaignModal from "@/components/modals/community/ApproveCampaignModal";
 import RejectCampaignModal from "@/components/modals/community/RejectCampaignModal";
 import { useCampaignAdminActions } from "@/app/api/src/hooks/post/useCampaignAdminActions";
@@ -787,16 +791,13 @@ export default function CommunityAdminPage({
                                   <span className="self-stretch my-auto text-sm text-neutral-800">
                                     {selectedCampaign.leader}
                                   </span>
-                                  <img
-                                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/0915c1f8d702c90f4deafed21adc581f37a91002?placeholderIfAbsent=true"
-                                    alt="Verification badge"
-                                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
+                                  <CheckmarkFilled
+                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedCampaign.user.role)}`}
+                                    aria-label="Verificado"
                                   />
-                                  <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-zinc-100">
-                                    <span className="self-stretch my-auto text-zinc-100">
-                                      {translateUserRole(selectedCampaign.user.role || "leader")}
-                                    </span>
-                                  </div>
+                                  <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedCampaign.user.role)}`}>
+                                    {translateUserRole(selectedCampaign.user.role || "leader")}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -929,16 +930,13 @@ export default function CommunityAdminPage({
                                   <span className="self-stretch my-auto text-sm text-neutral-800">
                                     {selectedReport.user.name}
                                   </span>
-                                  <img
-                                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/0915c1f8d702c90f4deafed21adc581f37a91002?placeholderIfAbsent=true"
-                                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
-                                    alt="Verified"
+                                  <CheckmarkFilled
+                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedReport.user.role)}`}
+                                    aria-label="Verificado"
                                   />
-                                  <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-zinc-100">
-                                    <span className="self-stretch my-auto text-zinc-100">
-                                      {translateUserRole(selectedReport.user.role || "member")}
-                                    </span>
-                                  </div>
+                                  <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedReport.user.role)}`}>
+                                    {translateUserRole(selectedReport.user.role || "member")}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -1198,12 +1196,11 @@ export default function CommunityAdminPage({
                                   <h2 className="self-stretch my-auto text-sm text-neutral-800">
                                     {selectedAnnouncement.author}
                                   </h2>
-                                  <img
-                                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/053d988ba4cfa8562519f55304901c8878c52e86?placeholderIfAbsent=true"
-                                    alt="Verification badge"
-                                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
+                                  <CheckmarkFilled
+                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedAnnouncement.user.role)}`}
+                                    aria-label="Verificado"
                                   />
-                                  <span className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-yellow-600 bg-opacity-40 text-yellow-950">
+                                  <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedAnnouncement.user.role)}`}>
                                     {translateUserRole(selectedAnnouncement.user.role || "admin")}
                                   </span>
                                 </div>
