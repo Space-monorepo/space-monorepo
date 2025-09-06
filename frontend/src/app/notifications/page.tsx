@@ -1,195 +1,79 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft, Filter, SortDesc, Eye, X, ArrowUp, MessageSquare } from "lucide-react"
 import Sidebar from "@/components/ui/sidebar"
+import { useNotifications } from "@/app/api/src/hooks/notifications/useNotifications"
+import { Notification } from "@/app/api/src/types/notifications/Notification"
 
 type NotificationType = "Campanhas" | "Avisos oficiais" | "Conexões" | "Interações"
-
-type Notification = {
-  id: number
-  type: string
-  title: string
-  author: string
-  community: string
-  date: string
-  time: string
-  status?: string
-  description?: string
-  stats?: {
-    published: string
-    accesses: number
-    participants: number
-    likes: number
-    comments: number
-  }
-  image?: string
-  actions?: string[]
-}
 
 export default function NotificacoesPage() {
   const [activeTab, setActiveTab] = useState<NotificationType>("Campanhas")
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
+  const { notifications, loading, error } = useNotifications()
 
-  const notifications: Record<NotificationType, Notification[]> = {
-    Campanhas: [
-      {
-        id: 1,
-        type: "Campanha",
-        title: "Revitalização da Sala de Biblioteca",
-        author: "Rafael Lanza",
-        community: "PUC - Campinas",
-        date: "18/02/2025",
-        time: "5 mil",
-        status: "Em análise",
-        description: `A sala de estudos da biblioteca da nossa unidade está precisando de uma atenção especial. Muitos alunos usam o espaço todos os dias, mas infelizmente ele vem apresentando problemas de estrutura, iluminação fraca e cadeiras danificadas. Estamos iniciando uma campanha para arrecadar fundos e voluntários com o objetivo de revitalizar esse espaço tão importante para nossa rotina acadêmica. A proposta inclui pequenas reformas, pintura, reorganização dos móveis e instalação de lâmpadas novas. Toda ajuda será bem-vinda – seja com contribuições financeiras ou com tempo e disposição para ajudar no mutirão.
-
-Se você acredita na força da coletividade e no impacto de um ambiente de estudo digno, participe da campanha!`,
-        stats: {
-          published: "18/02/2025",
-          accesses: 5000,
-          participants: 245,
-          likes: 678,
-          comments: 72,
-        },
-      },
-      {
-        id: 2,
-        type: "Campanha",
-        title: "Título da Campanha",
-        author: "Rafael Lanza",
-        community: "PUC - Campinas",
-        date: "18/02/2025",
-        time: "5 mil",
-        status: "Em análise",
-      },
-    ],
-    "Avisos oficiais": [
-      {
-        id: 1,
-        type: "Anúncio",
-        title: "Anúncio oficial da comunidade",
-        author: "Briann Oliveira",
-        community: "PUC - Campinas",
-        date: "18/02/2025",
-        time: "5 mil",
-        description: `Prezados membros,
-
-Informamos que, a partir do dia 22 de abril, o sistema de chat da plataforma passará por uma manutenção programada para melhorias de performance e segurança. Durante o período de atualização, que ocorrerá entre 22h e 04h, as funcionalidades de envio de mensagens e notificações estarão temporariamente indisponíveis. A moderação seguirá funcionando normalmente, bem como o acesso ao feed e às campanhas. Recomendamos que, caso haja alguma comunicação importante a ser feita durante esse horário, ela seja agendada com antecedência. Pedimos a compreensão de todos, pois essas melhorias são essenciais para garantir uma experiência mais estável e segura para a comunidade. Em caso de dúvidas, entre em contato com o suporte pela aba "Ajuda". Agradecemos pela colaboração.
-
-Atenciosamente,
-Equipe de Administração da Comunidade`,
-        image: "/ProfilePic2.svg?height=300&width=600&text=🛠️",
-        stats: {
-          published: "18/02/2025",
-          accesses: 5000,
-          participants: 0,
-          likes: 678,
-          comments: 72,
-        },
-        actions: ["Promover", "Comentar"],
-      },
-      {
-        id: 2,
-        type: "Anúncio",
-        title: "Título do Anúncio",
-        author: "Rafael Lanza",
-        community: "Condomínio",
-        date: "18/02/2025",
-        time: "5 mil",
-      },
-    ],
-    Conexões: [
-      {
-        id: 1,
-        type: "Conexão",
-        title: "Felipe Sousa deseja conectar-se com você",
-        author: "@felipesousa",
-        community: "PUC - Campinas",
-        date: "3 horas atrás",
-        time: "",
-        actions: ["Conectar-se", "X"],
-      },
-      {
-        id: 2,
-        type: "Conexão",
-        title: "Briann Gomes conectou-se com você",
-        author: "@brianngomes",
-        community: "Condomínio",
-        date: "1 semana atrás",
-        time: "",
-      },
-      {
-        id: 3,
-        type: "Conexão",
-        title: "Gabriel Padreca deseja conectar-se com você",
-        author: "@gabrielpadreca",
-        community: "Apple Campinas",
-        date: "2 semanas atrás",
-        time: "",
-        actions: ["Conectar-se", "X"],
-      },
-    ],
-    Interações: [
-      {
-        id: 1,
-        type: "Comentário",
-        title: "Felipe Sousa comentou no seu post: Parabéns pela campanha!!",
-        author: "@felipesousa",
-        community: "PUC - Campinas",
-        date: "3 horas atrás",
-        time: "",
-        actions: ["Curtir"],
-      },
-      {
-        id: 2,
-        type: "Curtida",
-        title: "Rafael Lanza curtiu seu comentário: Esse debate é importante!",
-        author: "@rafaellanza",
-        community: "Condomínio",
-        date: "3 horas atrás",
-        time: "",
-      },
-      {
-        id: 3,
-        type: "Comentário",
-        title: "Gabriel Padreca comentou no seu post: Tem toda razão, estou...",
-        author: "@gabrielpadreca",
-        community: "PUC - Campinas",
-        date: "10 horas atrás",
-        time: "",
-        actions: ["Curtir"],
-      },
-      {
-        id: 4,
-        type: "Participação",
-        title: "Briann Gomes está participando da sua campanha",
-        author: "@brianngomes",
-        community: "PUC - Campinas",
-        date: "14 horas atrás",
-        time: "",
-      },
-    ],
+  // Mapear os dados da API para o formato usado no componente
+  const notificationsTabs: Record<NotificationType, Notification[]> = {
+    Campanhas: notifications.campaigns,
+    "Avisos oficiais": notifications.announcements,
+    Conexões: notifications.connections,
+    Interações: notifications.interactions,
   }
 
-  const currentNotifications = notifications[activeTab] || []
+  const currentNotifications = notificationsTabs[activeTab] || []
 
-  // Set first notification as selected when changing tabs
-  if (!selectedNotification && currentNotifications.length > 0) {
-    setSelectedNotification(currentNotifications[0])
+  // Set first notification as selected when changing tabs or when data loads
+  useEffect(() => {
+    if (!selectedNotification && currentNotifications.length > 0) {
+      setSelectedNotification(currentNotifications[0])
+    }
+  }, [selectedNotification, currentNotifications])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 text-[#161616]">
+        <Sidebar variant="static" />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Carregando notificações...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 text-[#161616]">
+        <Sidebar variant="static" />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-red-600">Erro ao carregar notificações: {error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-black text-white rounded"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const handleTabChange = (tab: NotificationType) => {
     setActiveTab(tab)
-    setSelectedNotification(notifications[tab]?.[0] || null)
+    setSelectedNotification(notificationsTabs[tab]?.[0] || null)
   }
 
   const getConnectionCount = () => {
-    return notifications.Conexões.filter((n) => n.actions?.includes("Conectar-se")).length
+    return notificationsTabs.Conexões.filter((n) => n.actions?.includes("Conectar-se")).length
   }
 
   const getInteractionCount = () => {
-    return notifications.Interações.length
+    return notificationsTabs.Interações.length
   }
 
   return (
@@ -205,7 +89,7 @@ Equipe de Administração da Comunidade`,
           </div>
           {/* Navigation Tabs */}
           <nav className="py-4">
-            {(Object.keys(notifications) as NotificationType[]).map((tab) => (
+            {(Object.keys(notificationsTabs) as NotificationType[]).map((tab) => (
               <button
                 key={tab}
                 className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${activeTab === tab
@@ -310,8 +194,8 @@ Equipe de Administração da Comunidade`,
                           </div>
                         )}
                       </div>
-                      <p className="text-xs text-[#525252]">{notification.author}</p>
-                      <p className="text-xs text-[#525252]">Comunidade: {notification.community}</p>
+                      <p className="text-xs text-[#525252]">{notification.author.name}</p>
+                      <p className="text-xs text-[#525252]">Comunidade: {notification.community.name}</p>
                       <p className="text-xs text-[#525252] mt-1">{notification.date}</p>
                     </div>
                   </div>
@@ -321,14 +205,14 @@ Equipe de Administração da Comunidade`,
                       <span className="text-xs text-[#525252]">{notification.date}</span>
                       <div className="flex items-center gap-1">
                         <Eye className="h-4 w-4 text-[#525252]" />
-                        <span className="text-xs text-[#525252]">{notification.time}</span>
+                        <span className="text-xs text-[#525252]">{notification.time || notification.stats?.accesses || '0'}</span>
                       </div>
                     </div>
                     <h3 className="font-medium mb-1">{notification.title}</h3>
                     <p className="text-xs text-[#525252] mb-1">
-                      {activeTab === "Avisos oficiais" ? "Administrador" : "Líder"}: {notification.author}
+                      {activeTab === "Avisos oficiais" ? "Administrador" : "Líder"}: {notification.author.name}
                     </p>
-                    <p className="text-xs text-[#525252] mb-2">Comunidade: {notification.community}</p>
+                    <p className="text-xs text-[#525252] mb-2">Comunidade: {notification.community.name}</p>
                     {notification.status && (
                       <span className="text-xs px-2 py-0.5 bg-[#fff8e1] text-[#b28600] rounded-full">
                         {notification.status}
@@ -360,7 +244,7 @@ Equipe de Administração da Comunidade`,
                             <div className="flex gap-2 items-center w-full h-[23px]">
                               <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                                 <span className="self-stretch my-auto text-sm text-neutral-800">
-                                  {selectedNotification.author}
+                                  {selectedNotification.author.name}
                                 </span>
                                 <span className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-white">
                                   {activeTab === "Avisos oficiais" ? "Administrador" : "Líder"}
@@ -369,7 +253,7 @@ Equipe de Administração da Comunidade`,
                             </div>
                           </div>
                         </div>
-                        <span className="text-xs text-neutral-500">{selectedNotification.community}</span>
+                        <span className="text-xs text-neutral-500">{selectedNotification.community.name}</span>
                       </div>
                       <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
                         <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
@@ -393,10 +277,10 @@ Equipe de Administração da Comunidade`,
                   </header>
 
                   {/* Image Section */}
-                  {selectedNotification.image && (
+                  {selectedNotification.image_url && (
                     <section className="px-8 pb-6 w-full max-md:px-5 max-md:max-w-full">
                       <img
-                        src={selectedNotification.image || "/ProfilePic2.svg"}
+                        src={selectedNotification.image_url || "/ProfilePic2.svg"}
                         alt="Content image"
                         className="w-full rounded"
                       />
