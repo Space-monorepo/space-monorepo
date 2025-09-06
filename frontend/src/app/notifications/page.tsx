@@ -31,7 +31,7 @@ export default function NotificacoesPage() {
   const [activeTab, setActiveTab] = useState<NotificationType>("Campanhas")
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
 
-  const notifications = {
+  const notifications: Record<NotificationType, Notification[]> = {
     Campanhas: [
       {
         id: 1,
@@ -194,22 +194,24 @@ Equipe de Administração da Comunidade`,
 
   return (
     <div className="min-h-screen bg-gray-100 text-[#161616]">
-      <Sidebar variant="static"/>
-      <div className="ml-64 flex">
-        {/* Left Navigation */}
-        <div className="w-64 border-r border-[#e0e0e0] bg-gray-100 min-h-screen">
-          <div className="p-4 border-b border-[#e0e0e0] flex items-center gap-3">
+      <Sidebar variant="static" />
+      <div className="flex">
+        {/* Left Navigation - Fixo igual CommunityAdminPage */}
+        <div className="fixed left-64 top-0 w-64 bg-white border-r border-[#e0e0e0] h-screen z-20 overflow-y-auto">
+          {/* Header */}
+          <div className="sticky top-0 p-6 border-b border-[#e0e0e0] bg-white flex items-center gap-3">
             <ArrowLeft className="h-5 w-5 text-[#525252]" />
-            <h1 className="text-xl font-medium">Notificações</h1>
+            <h1 className="text-lg font-medium">Notificações</h1>
           </div>
-
-          <nav className="py-2">
+          {/* Navigation Tabs */}
+          <nav className="py-4">
             {(Object.keys(notifications) as NotificationType[]).map((tab) => (
               <button
                 key={tab}
-                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] ${
-                  activeTab === tab ? "bg-[#f4f4f4] border-r-4 border-black" : ""
-                }`}
+                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${activeTab === tab
+                  ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
+                  : "text-[#525252]"
+                  }`}
                 onClick={() => handleTabChange(tab)}
               >
                 <div className="flex items-center justify-between">
@@ -231,7 +233,7 @@ Equipe de Administração da Comunidade`,
         </div>
 
         {/* Middle Section - Notifications List */}
-        <div className="w-[800px] border-r border-[#e0e0e0] bg-gray-100 min-h-screen">
+        <div className="w-80 fixed top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
           {/* Header */}
           <div className="p-4 border-b border-[#e0e0e0] flex items-center justify-between">
             <h2 className="font-medium">{activeTab}</h2>
@@ -275,9 +277,8 @@ Equipe de Administração da Comunidade`,
             {currentNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
-                  selectedNotification?.id === notification.id ? "bg-[#f4f4f4]" : ""
-                }`}
+                className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedNotification?.id === notification.id ? "bg-[#f4f4f4]" : ""
+                  }`}
                 onClick={() => setSelectedNotification(notification)}
               >
                 {activeTab === "Conexões" || activeTab === "Interações" ? (
@@ -295,14 +296,13 @@ Equipe de Administração da Comunidade`,
                         <p className="font-medium text-sm">{notification.title}</p>
                         {notification.actions && (
                           <div className="flex gap-2">
-                            {notification.actions.map((action, index) => (
+                            {notification.actions.map((action: string, index: number) => (
                               <button
                                 key={index}
-                                className={`px-3 py-1 text-xs ${
-                                  action === "Conectar-se" || action === "Curtir"
-                                    ? "bg-[#161616] text-white"
-                                    : "bg-[#f4f4f4] hover:bg-[#e0e0e0]"
-                                }`}
+                                className={`px-3 py-1 text-xs ${action === "Conectar-se" || action === "Curtir"
+                                  ? "bg-[#161616] text-white"
+                                  : "bg-[#f4f4f4] hover:bg-[#e0e0e0]"
+                                  }`}
                               >
                                 {action === "X" ? <X className="h-3 w-3" /> : action}
                               </button>
@@ -343,95 +343,150 @@ Equipe de Administração da Comunidade`,
 
         {/* Right Section - Detailed View */}
         {selectedNotification && (activeTab === "Campanhas" || activeTab === "Avisos oficiais") && (
-          <div className="flex-1 p-6">
-            <div className="bg-white border border-[#e0e0e0] p-6">
-              {/* Author info */}
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-full overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/ProfilePic1.svg" alt="User" className="w-full h-full object-cover" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{selectedNotification.author}</span>
-                  <div className="w-1 h-1 rounded-full bg-[#525252]"></div>
-                  <span className="text-xs px-2 py-0.5 bg-[#393939] text-white">
-                    {activeTab === "Avisos oficiais" ? "Administrador" : "Líder"}
-                  </span>
-                </div>
-                <span className="text-xs text-[#525252] ml-auto">{selectedNotification.community}</span>
-              </div>
-
-              {/* Content title */}
-              <div className="mb-4">
-                <div className="text-sm text-[#525252] mb-1">Título:</div>
-                <h2 className="text-lg font-medium">{selectedNotification.title}</h2>
-              </div>
-
-              {/* Content description */}
-              <div className="mb-6">
-                <div className="text-sm text-[#525252] mb-1">Descrição:</div>
-                <p className="text-[#161616] whitespace-pre-line">{selectedNotification.description}</p>
-              </div>
-
-              {/* Image */}
-              {selectedNotification.image && (
-                <div className="mb-6">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={selectedNotification.image || "/ProfilePic2.svg"} alt="Content image" className="w-full" />
-                </div>
-              )}
-
-              {/* Stats */}
-              {selectedNotification.stats && (
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <div className="text-sm text-[#525252] mb-1">Data publicada:</div>
-                    <div>{selectedNotification.stats.published}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-[#525252] mb-1">Curtidas:</div>
-                    <div>{selectedNotification.stats.likes} curtidas</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-[#525252] mb-1">Número de acessos:</div>
-                    <div>{selectedNotification.stats.accesses.toLocaleString()} acessos</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-[#525252] mb-1">Comentários:</div>
-                    <div>{selectedNotification.stats.comments} comentários</div>
-                  </div>
-                  {selectedNotification.stats.participants > 0 && (
-                    <div>
-                      <div className="text-sm text-[#525252] mb-1">Participantes:</div>
-                      <div>{selectedNotification.stats.participants} pessoas</div>
-                    </div>
-                  )}
-                  {selectedNotification.status && (
-                    <div>
-                      <div className="text-sm text-[#525252] mb-1">Status:</div>
-                      <div className="inline-block px-2 py-0.5 bg-[#fff8e1] text-[#b28600] rounded-full text-sm">
-                        {selectedNotification.status}
+          <div className="flex-1 bg-gray-100 px-6 py-8 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
+            <div className="max-w-full">
+              <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
+                  <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                    <div className="w-full max-md:max-w-full">
+                      <div className="flex justify-between items-start w-full max-md:max-w-full">
+                        <div className="flex items-center min-w-60">
+                          <img
+                            src="/ProfilePic1.svg"
+                            alt="User"
+                            className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                          />
+                          <div className="self-stretch my-auto min-w-60 w-[342px]">
+                            <div className="flex gap-2 items-center w-full h-[23px]">
+                              <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                <span className="self-stretch my-auto text-sm text-neutral-800">
+                                  {selectedNotification.author}
+                                </span>
+                                <span className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-white">
+                                  {activeTab === "Avisos oficiais" ? "Administrador" : "Líder"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-xs text-neutral-500">{selectedNotification.community}</span>
+                      </div>
+                      <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                        <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                          <span className="self-stretch my-auto font-semibold text-neutral-800">
+                            Título:{" "}
+                          </span>
+                          <span className="self-stretch my-auto text-neutral-800">
+                            {selectedNotification.title}
+                          </span>
+                        </div>
+                        <div className="mt-2 w-full max-md:max-w-full">
+                          <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                            Descrição:
+                          </h3>
+                          <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full whitespace-pre-line">
+                            {selectedNotification.description}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+                  </header>
 
-              {/* Actions */}
-              {selectedNotification.actions && (
-                <div className="flex items-center gap-4">
-                  {selectedNotification.actions.map((action, index) => (
-                    <button
-                      key={index}
-                      className="flex items-center gap-2 px-4 py-2 border border-[#e0e0e0] hover:bg-[#f8f8f8]"
-                    >
-                      {action === "Promover" && <ArrowUp className="h-4 w-4" />}
-                      {action === "Comentar" && <MessageSquare className="h-4 w-4" />}
-                      {action}
-                    </button>
-                  ))}
-                </div>
-              )}
+                  {/* Image Section */}
+                  {selectedNotification.image && (
+                    <section className="px-8 pb-6 w-full max-md:px-5 max-md:max-w-full">
+                      <img
+                        src={selectedNotification.image || "/ProfilePic2.svg"}
+                        alt="Content image"
+                        className="w-full rounded"
+                      />
+                    </section>
+                  )}
+
+                  <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
+                    {selectedNotification.stats && (
+                      <div className="w-full text-sm leading-none max-md:max-w-full">
+                        <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
+                          <div className="flex flex-col items-start">
+                            <div className="flex gap-2 items-center">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Data publicada:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedNotification.stats.published}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center self-stretch mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Número de acessos:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedNotification.stats.accesses.toLocaleString()} acessos
+                              </span>
+                            </div>
+                            {selectedNotification.stats.participants > 0 && (
+                              <div className="flex gap-2 items-center mt-4">
+                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                  Participantes:
+                                </span>
+                                <span className="self-stretch my-auto text-neutral-500">
+                                  {selectedNotification.stats.participants} pessoas
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col w-[198px]">
+                            <div className="flex gap-2 items-center self-start">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Curtidas:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedNotification.stats.likes} curtidas
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4 w-full">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Comentários:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedNotification.stats.comments} comentários
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Status Section */}
+                    {selectedNotification.status && (
+                      <div className="flex gap-2 items-center self-start mt-10">
+                        <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
+                          Status:
+                        </span>
+                        <div className="inline-block px-2 py-0.5 bg-[#fff8e1] text-[#b28600] rounded-full text-sm">
+                          {selectedNotification.status}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Actions Section */}
+                    {selectedNotification.actions && (
+                      <div className="flex items-center gap-4 mt-10">
+                        {selectedNotification.actions.map((action: string, index: number) => (
+                          <button
+                            key={index}
+                            className="flex items-center gap-2 px-4 py-2 border border-[#e0e0e0] hover:bg-[#f8f8f8] rounded"
+                          >
+                            {action === "Promover" && <ArrowUp className="h-4 w-4" />}
+                            {action === "Comentar" && <MessageSquare className="h-4 w-4" />}
+                            {action}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                </article>
+              </div>
             </div>
           </div>
         )}
