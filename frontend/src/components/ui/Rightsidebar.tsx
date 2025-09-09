@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import useRightSidebarData from "@/app/api/src/hooks/sidebar/useRightSidebarData";
+import PostPreviewModal from "@/components/modals/PostPreviewModal";
+import { translatePostType } from "@/lib/postTypeTranslations";
+import { translateUserRole } from "@/lib/roleTranslations";
+import { getRelativeTime } from "@/lib/relativeTime";
 
 export default function RightSidebar() {
 
   const { userCampaigns, loading, error, refreshCampaigns } = useRightSidebarData();
+  const [isPostPreviewOpen, setIsPostPreviewOpen] = useState(false);
+  const [postPreviewData, setPostPreviewData] = useState<any>(null);
 
   // Campanhas em engajamento: ordena por soma de likes + comentários e pega as top 3
   const trendingCampaigns = [...userCampaigns]
@@ -49,7 +55,32 @@ export default function RightSidebar() {
           ) : userCampaigns.length > 0 ? (
             userCampaigns.map((campaign, index) => (
               <article key={campaign.id} className="flex relative flex-col gap-1 items-start self-stretch max-md:w-full">
-                <div className="flex relative gap-2 items-center self-stretch p-3 rounded-sm bg-neutral-200 hover:bg-neutral-300 transition-colors cursor-pointer max-md:w-full max-sm:p-2.5">
+                <div
+                  className="flex relative gap-2 items-center self-stretch p-3 rounded-sm bg-neutral-200 hover:bg-neutral-300 transition-colors cursor-pointer max-md:w-full max-sm:p-2.5"
+                  onClick={() => {
+                    setPostPreviewData({
+                      id: campaign.id,
+                      title: campaign.title,
+                      content: campaign.content,
+                      author: campaign.user.name,
+                      avatar: campaign.user.profile_picture || "/no-profile-pic.png",
+                      role: translateUserRole(campaign.user.role),
+                      location: campaign.community.name,
+                      type: translatePostType(campaign.type_post),
+                      time: getRelativeTime(campaign.created_at),
+                      imageUrl: campaign.image_url,
+                      likes: campaign.likes_count,
+                      comments: campaign.comments_count,
+                      shares: campaign.report_count,
+                      username: campaign.user.username || campaign.user.id,
+                      user: {
+                        id: campaign.user.id,
+                        profile_picture: campaign.user.profile_picture
+                      }
+                    });
+                    setIsPostPreviewOpen(true);
+                  }}
+                >
                   <div>
                     <div
                       dangerouslySetInnerHTML={{
@@ -140,6 +171,13 @@ export default function RightSidebar() {
           </div>
         </article>
       </section>
+
+      {/* Modal de visualização do post */}
+      <PostPreviewModal
+        post={postPreviewData}
+        isOpen={isPostPreviewOpen}
+        onClose={() => setIsPostPreviewOpen(false)}
+      />
     </nav>
   );
 }
