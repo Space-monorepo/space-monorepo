@@ -32,6 +32,7 @@ import { LeveBadge, ModeradaBadge, CriticaBadge } from "@/components/badges/comp
 import ModalAnnouncement from "@/components/modals/posts/ModalAnnouncement";
 import RejectComplaintModal from "@/components/modals/community/RejectComplaintModal";
 import ApproveComplaintModal from "@/components/modals/community/ApproveComplaintModal";
+import ImportUserModal from "@/components/modals/community/ImportUserModal";
 import { ChevronSort, Email, FilterEdit } from "@carbon/icons-react";
 
 type UserInfo = {
@@ -159,6 +160,7 @@ export default function CommunityAdminPage({
   const [excludeUserEmail, setExcludeUserEmail] = useState("");
   // Estados para importação em lote
   const [emailsToImport, setEmailsToImport] = useState("");
+  const [isImportUserModalOpen, setIsImportUserModalOpen] = useState(false);
   const [hasLoadedMembers, setHasLoadedMembers] = useState(false);
   const loadMembersRef = useRef(loadMembers);
 
@@ -456,7 +458,7 @@ export default function CommunityAdminPage({
 
   const handleImportUsers = async () => {
     if (!emailsToImport.trim()) {
-      toast.error("Por favor, digite os emails para importar");
+      toast.error("Por favor, digite o email para importar");
       return;
     }
 
@@ -465,17 +467,10 @@ export default function CommunityAdminPage({
       return;
     }
 
-    const emails = emailsToImport
-      .split(/[,\n]/)
-      .map((e) => e.trim())
-      .filter((e) => e);
-
-    if (emails.length === 0) {
-      toast.error("Nenhum email válido encontrado");
-      return;
-    }
-    await importUsers(id, emails);
+    const email = emailsToImport.trim();
+    await importUsers(id, [email]);
     setEmailsToImport("");
+    setIsImportUserModalOpen(false);
   };
 
   // Função para mapear severidade para o badge correto
@@ -1197,19 +1192,19 @@ export default function CommunityAdminPage({
                   <section className="flex flex-col gap-4 items-start px-0 py-12 w-full border-b border-solid border-b-stone-300">
                     <div className="flex flex-col gap-2 items-start w-full">
                       <h2 className="w-full text-sm font-semibold leading-6 text-neutral-800">
-                        Importar base de dados de usuários
+                        Importar usuário por e-mail
                       </h2>
                       <p className="text-sm text-neutral-500">
-                        Tamanho máximo do arquivo é 2MB. Tipos de arquivos suportados são .jpg e .png.
+                        Adicione um usuário à comunidade informando o e-mail.
                       </p>
                     </div>
                     <button
                       className="flex gap-8 items-center py-3 pr-16 pl-4 cursor-pointer bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={handleImportUsers}
+                      onClick={() => setIsImportUserModalOpen(true)}
                       disabled={isUserActionLoading}
                     >
                       <span className="text-sm leading-6 text-zinc-100">
-                        {isUserActionLoading ? "Importando..." : "Importar base"}
+                        Importar base
                       </span>
                     </button>
                   </section>
@@ -1527,6 +1522,16 @@ export default function CommunityAdminPage({
       </div>
 
       {/* Modals */}
+      {/* Modal para importar usuário por e-mail */}
+      <ImportUserModal
+        isOpen={isImportUserModalOpen}
+        onClose={() => setIsImportUserModalOpen(false)}
+        onImport={handleImportUsers}
+        loading={isUserActionLoading}
+        emailValue={emailsToImport}
+        onEmailChange={setEmailsToImport}
+      />
+
       <ApproveCampaignModal
         isOpen={isApproveModalOpen}
         onClose={() => setIsApproveModalOpen(false)}
