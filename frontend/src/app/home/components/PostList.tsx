@@ -21,6 +21,7 @@ import { getRelativeTime } from "@/lib/relativeTime";
 import { API_URL } from "@/config";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
+import PostPreviewModal from "@/components/modals/PostPreviewModal";
 
 // CommentsSection como componente interno
 interface Comment {
@@ -436,6 +437,9 @@ export default function PostList() {
 
   const { participating, loading: loadingParticipation, checkParticipation, participate } = useCampaignParticipation();
 
+  const [isPostPreviewOpen, setIsPostPreviewOpen] = useState(false);
+  const [postPreviewData, setPostPreviewData] = useState<any>(null);
+
   // Função para carregar posts iniciais
   const loadInitialPosts = async () => {
     const token = getTokenFromCookies();
@@ -702,7 +706,10 @@ export default function PostList() {
                       <div className="relative">
                         <button
                           className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                          onClick={() => setOpenMenuPostId(openMenuPostId === post.id ? null : post.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuPostId(openMenuPostId === post.id ? null : post.id);
+                          }}
                           aria-label="Mais opções"
                         >
                           <OverflowMenuVertical className="h-4 w-4 text-gray-500" />
@@ -715,7 +722,8 @@ export default function PostList() {
                           >
                             <button
                               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 rounded"
-                              onClick={async () => {
+                              onClick={async (e) => {
+                                e.stopPropagation();
                                 setOpenMenuPostId(null);
                                 try {
                                   await reportPost(post.community?.id || 'default-community-id', post.id);
@@ -732,7 +740,33 @@ export default function PostList() {
 
                   <div className="mt-6 w-full text-neutral-800 max-md:max-w-full">
                     <div className="flex flex-row justify-between items-center w-full max-md:max-w-full">
-                      <div className="flex gap-2.5 items-center text-xl font-bold leading-relaxed min-w-60 px-0 w-0 flex-1" style={{ wordBreak: 'break-word' }}>
+                      <div
+                        className="flex gap-2.5 items-center text-xl font-bold leading-relaxed min-w-60 px-0 w-0 flex-1 cursor-pointer"
+                        style={{ wordBreak: 'break-word' }}
+                        onClick={() => {
+                          setPostPreviewData({
+                            id: post.id,
+                            title: post.title,
+                            content: post.content,
+                            author: post.author,
+                            avatar: post.avatar,
+                            role: post.role,
+                            location: post.location,
+                            type: post.type,
+                            time: post.time,
+                            imageUrl: post.image,
+                            likes: post.likes,
+                            comments: post.comments,
+                            shares: post.shares,
+                            username: post.username,
+                            user: {
+                              id: post.user.id,
+                              profile_picture: post.user.profile_picture
+                            }
+                          });
+                          setIsPostPreviewOpen(true);
+                        }}
+                      >
                         <h2
                           className="text-neutral-800 px-0 font-georgia font-bold break-words w-full max-w-full"
                           style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}
@@ -750,8 +784,31 @@ export default function PostList() {
 
                     {post.content && (
                       <div
-                        className="mt-4 text-sm leading-5 text-justify text-neutral-800 max-md:max-w-full whitespace-pre-line font-regular break-words w-full max-w-full"
+                        className="mt-4 text-sm leading-5 text-justify text-neutral-800 max-md:max-w-full whitespace-pre-line font-regular break-words w-full max-w-full cursor-pointer"
                         style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}
+                        onClick={() => {
+                          setPostPreviewData({
+                            id: post.id,
+                            title: post.title,
+                            content: post.content,
+                            author: post.author,
+                            avatar: post.avatar,
+                            role: post.role,
+                            location: post.location,
+                            type: post.type,
+                            time: post.time,
+                            imageUrl: post.image,
+                            likes: post.likes,
+                            comments: post.comments,
+                            shares: post.shares,
+                            username: post.username,
+                            user: {
+                              id: post.user.id,
+                              profile_picture: post.user.profile_picture
+                            }
+                          });
+                          setIsPostPreviewOpen(true);
+                        }}
                       >
                         {post.content}
                       </div>
@@ -769,7 +826,10 @@ export default function PostList() {
                     {post.type === 'Campanha' && (
                       <button
                         className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${participating[post.id] ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
-                        onClick={() => !participating[post.id] && handleParticipateCampaign(post)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!participating[post.id]) handleParticipateCampaign(post);
+                        }}
                         disabled={participating[post.id]}
                       >
                         {participating[post.id] ? 'Já participa da campanha' : 'Participar da Campanha'}
@@ -782,7 +842,10 @@ export default function PostList() {
                   <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5 w-[214px]">
                     <button
                       className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap"
-                      onClick={() => handleLike(post)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike(post);
+                      }}
                       title="Curtir"
                     >
                       <ArrowUp className="h-4 w-4 text-gray-500" />
@@ -792,7 +855,10 @@ export default function PostList() {
                     </button>
                     <button
                       className={`flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap transition-colors px-3 py-1 ${openCommentsPostId === post.id ? 'bg-neutral-200' : ''}`}
-                      onClick={() => handleComment(post)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleComment(post);
+                      }}
                       title="Comentar"
                     >
                       <Forum className={`h-4 w-4 ${openCommentsPostId === post.id ? 'text-black-300' : 'text-gray-500'}`} />
@@ -802,7 +868,10 @@ export default function PostList() {
                     </button>
                     <button
                       className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-teal-700"
-                      onClick={() => handleShare(post)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleShare(post);
+                      }}
                       title="Compartilhar"
                     >
                       <Activity className="h-4 w-4 text-teal-700" />
@@ -845,6 +914,11 @@ export default function PostList() {
             <span>Você chegou ao final dos posts</span>
           </div>
         )} */}
+        <PostPreviewModal
+          post={postPreviewData}
+          isOpen={isPostPreviewOpen}
+          onClose={() => setIsPostPreviewOpen(false)}
+        />
       </main>
     </div>
   );
