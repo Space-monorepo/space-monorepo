@@ -176,19 +176,23 @@ export default function CommunityAdminPage({
     if (id) {
       fetchCommunity(id);
       fetchCommunityPosts(id);
-    }
-  }, [id, fetchCommunity, fetchCommunityPosts]); // Carregar membros quando a aba de usuários for ativa
-  useEffect(() => {
-    if (id && activeTab === "Usuários" && !hasLoadedMembers) {
+      // Carregar membros sempre para permitir operações de moderação
       loadMembersRef.current(id);
-      setHasLoadedMembers(true);
     }
-  }, [id, activeTab, hasLoadedMembers]); // Sem dependência de loadMembers
+  }, [id, fetchCommunity, fetchCommunityPosts]);
 
-  // Atualizar ref quando loadMembers mudar
+  // Atualizar a ref quando loadMembers mudar
   useEffect(() => {
     loadMembersRef.current = loadMembers;
   }, [loadMembers]);
+
+  // Marcar que membros foram carregados quando a aba usuários for acessada  
+  useEffect(() => {
+    if (activeTab === "Usuários") {
+      setHasLoadedMembers(true);
+    }
+  }, [activeTab]);
+
   const tabs = ["Campanhas", "Denúncias", "Usuários", "Anúncios", "Comunidade"];
 
   // Função para mapear status da API para status do frontend
@@ -423,7 +427,7 @@ export default function CommunityAdminPage({
       return;
     }
 
-    await addModeratorByEmail(id, newModeratorEmail, "moderator");
+    await addModeratorByEmail(id, id, newModeratorEmail);
   };
 
   const handleRemoveUser = async () => {
@@ -452,7 +456,7 @@ export default function CommunityAdminPage({
       `Tem certeza que deseja excluir o usuário "${memberToRemove.user.name}" (${memberToRemove.user.email})? Esta ação é permanente e não pode ser desfeita.`
     );
     if (confirmRemoval) {
-      await removeUserById(id, id, memberToRemove.user_id);
+      await removeUserById(id, id, memberToRemove.id);
     }
   };
 
