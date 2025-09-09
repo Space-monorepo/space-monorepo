@@ -50,7 +50,7 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
       onMouseLeave={() => variant === "hover" && setIsHovered(false)}
     >
       {/* Logo */}
-      <div className="p-9 flex items-center gap-3 border-b border-gray-200">
+      <div className="p-9 flex items-center gap-3 border-gray-200">
         <Link href="/home" className="flex items-center space-x-2">
           <Image src="/Vector.svg" alt="Space Logo" width={24} height={24} />
           <Image
@@ -112,24 +112,24 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
           />
           <SidebarItem
             icon={<User size={20} />}
-            label="Administração"
+            label="Administrador"
             href="/administration"
             active={isActive("/administration")}
             isOpen={isOpen}
           />
+          <div className="mt-110">
+            <SidebarItem
+              icon={<Settings size={20} />}
+              label="Configurações"
+              href="/settings"
+              active={isActive("/settings")}
+              isOpen={isOpen}
+            />
+          </div>
         </nav>
       </div>
 
-      {/* Configurações */}
-      <div className="px-6 mb-4 border-gray-200">
-        <SidebarItem
-          icon={<Settings size={20} />}
-          label="Configurações"
-          href="/settings"
-          active={isActive("/settings")}
-          isOpen={isOpen}
-        />
-      </div>
+
 
       {/* Perfil e logout */}
       <div className="p-7 py-4 border-gray-200">
