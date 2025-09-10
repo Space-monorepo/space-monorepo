@@ -1,4 +1,3 @@
-
 def test_list_posts_under_analysis_route():
     pass
 

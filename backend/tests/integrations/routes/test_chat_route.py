@@ -1,6 +1,6 @@
-
 def test_send_message_route(mongo_db, authenticate_client, user_on_db):
     pass
+
 
 def test_get_message_route(mongo_db, authenticate_client, user_on_db):
     pass

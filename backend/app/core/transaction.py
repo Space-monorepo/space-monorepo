@@ -12,7 +12,7 @@ from app.api.post.repository import (
     PostRepository,
     PollPostsRepository,
     PollOptionsRepository,
-    PostLikesRepository
+    PostLikesRepository,
 )
 from app.api.rating.repository import RatingRepository
 from app.api.users.repository import UserRepository
@@ -89,13 +89,12 @@ class TransactionManager:
 
     def get_member_badge_repository(self):
         return MemberBadgeRepository(self._session)
-    
+
     def get_rating_repository(self):
         return RatingRepository(self._session)
-    
+
     def get_comment_repository(self):
         return CommentRepository(self._session)
-    
+
     def get_comment_likes_repository(self):
         return CommentLikesRepository(self._session)
-      

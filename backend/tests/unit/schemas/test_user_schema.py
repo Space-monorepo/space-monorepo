@@ -5,6 +5,7 @@ import pytest
 
 from app.api.users.schema import LoginSchema, UserCreate, UserResponse, UserUpdate
 
+
 @pytest.mark.unit
 def test_user_input_schema():
     user = UserCreate(

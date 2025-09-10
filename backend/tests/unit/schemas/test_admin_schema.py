@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from app.api.administration.schema import ImportMembers
 
+
 @pytest.mark.unit
 def test_import_members_schema():
     import_members = ImportMembers(emails=['user1@example.com', 'user2@example.com'])

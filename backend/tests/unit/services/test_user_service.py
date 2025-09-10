@@ -18,12 +18,12 @@ def test_create_user_service_success():
     - Then it should return the created user with generated ID
     """
     # Arrange
-    fake_email = "johndoe@example.com"
-    fake_name = "John Doe"
-    fake_hashed_password = "hashed_password"
+    fake_email = 'johndoe@example.com'
+    fake_name = 'John Doe'
+    fake_hashed_password = 'hashed_password'
     fake_profile_image_url = None
     fake_reputation_level = 1
-    fake_status = "pending"
+    fake_status = 'pending'
     fake_user_id = uuid4()
 
     fake_user_create = UserCreate(
@@ -50,7 +50,9 @@ def test_create_user_service_success():
 
     service = UserService(mock_tm)
     service.user_repo = mock_user_repo
-    service.get_by_email = Mock(return_value=None)  # Mock para simular que usuário não existe
+    service.get_by_email = Mock(
+        return_value=None
+    )  # Mock para simular que usuário não existe
 
     # Act
     result = service.create_user(fake_user_create)
@@ -79,8 +81,8 @@ def test_get_user_service_success():
     """
     # Arrange
     fake_user_id = str(uuid4())
-    fake_email = "johndoe@example.com"
-    fake_name = "John Doe"
+    fake_email = 'johndoe@example.com'
+    fake_name = 'John Doe'
 
     fake_user = Mock(spec=User)
     fake_user.id = fake_user_id
@@ -116,9 +118,9 @@ def test_get_by_email_service_success():
     - Then it should return the expected user
     """
     # Arrange
-    fake_email = "johndoe@example.com"
+    fake_email = 'johndoe@example.com'
     fake_user_id = uuid4()
-    fake_name = "John Doe"
+    fake_name = 'John Doe'
 
     fake_user = Mock(spec=User)
     fake_user.id = fake_user_id
@@ -155,9 +157,9 @@ def test_update_user_service_success():
     """
     # Arrange
     fake_user_id = str(uuid4())
-    fake_old_email = "johndoe@example.com"
-    fake_new_email = "new_johndoe@example.com"
-    fake_name = "John Doe"
+    fake_old_email = 'johndoe@example.com'
+    fake_new_email = 'new_johndoe@example.com'
+    fake_name = 'John Doe'
 
     fake_user_update = UserUpdate(email=fake_new_email)
 

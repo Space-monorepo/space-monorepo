@@ -1,38 +1,39 @@
-from unittest.mock import MagicMock
 import uuid
+from unittest.mock import MagicMock
+
 import pytest
 from fastapi.testclient import TestClient
 from pymongo import MongoClient
-from sqlalchemy import create_engine, text, StaticPool
+from sqlalchemy import StaticPool, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.api.badges.model import Badge as BadgeModel
+from app.api.badges.model import MemberBadge as MemberBadgeModel
+from app.api.comment.model import Comment, CommentLikes
+from app.api.comment.schema import CommentStatusEnum
 from app.api.communities.model import Community, CommunityMember
 from app.api.communities.schema import CommunityMemberRoleEnum, CommunityTypeEnum
-from app.core.config import settings
-from app.core.database import Base, get_db, get_mongo_db
-from app.core.transaction import TransactionManager
-from app.main import app
 from app.api.post.model import (
+    CampaignParticipants,
     CampaignPost,
     ComplaintPost,
     PollOptions,
     PollPosts,
     Post,
     PostFeedback,
-    CampaignParticipants,
 )
 from app.api.post.repository import PostRepository
 from app.api.post.schemas import (
     CampaignStatusEnum,
     PostTypeEnum,
 )
+from app.api.rating.model import Rating
 from app.api.users.schema import UserCreate
 from app.api.users.service import UserService
-from app.api.badges.model import Badge as BadgeModel
-from app.api.badges.model import MemberBadge as MemberBadgeModel
-from app.api.rating.model import Rating
-from app.api.comment.model import Comment, CommentLikes
-from app.api.comment.schema import CommentStatusEnum
+from app.core.config import settings
+from app.core.database import Base, get_db, get_mongo_db
+from app.core.transaction import TransactionManager
+from app.main import app
 
 
 @pytest.fixture(scope='session')
@@ -174,6 +175,7 @@ def community_on_db(session_sql):
         name='Test Community',
         description='Test Description',
         type_community=CommunityTypeEnum.UNIVERSITY,
+        image_url='https://example.com/test-community-image.jpg',
     )
 
     session_sql.add(community)
@@ -297,7 +299,9 @@ def campaign_post_on_db(session_sql, post_on_db):
 
 
 @pytest.fixture
-def campaign_participants_on_db(session_sql, campaign_post_on_db, community_member_on_db):
+def campaign_participants_on_db(
+    session_sql, campaign_post_on_db, community_member_on_db
+):
     campaign_participants = CampaignParticipants(
         campaign_id=campaign_post_on_db.post_id,
         user_id=community_member_on_db.user_id,
