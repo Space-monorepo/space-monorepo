@@ -9,8 +9,6 @@ from app.api.comment.schema import (
     CommentStatusEnum,
     CommentUpdate,
     CommentResponse,
-    CommentAuthor,
-    PostRelated,
 )
 from app.api.comment.service import CommentService
 from app.api.comment.exceptions import CommentSuspendedError, CommentNotFoundError, CommentLikesNotFoundError
