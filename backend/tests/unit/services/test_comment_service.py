@@ -20,8 +20,131 @@ from app.api.communities.schema import CommunityMemberResponse, CommunityMemberR
 from app.utils.schema import PaginationSearchParams
 
 
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+
+REPORT_THRESHOLD = 10
+DEFAULT_LIKES_COUNT = 0
+DEFAULT_REPORT_COUNT = 0
+DEFAULT_COMMENTS_COUNT = 0
+DEFAULT_PAGINATION_OFFSET = 0
+DEFAULT_PAGINATION_LIMIT = 10
+
+
+# =============================================================================
+# FIXTURES
+# =============================================================================
+
+@pytest.fixture
+def fake_ids():
+    """Fixture que retorna IDs únicos para uso nos testes."""
+    return {
+        'comment_id': uuid4(),
+        'post_id': str(uuid4()),
+        'user_id': str(uuid4()),
+        'community_id': str(uuid4()),
+        'parent_id': str(uuid4()),
+        'member_id': str(uuid4()),
+        'reply_id': uuid4(),
+    }
+
+
+@pytest.fixture
+def fake_comment_data():
+    """Fixture com dados padrão para comentários."""
+    return {
+        'content': 'Test comment content',
+        'status': CommentStatusEnum.ACTIVE,
+        'likes_count': DEFAULT_LIKES_COUNT,
+        'report_count': DEFAULT_REPORT_COUNT,
+        'created_at': datetime.now(timezone.utc),
+    }
+
+
+@pytest.fixture
+def fake_post(fake_ids):
+    """Fixture que retorna um mock de Post."""
+    post = Mock(spec=Post)
+    post.id = fake_ids['post_id']
+    post.title = 'Test Post'
+    post.community_id = fake_ids['community_id']
+    post.comments_count = DEFAULT_COMMENTS_COUNT
+    return post
+
+
+@pytest.fixture
+def fake_user(fake_ids):
+    """Fixture que retorna um mock de User."""
+    user = Mock(spec=User)
+    user.id = fake_ids['user_id']
+    user.name = 'Test User'
+    user.profile_image_url = 'https://example.com/profile.jpg'
+    return user
+
+
+@pytest.fixture
+def fake_comment(fake_ids, fake_comment_data, fake_post, fake_user):
+    """Fixture que retorna um mock de Comment com relacionamentos."""
+    comment = Mock(spec=Comment)
+    comment.id = fake_ids['comment_id']
+    comment.post_id = fake_ids['post_id']
+    comment.user_id = fake_ids['user_id']
+    comment.content = fake_comment_data['content']
+    comment.status = fake_comment_data['status']
+    comment.likes_count = fake_comment_data['likes_count']
+    comment.report_count = fake_comment_data['report_count']
+    comment.parent_id = None
+    comment.created_at = fake_comment_data['created_at']
+    comment.post = fake_post
+    comment.user = fake_user
+    return comment
+
+
+@pytest.fixture
+def mock_repositories():
+    """Fixture que retorna mocks dos repositórios."""
+    return {
+        'tm': Mock(),
+        'comment_repo': Mock(),
+        'post_repo': Mock(),
+        'member_repo': Mock(),
+        'comment_likes_repo': Mock(),
+    }
+
+
+@pytest.fixture
+def mock_services():
+    """Fixture que retorna mocks dos serviços."""
+    return {
+        'community_service': Mock(),
+    }
+
+
+@pytest.fixture
+def comment_service(mock_repositories, mock_services):
+    """Fixture que retorna uma instância configurada do CommentService."""
+    service = CommentService(mock_repositories['tm'])
+    service.comment_repo = mock_repositories['comment_repo']
+    service.post_repo = mock_repositories['post_repo']
+    service.member_repo = mock_repositories['member_repo']
+    service.comment_likes_repo = mock_repositories['comment_likes_repo']
+    service.community_service = mock_services['community_service']
+    return service
+
+
+@pytest.fixture
+def pagination_params():
+    """Fixture que retorna parâmetros de paginação padrão."""
+    return PaginationSearchParams(offset=DEFAULT_PAGINATION_OFFSET, limit=DEFAULT_PAGINATION_LIMIT)
+
+
+# =============================================================================
+# SUCCESS TESTS
+# =============================================================================
+
 @pytest.mark.unit
-def test_create_comment_service_success():
+def test_create_comment_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user, fake_comment):
     """
     Tests the `create_comment` method of CommentService.
 
@@ -31,91 +154,44 @@ def test_create_comment_service_success():
     - Then it should return the created comment with mapped response
     """
     # Arrange
-    fake_comment_id = uuid4()
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
-    fake_content = "Test comment content"
-    fake_status = CommentStatusEnum.ACTIVE
     fake_member_role = CommunityMemberRoleEnum.MEMBER
 
     fake_comment_create = CommentCreate(
-        post_id=fake_post_id,
-        user_id=fake_user_id,
-        content=fake_content,
+        post_id=fake_ids['post_id'],
+        user_id=fake_ids['user_id'],
+        content='Test comment content',
         parent_id=None,
-        status=fake_status,
+        status=CommentStatusEnum.ACTIVE,
     )
 
-    fake_created_comment = Mock(spec=Comment)
-    fake_created_comment.id = fake_comment_id
-    fake_created_comment.post_id = fake_post_id
-    fake_created_comment.user_id = fake_user_id
-    fake_created_comment.content = fake_content
-    fake_created_comment.parent_id = None
-    fake_created_comment.status = fake_status
-    fake_created_comment.likes_count = 0
-    fake_created_comment.report_count = 0
-    fake_created_comment.created_at = datetime.now(timezone.utc)
-
-    # Mock objects
-    fake_post = Mock(spec=Post)
-    fake_post.id = fake_post_id
-    fake_post.title = "Test Post"
-    fake_post.community_id = fake_community_id
-    fake_post.comments_count = 0
-    fake_created_comment.post = fake_post
-
-    fake_user = Mock(spec=User)
-    fake_user.id = fake_user_id
-    fake_user.name = "Test User"
-    fake_user.profile_image_url = "https://example.com/profile.jpg"
-    fake_created_comment.user = fake_user
-
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.save.return_value = fake_created_comment
-
-    mock_post_repo = Mock()
-    mock_post_repo.get_by_id.return_value = fake_post
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    mock_community_service = Mock()
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.post_repo = mock_post_repo
-    service.member_repo = mock_member_repo
-    service.community_service = mock_community_service
+    mock_repositories['comment_repo'].save.return_value = fake_comment
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.create_comment(fake_comment_create)
+    result = comment_service.create_comment(fake_comment_create)
 
     # Assert
-    # The service calls get_by_id twice: once for validation, once to increment comments_count
-    assert mock_post_repo.get_by_id.call_count == 2
-    mock_post_repo.get_by_id.assert_called_with(fake_post_id)  # Check last call was correct
-    mock_comment_repo.save.assert_called_once()
-    mock_post_repo.save.assert_called_once_with(fake_post)
-    mock_member_repo.get_member_role.assert_called_once_with(fake_user_id, fake_community_id)
+    assert mock_repositories['post_repo'].get_by_id.call_count == 2
+    mock_repositories['comment_repo'].save.assert_called_once()
+    mock_repositories['post_repo'].save.assert_called_once_with(fake_post)
+    mock_repositories['member_repo'].get_member_role.assert_called_once_with(fake_ids['user_id'], fake_ids['community_id'])
     assert fake_post.comments_count == 1
     assert result is not None
     assert isinstance(result, CommentResponse)
-    assert result.id == fake_comment_id
-    assert str(result.post.id) == fake_post_id
-    assert str(result.user.id) == fake_user_id
-    assert result.content == fake_content
-    assert result.status == fake_status
-    assert result.likes_count == 0
-    assert result.report_count == 0
+    assert str(result.id) == str(fake_ids['comment_id'])
+    assert str(result.post.id) == fake_ids['post_id']
+    assert str(result.user.id) == fake_ids['user_id']
+    assert result.content == 'Test comment content'
+    assert result.status == CommentStatusEnum.ACTIVE
+    assert result.likes_count == DEFAULT_LIKES_COUNT
+    assert result.report_count == DEFAULT_REPORT_COUNT
     assert result.parent_id is None
     assert result.user.member_role == fake_member_role
 
 
 @pytest.mark.unit
-def test_create_comment_reply_service_success():
+def test_create_comment_reply_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
     """
     Tests the `create_comment` method of CommentService for creating replies.
 
@@ -125,89 +201,55 @@ def test_create_comment_reply_service_success():
     - Then it should return the created reply linked to parent comment
     """
     # Arrange
-    fake_comment_id = uuid4()
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
-    fake_parent_id = str(uuid4())
-    fake_content = "Test reply content"
     fake_member_role = CommunityMemberRoleEnum.MEMBER
 
     fake_comment_create = CommentCreate(
-        post_id=fake_post_id,
-        user_id=fake_user_id,
-        content=fake_content,
-        parent_id=fake_parent_id,
+        post_id=fake_ids['post_id'],
+        user_id=fake_ids['user_id'],
+        content='Test reply content',
+        parent_id=fake_ids['parent_id'],
         status=CommentStatusEnum.ACTIVE,
     )
 
     fake_parent_comment = Mock(spec=Comment)
-    fake_parent_comment.id = fake_parent_id
-    fake_parent_comment.post_id = fake_post_id
+    fake_parent_comment.id = fake_ids['parent_id']
+    fake_parent_comment.post_id = fake_ids['post_id']
     fake_parent_comment.parent_id = None
 
     fake_created_reply = Mock(spec=Comment)
-    fake_created_reply.id = fake_comment_id
-    fake_created_reply.post_id = fake_post_id
-    fake_created_reply.user_id = fake_user_id
-    fake_created_reply.content = fake_content
-    fake_created_reply.parent_id = fake_parent_id
+    fake_created_reply.id = fake_ids['comment_id']
+    fake_created_reply.post_id = fake_ids['post_id']
+    fake_created_reply.user_id = fake_ids['user_id']
+    fake_created_reply.content = 'Test reply content'
+    fake_created_reply.parent_id = fake_ids['parent_id']
     fake_created_reply.status = CommentStatusEnum.ACTIVE
-    fake_created_reply.likes_count = 0
-    fake_created_reply.report_count = 0
+    fake_created_reply.likes_count = DEFAULT_LIKES_COUNT
+    fake_created_reply.report_count = DEFAULT_REPORT_COUNT
     fake_created_reply.created_at = datetime.now(timezone.utc)
-
-    # Mock relacionamentos
-    fake_post = Mock(spec=Post)
-    fake_post.id = fake_post_id
-    fake_post.title = "Test Post"
-    fake_post.community_id = fake_community_id
-    fake_post.comments_count = 1
     fake_created_reply.post = fake_post
-
-    fake_user = Mock(spec=User)
-    fake_user.id = fake_user_id
-    fake_user.name = "Reply User"
-    fake_user.profile_image_url = "https://example.com/profile.jpg"
     fake_created_reply.user = fake_user
 
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_parent_comment
-    mock_comment_repo.save.return_value = fake_created_reply
-
-    mock_post_repo = Mock()
-    mock_post_repo.get_by_id.return_value = fake_post
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    mock_community_service = Mock()
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.post_repo = mock_post_repo
-    service.member_repo = mock_member_repo
-    service.community_service = mock_community_service
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_parent_comment
+    mock_repositories['comment_repo'].save.return_value = fake_created_reply
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.create_comment(fake_comment_create)
+    result = comment_service.create_comment(fake_comment_create)
 
     # Assert
-    # The service calls get_by_id twice: once for validation, once to increment comments_count
-    assert mock_post_repo.get_by_id.call_count == 2
-    mock_post_repo.get_by_id.assert_called_with(fake_post_id)  # Check last call was correct
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_parent_id)
-    mock_comment_repo.save.assert_called_once()
+    assert mock_repositories['post_repo'].get_by_id.call_count == 2
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['parent_id'])
+    mock_repositories['comment_repo'].save.assert_called_once()
     assert result is not None
     assert isinstance(result, CommentResponse)
-    assert result.id == fake_comment_id
-    assert str(result.parent_id) == fake_parent_id
-    assert result.content == fake_content
+    assert str(result.id) == str(fake_ids['comment_id'])
+    assert str(result.parent_id) == fake_ids['parent_id']
+    assert result.content == 'Test reply content'
 
 
 @pytest.mark.unit
-def test_get_comment_by_id_service_success():
+def test_get_comment_by_id_service_success(comment_service, mock_repositories, fake_ids, fake_comment):
     """
     Tests the `get_comment` method of CommentService.
 
@@ -217,66 +259,30 @@ def test_get_comment_by_id_service_success():
     - Then it should return the expected comment response
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
-    fake_content = "Test comment content"
     fake_member_role = CommunityMemberRoleEnum.MEMBER
-
-    fake_comment = Mock(spec=Comment)
-    fake_comment.id = fake_comment_id
-    fake_comment.post_id = fake_post_id
-    fake_comment.user_id = fake_user_id
-    fake_comment.content = fake_content
-    fake_comment.status = CommentStatusEnum.ACTIVE
     fake_comment.likes_count = 3
-    fake_comment.report_count = 0
-    fake_comment.parent_id = None
-    fake_comment.created_at = datetime.now(timezone.utc)
 
-    # Mock relacionamentos
-    fake_post = Mock(spec=Post)
-    fake_post.id = fake_post_id
-    fake_post.title = "Test Post"
-    fake_post.community_id = fake_community_id
-    fake_comment.post = fake_post
-
-    fake_user = Mock(spec=User)
-    fake_user.id = fake_user_id
-    fake_user.name = "Test User"
-    fake_user.profile_image_url = "https://example.com/profile.jpg"
-    fake_comment.user = fake_user
-
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_comment
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.member_repo = mock_member_repo
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_comment
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.get_comment(fake_comment_id)
+    result = comment_service.get_comment(fake_ids['comment_id'])
 
     # Assert
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_comment_id)
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
     assert result is not None
     assert isinstance(result, CommentResponse)
-    assert str(result.id) == fake_comment_id
-    assert result.content == fake_content
-    assert str(result.user.id) == fake_user_id
-    assert str(result.post.id) == fake_post_id
+    assert str(result.id) == str(fake_ids['comment_id'])
+    assert result.content == fake_comment.content
+    assert str(result.user.id) == fake_ids['user_id']
+    assert str(result.post.id) == fake_ids['post_id']
     assert result.status == CommentStatusEnum.ACTIVE
     assert result.likes_count == 3
-    assert result.report_count == 0
+    assert result.report_count == DEFAULT_REPORT_COUNT
 
 
 @pytest.mark.unit
-def test_list_comments_by_post_service_success():
+def test_list_comments_by_post_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_comment, pagination_params):
     """
     Tests the `list_comments_by_post` method of CommentService.
 
@@ -286,71 +292,33 @@ def test_list_comments_by_post_service_success():
     - Then it should return a paginated response with the expected comments
     """
     # Arrange
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
-    fake_comment_id = str(uuid4())
-    fake_pagination_params = PaginationSearchParams(offset=0, limit=10)
     fake_member_role = CommunityMemberRoleEnum.MEMBER
-
-    fake_comment = Mock(spec=Comment)
-    fake_comment.id = fake_comment_id
-    fake_comment.post_id = fake_post_id
-    fake_comment.user_id = fake_user_id
-    fake_comment.content = "Test comment content"
-    fake_comment.status = CommentStatusEnum.ACTIVE
     fake_comment.likes_count = 5
     fake_comment.report_count = 1
-    fake_comment.parent_id = None
-    fake_comment.created_at = datetime.now(timezone.utc)
 
-    # Mock relacionamentos
-    fake_post = Mock(spec=Post)
-    fake_post.id = fake_post_id
-    fake_post.title = "Test Post"
-    fake_post.community_id = fake_community_id
-    fake_comment.post = fake_post
-
-    fake_user = Mock(spec=User)
-    fake_user.id = fake_user_id
-    fake_user.name = "Comment User"
-    fake_user.profile_image_url = "https://example.com/profile.jpg"
-    fake_comment.user = fake_user
-
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.list_comments_by_post.return_value = ([fake_comment], 1)
-
-    mock_post_repo = Mock()
-    mock_post_repo.get_by_id.return_value = fake_post
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.post_repo = mock_post_repo
-    service.member_repo = mock_member_repo
+    mock_repositories['comment_repo'].list_comments_by_post.return_value = ([fake_comment], 1)
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.list_comments_by_post(fake_post_id, fake_pagination_params, include_replies=False)
+    result = comment_service.list_comments_by_post(fake_ids['post_id'], pagination_params, include_replies=False)
 
     # Assert
-    mock_post_repo.get_by_id.assert_called_once_with(fake_post_id)
-    mock_comment_repo.list_comments_by_post.assert_called_once_with(fake_post_id, fake_pagination_params)
+    mock_repositories['post_repo'].get_by_id.assert_called_once_with(fake_ids['post_id'])
+    mock_repositories['comment_repo'].list_comments_by_post.assert_called_once_with(fake_ids['post_id'], pagination_params)
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
-    assert str(result.items[0].post.id) == fake_post_id
-    assert str(result.items[0].id) == fake_comment_id
+    assert str(result.items[0].post.id) == fake_ids['post_id']
+    assert str(result.items[0].id) == str(fake_ids['comment_id'])
     assert result.total == 1
     assert result.has_more == False
-    assert result.current_offset == 0
-    assert result.current_limit == 10
+    assert result.current_offset == DEFAULT_PAGINATION_OFFSET
+    assert result.current_limit == DEFAULT_PAGINATION_LIMIT
 
 
 @pytest.mark.unit
-def test_list_comments_by_user_service_success():
+def test_list_comments_by_user_service_success(comment_service, mock_repositories, fake_ids, fake_comment, pagination_params):
     """
     Tests the `list_comments_by_user` method of CommentService.
 
@@ -360,67 +328,31 @@ def test_list_comments_by_user_service_success():
     - Then it should return a paginated response with the expected comments
     """
     # Arrange
-    fake_user_id = str(uuid4())
-    fake_post_id = str(uuid4())
-    fake_community_id = str(uuid4())
-    fake_comment_id = str(uuid4())
-    fake_pagination_params = PaginationSearchParams(offset=0, limit=10)
     fake_member_role = CommunityMemberRoleEnum.MEMBER
-
-    fake_comment = Mock(spec=Comment)
-    fake_comment.id = fake_comment_id
-    fake_comment.post_id = fake_post_id
-    fake_comment.user_id = fake_user_id
-    fake_comment.content = "User comment content"
-    fake_comment.parent_id = None
-    fake_comment.status = CommentStatusEnum.ACTIVE
+    fake_comment.content = 'User comment content'
     fake_comment.likes_count = 3
-    fake_comment.report_count = 0
-    fake_comment.parent_id = None
-    fake_comment.created_at = datetime.now(timezone.utc)
 
-    # Mock relacionamentos
-    fake_post = Mock(spec=Post)
-    fake_post.id = fake_post_id
-    fake_post.title = "User Post"
-    fake_post.community_id = fake_community_id
-    fake_comment.post = fake_post
-
-    fake_user = Mock(spec=User)
-    fake_user.id = fake_user_id
-    fake_user.name = "Test User"
-    fake_user.profile_image_url = "https://example.com/profile.jpg"
-    fake_comment.user = fake_user
-
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.list_comments_by_user.return_value = ([fake_comment], 1)
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.member_repo = mock_member_repo
+    mock_repositories['comment_repo'].list_comments_by_user.return_value = ([fake_comment], 1)
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.list_comments_by_user(fake_user_id, fake_pagination_params)
+    result = comment_service.list_comments_by_user(fake_ids['user_id'], pagination_params)
 
     # Assert
-    mock_comment_repo.list_comments_by_user.assert_called_once_with(fake_user_id, fake_pagination_params)
+    mock_repositories['comment_repo'].list_comments_by_user.assert_called_once_with(fake_ids['user_id'], pagination_params)
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
-    assert str(result.items[0].user.id) == fake_user_id
-    assert str(result.items[0].id) == fake_comment_id
+    assert str(result.items[0].user.id) == fake_ids['user_id']
+    assert str(result.items[0].id) == str(fake_ids['comment_id'])
     assert result.total == 1
     assert result.has_more == False
-    assert result.current_offset == 0
-    assert result.current_limit == 10
+    assert result.current_offset == DEFAULT_PAGINATION_OFFSET
+    assert result.current_limit == DEFAULT_PAGINATION_LIMIT
 
 
 @pytest.mark.unit
-def test_list_replies_by_parent_service_success():
+def test_list_replies_by_parent_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user, pagination_params):
     """
     Tests the `list_replies_by_parent` method of CommentService.
 
@@ -430,70 +362,45 @@ def test_list_replies_by_parent_service_success():
     - Then it should return a paginated response with the expected replies
     """
     # Arrange
-    fake_parent_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_post_id = str(uuid4())
-    fake_community_id = str(uuid4())
-    fake_reply_id = str(uuid4())
-    fake_pagination_params = PaginationSearchParams(offset=0, limit=10)
     fake_member_role = CommunityMemberRoleEnum.MEMBER
 
     fake_parent_comment = Mock(spec=Comment)
-    fake_parent_comment.id = fake_parent_id
+    fake_parent_comment.id = fake_ids['parent_id']
     fake_parent_comment.parent_id = None
 
     fake_reply = Mock(spec=Comment)
-    fake_reply.id = fake_reply_id
-    fake_reply.post_id = fake_post_id
-    fake_reply.user_id = fake_user_id
-    fake_reply.content = "Test reply content"
-    fake_reply.parent_id = fake_parent_id
+    fake_reply.id = fake_ids['reply_id']
+    fake_reply.post_id = fake_ids['post_id']
+    fake_reply.user_id = fake_ids['user_id']
+    fake_reply.content = 'Test reply content'
+    fake_reply.parent_id = fake_ids['parent_id']
     fake_reply.status = CommentStatusEnum.ACTIVE
     fake_reply.likes_count = 1
-    fake_reply.report_count = 0
+    fake_reply.report_count = DEFAULT_REPORT_COUNT
     fake_reply.created_at = datetime.now(timezone.utc)
-
-    # Mock relacionamentos
-    fake_post = Mock(spec=Post)
-    fake_post.id = fake_post_id
-    fake_post.title = "Reply Post"
-    fake_post.community_id = fake_community_id
     fake_reply.post = fake_post
-
-    fake_user = Mock(spec=User)
-    fake_user.id = fake_user_id
-    fake_user.name = "Reply User"
-    fake_user.profile_image_url = "https://example.com/profile.jpg"
     fake_reply.user = fake_user
 
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_parent_comment
-    mock_comment_repo.list_replies_by_parent.return_value = ([fake_reply], 1)
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.member_repo = mock_member_repo
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_parent_comment
+    mock_repositories['comment_repo'].list_replies_by_parent.return_value = ([fake_reply], 1)
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.list_replies_by_parent(fake_parent_id, fake_pagination_params)
+    result = comment_service.list_replies_by_parent(fake_ids['parent_id'], pagination_params)
 
     # Assert
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_parent_id)
-    mock_comment_repo.list_replies_by_parent.assert_called_once_with(fake_parent_id, fake_pagination_params)
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['parent_id'])
+    mock_repositories['comment_repo'].list_replies_by_parent.assert_called_once_with(fake_ids['parent_id'], pagination_params)
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
-    assert str(result.items[0].parent_id) == fake_parent_id
-    assert str(result.items[0].id) == fake_reply_id
+    assert str(result.items[0].parent_id) == fake_ids['parent_id']
+    assert str(result.items[0].id) == str(fake_ids['reply_id'])
     assert result.total == 1
 
 
 @pytest.mark.unit
-def test_update_comment_content_service_success():
+def test_update_comment_content_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
     """
     Tests the `update_comment` method of CommentService for content updates.
 
@@ -503,82 +410,57 @@ def test_update_comment_content_service_success():
     - Then it should return the updated comment response
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
-    fake_original_content = "Original content"
-    fake_updated_content = "Updated content"
     fake_member_role = CommunityMemberRoleEnum.MEMBER
+    fake_original_content = 'Original content'
+    fake_updated_content = 'Updated content'
 
     fake_comment_update = CommentUpdate(content=fake_updated_content)
 
-    # Mock do comentário original
     fake_existing_comment = Mock(spec=Comment)
-    fake_existing_comment.id = fake_comment_id
-    fake_existing_comment.post_id = fake_post_id
-    fake_existing_comment.user_id = fake_user_id
+    fake_existing_comment.id = fake_ids['comment_id']
+    fake_existing_comment.post_id = fake_ids['post_id']
+    fake_existing_comment.user_id = fake_ids['user_id']
     fake_existing_comment.content = fake_original_content
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 2
-    fake_existing_comment.report_count = 0
+    fake_existing_comment.report_count = DEFAULT_REPORT_COUNT
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
+    fake_existing_comment.post = fake_post
+    fake_existing_comment.user = fake_user
 
-    # Mock do comentário atualizado (retornado após save)
     fake_saved_comment = Mock(spec=Comment)
-    fake_saved_comment.id = fake_comment_id
-    fake_saved_comment.post_id = fake_post_id
-    fake_saved_comment.user_id = fake_user_id
-    fake_saved_comment.content = fake_updated_content  # Conteúdo atualizado
+    fake_saved_comment.id = fake_ids['comment_id']
+    fake_saved_comment.post_id = fake_ids['post_id']
+    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.content = fake_updated_content
     fake_saved_comment.status = CommentStatusEnum.ACTIVE
     fake_saved_comment.likes_count = 2
-    fake_saved_comment.report_count = 0
+    fake_saved_comment.report_count = DEFAULT_REPORT_COUNT
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
+    fake_saved_comment.post = fake_post
+    fake_saved_comment.user = fake_user
 
-    # Mock relacionamentos para ambos os comentários
-    for comment in [fake_existing_comment, fake_saved_comment]:
-        fake_post = Mock(spec=Post)
-        fake_post.id = fake_post_id
-        fake_post.title = "Test Post"
-        fake_post.community_id = fake_community_id
-        comment.post = fake_post
-
-        fake_user = Mock(spec=User)
-        fake_user.id = fake_user_id
-        fake_user.name = "Test User"
-        fake_user.profile_image_url = "https://example.com/profile.jpg"
-        comment.user = fake_user
-
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    # Primeira chamada (_get_comment) retorna comentário original, segunda chamada retorna comentário atualizado
-    mock_comment_repo.get_by_id.side_effect = [fake_existing_comment, fake_saved_comment]
-    mock_comment_repo.save.return_value = fake_saved_comment
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.member_repo = mock_member_repo
+    mock_repositories['comment_repo'].get_by_id.side_effect = [fake_existing_comment, fake_saved_comment]
+    mock_repositories['comment_repo'].save.return_value = fake_saved_comment
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.update_comment(fake_comment_id, fake_comment_update)
+    result = comment_service.update_comment(fake_ids['comment_id'], fake_comment_update)
 
     # Assert
-    assert mock_comment_repo.get_by_id.call_count == 2  # Chamado duas vezes
-    mock_comment_repo.save.assert_called_once_with(fake_existing_comment)
-    assert fake_existing_comment.content == fake_updated_content  # Conteúdo foi atualizado no objeto
+    assert mock_repositories['comment_repo'].get_by_id.call_count == 2
+    mock_repositories['comment_repo'].save.assert_called_once_with(fake_existing_comment)
+    assert fake_existing_comment.content == fake_updated_content
     assert result is not None
     assert isinstance(result, CommentResponse)
-    assert str(result.id) == fake_comment_id
+    assert str(result.id) == str(fake_ids['comment_id'])
     assert result.content == fake_updated_content
 
 
 @pytest.mark.unit
-def test_update_comment_status_service_success():
+def test_update_comment_status_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
     """
     Tests the `update_comment` method of CommentService for status updates.
 
@@ -588,76 +470,54 @@ def test_update_comment_status_service_success():
     - Then it should return the updated comment with new status
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
     fake_member_role = CommunityMemberRoleEnum.MEMBER
     fake_comment_update = CommentUpdate(status=CommentStatusEnum.SUSPENDED)
 
     fake_existing_comment = Mock(spec=Comment)
-    fake_existing_comment.id = fake_comment_id
-    fake_existing_comment.post_id = fake_post_id
-    fake_existing_comment.user_id = fake_user_id
-    fake_existing_comment.content = "Test content"
+    fake_existing_comment.id = fake_ids['comment_id']
+    fake_existing_comment.post_id = fake_ids['post_id']
+    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.content = 'Test content'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 1
-    fake_existing_comment.report_count = 0
+    fake_existing_comment.report_count = DEFAULT_REPORT_COUNT
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
+    fake_existing_comment.post = fake_post
+    fake_existing_comment.user = fake_user
 
     fake_saved_comment = Mock(spec=Comment)
-    fake_saved_comment.id = fake_comment_id
-    fake_saved_comment.post_id = fake_post_id
-    fake_saved_comment.user_id = fake_user_id
-    fake_saved_comment.content = "Test content"
-    fake_saved_comment.status = CommentStatusEnum.SUSPENDED  # Status atualizado
+    fake_saved_comment.id = fake_ids['comment_id']
+    fake_saved_comment.post_id = fake_ids['post_id']
+    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.content = 'Test content'
+    fake_saved_comment.status = CommentStatusEnum.SUSPENDED
     fake_saved_comment.likes_count = 1
-    fake_saved_comment.report_count = 0
+    fake_saved_comment.report_count = DEFAULT_REPORT_COUNT
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
+    fake_saved_comment.post = fake_post
+    fake_saved_comment.user = fake_user
 
-    # Mock relacionamentos para ambos os comentários
-    for comment in [fake_existing_comment, fake_saved_comment]:
-        fake_post = Mock(spec=Post)
-        fake_post.id = fake_post_id
-        fake_post.title = "Test Post"
-        fake_post.community_id = fake_community_id
-        comment.post = fake_post
-
-        fake_user = Mock(spec=User)
-        fake_user.id = fake_user_id
-        fake_user.name = "Test User"
-        fake_user.profile_image_url = "https://example.com/profile.jpg"
-        comment.user = fake_user
-
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.side_effect = [fake_existing_comment, fake_saved_comment]
-    mock_comment_repo.save.return_value = fake_saved_comment
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.member_repo = mock_member_repo
+    mock_repositories['comment_repo'].get_by_id.side_effect = [fake_existing_comment, fake_saved_comment]
+    mock_repositories['comment_repo'].save.return_value = fake_saved_comment
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.update_comment(fake_comment_id, fake_comment_update)
+    result = comment_service.update_comment(fake_ids['comment_id'], fake_comment_update)
 
     # Assert
-    assert mock_comment_repo.get_by_id.call_count == 2
-    mock_comment_repo.save.assert_called_once_with(fake_existing_comment)
-    assert fake_existing_comment.status == CommentStatusEnum.SUSPENDED  # Status foi atualizado no objeto
+    assert mock_repositories['comment_repo'].get_by_id.call_count == 2
+    mock_repositories['comment_repo'].save.assert_called_once_with(fake_existing_comment)
+    assert fake_existing_comment.status == CommentStatusEnum.SUSPENDED
     assert result is not None
     assert isinstance(result, CommentResponse)
-    assert str(result.id) == fake_comment_id
+    assert str(result.id) == str(fake_ids['comment_id'])
     assert result.status == CommentStatusEnum.SUSPENDED
 
 
 @pytest.mark.unit
-def test_delete_comment_service_success():
+def test_delete_comment_service_success(comment_service, mock_repositories, fake_ids):
     """
     Tests the `delete_comment` method of CommentService.
 
@@ -667,13 +527,10 @@ def test_delete_comment_service_success():
     - Then it should return True and decrement post comments count
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-    fake_post_id = str(uuid4())
-
     fake_existing_comment = Mock(spec=Comment)
-    fake_existing_comment.id = fake_comment_id
-    fake_existing_comment.post_id = fake_post_id
-    fake_existing_comment.content = "Comment to delete"
+    fake_existing_comment.id = fake_ids['comment_id']
+    fake_existing_comment.post_id = fake_ids['post_id']
+    fake_existing_comment.content = 'Comment to delete'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 5
     fake_existing_comment.report_count = 1
@@ -681,35 +538,27 @@ def test_delete_comment_service_success():
     fake_existing_comment.created_at = datetime.now(timezone.utc)
 
     fake_post = Mock(spec=Post)
-    fake_post.id = fake_post_id
-    fake_post.comments_count = 5  # Começando com 5 comentários
+    fake_post.id = fake_ids['post_id']
+    fake_post.comments_count = 5
 
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_existing_comment
-    mock_comment_repo.delete.return_value = True
-
-    mock_post_repo = Mock()
-    mock_post_repo.get_by_id.return_value = fake_post
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.post_repo = mock_post_repo
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
+    mock_repositories['comment_repo'].delete.return_value = True
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
 
     # Act
-    result = service.delete_comment(fake_comment_id)
+    result = comment_service.delete_comment(fake_ids['comment_id'])
 
     # Assert
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_comment_id)
-    mock_post_repo.get_by_id.assert_called_once_with(fake_post_id)
-    mock_comment_repo.delete.assert_called_once_with(fake_existing_comment)
-    mock_post_repo.save.assert_called_once_with(fake_post)
-    assert fake_post.comments_count == 4  # Verificar que foi decrementado
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['post_repo'].get_by_id.assert_called_once_with(fake_ids['post_id'])
+    mock_repositories['comment_repo'].delete.assert_called_once_with(fake_existing_comment)
+    mock_repositories['post_repo'].save.assert_called_once_with(fake_post)
+    assert fake_post.comments_count == 4
     assert result is True
 
 
 @pytest.mark.unit
-def test_like_comment_service_success():
+def test_like_comment_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
     """
     Tests the `like_comment` method of CommentService.
 
@@ -719,86 +568,60 @@ def test_like_comment_service_success():
     - Then it should return the comment with incremented likes count
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-    fake_member_id = str(uuid4())
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
     fake_member_role = CommunityMemberRoleEnum.MEMBER
 
     fake_existing_comment = Mock(spec=Comment)
-    fake_existing_comment.id = fake_comment_id
-    fake_existing_comment.post_id = fake_post_id
-    fake_existing_comment.user_id = fake_user_id
-    fake_existing_comment.content = "Comment to like"
+    fake_existing_comment.id = fake_ids['comment_id']
+    fake_existing_comment.post_id = fake_ids['post_id']
+    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.content = 'Comment to like'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
-    fake_existing_comment.likes_count = 0
-    fake_existing_comment.report_count = 0
+    fake_existing_comment.likes_count = DEFAULT_LIKES_COUNT
+    fake_existing_comment.report_count = DEFAULT_REPORT_COUNT
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
+    fake_existing_comment.post = fake_post
+    fake_existing_comment.user = fake_user
 
     fake_saved_comment = Mock(spec=Comment)
-    fake_saved_comment.id = fake_comment_id
-    fake_saved_comment.post_id = fake_post_id
-    fake_saved_comment.user_id = fake_user_id
-    fake_saved_comment.content = "Comment to like"
+    fake_saved_comment.id = fake_ids['comment_id']
+    fake_saved_comment.post_id = fake_ids['post_id']
+    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.content = 'Comment to like'
     fake_saved_comment.status = CommentStatusEnum.ACTIVE
-    fake_saved_comment.likes_count = 1  # Incrementado após like
-    fake_saved_comment.report_count = 0
+    fake_saved_comment.likes_count = 1
+    fake_saved_comment.report_count = DEFAULT_REPORT_COUNT
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
-
-    # Mock relacionamentos para ambos os comentários
-    for comment in [fake_existing_comment, fake_saved_comment]:
-        fake_post = Mock(spec=Post)
-        fake_post.id = fake_post_id
-        fake_post.title = "Test Post"
-        fake_post.community_id = fake_community_id
-        comment.post = fake_post
-
-        fake_user = Mock(spec=User)
-        fake_user.id = fake_user_id
-        fake_user.name = "Test User"
-        fake_user.profile_image_url = "https://example.com/profile.jpg"
-        comment.user = fake_user
+    fake_saved_comment.post = fake_post
+    fake_saved_comment.user = fake_user
 
     fake_comment_like = Mock(spec=CommentLikes)
-    fake_comment_like.comment_id = fake_comment_id
-    fake_comment_like.member_id = fake_member_id
+    fake_comment_like.comment_id = fake_ids['comment_id']
+    fake_comment_like.member_id = fake_ids['member_id']
 
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_existing_comment
-    mock_comment_repo.save.return_value = fake_saved_comment
-
-    mock_comment_likes_repo = Mock()
-    mock_comment_likes_repo.save.return_value = fake_comment_like
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.comment_likes_repo = mock_comment_likes_repo
-    service.member_repo = mock_member_repo
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
+    mock_repositories['comment_repo'].save.return_value = fake_saved_comment
+    mock_repositories['comment_likes_repo'].save.return_value = fake_comment_like
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.like_comment(fake_comment_id, fake_member_id)
+    result = comment_service.like_comment(fake_ids['comment_id'], fake_ids['member_id'])
 
     # Assert
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_comment_id)
-    mock_comment_likes_repo.save.assert_called_once()
-    mock_comment_repo.save.assert_called_once_with(fake_existing_comment)
-    assert fake_existing_comment.likes_count == 1  # Verificar que foi incrementado
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_likes_repo'].save.assert_called_once()
+    mock_repositories['comment_repo'].save.assert_called_once_with(fake_existing_comment)
+    assert fake_existing_comment.likes_count == 1
     assert result is not None
     assert isinstance(result, CommentResponse)
-    assert str(result.id) == fake_comment_id
+    assert str(result.id) == str(fake_ids['comment_id'])
     assert result.likes_count == 1
-    assert result.content == "Comment to like"
+    assert result.content == 'Comment to like'
 
 
 @pytest.mark.unit
-def test_unlike_comment_service_success():
+def test_unlike_comment_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
     """
     Tests the `unlike_comment` method of CommentService.
 
@@ -808,88 +631,62 @@ def test_unlike_comment_service_success():
     - Then it should return the comment with decremented likes count
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-    fake_member_id = str(uuid4())
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
     fake_member_role = CommunityMemberRoleEnum.MEMBER
 
     fake_existing_comment = Mock(spec=Comment)
-    fake_existing_comment.id = fake_comment_id
-    fake_existing_comment.post_id = fake_post_id
-    fake_existing_comment.user_id = fake_user_id
-    fake_existing_comment.content = "Comment to unlike"
+    fake_existing_comment.id = fake_ids['comment_id']
+    fake_existing_comment.post_id = fake_ids['post_id']
+    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.content = 'Comment to unlike'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
-    fake_existing_comment.likes_count = 1  # Tem 1 like que será removido
-    fake_existing_comment.report_count = 0
+    fake_existing_comment.likes_count = 1
+    fake_existing_comment.report_count = DEFAULT_REPORT_COUNT
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
+    fake_existing_comment.post = fake_post
+    fake_existing_comment.user = fake_user
 
     fake_saved_comment = Mock(spec=Comment)
-    fake_saved_comment.id = fake_comment_id
-    fake_saved_comment.post_id = fake_post_id
-    fake_saved_comment.user_id = fake_user_id
-    fake_saved_comment.content = "Comment to unlike"
+    fake_saved_comment.id = fake_ids['comment_id']
+    fake_saved_comment.post_id = fake_ids['post_id']
+    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.content = 'Comment to unlike'
     fake_saved_comment.status = CommentStatusEnum.ACTIVE
-    fake_saved_comment.likes_count = 0  # Decrementado após unlike
-    fake_saved_comment.report_count = 0
+    fake_saved_comment.likes_count = DEFAULT_LIKES_COUNT
+    fake_saved_comment.report_count = DEFAULT_REPORT_COUNT
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
-
-    # Mock relacionamentos para ambos os comentários
-    for comment in [fake_existing_comment, fake_saved_comment]:
-        fake_post = Mock(spec=Post)
-        fake_post.id = fake_post_id
-        fake_post.title = "Test Post"
-        fake_post.community_id = fake_community_id
-        comment.post = fake_post
-
-        fake_user = Mock(spec=User)
-        fake_user.id = fake_user_id
-        fake_user.name = "Test User"
-        fake_user.profile_image_url = "https://example.com/profile.jpg"
-        comment.user = fake_user
+    fake_saved_comment.post = fake_post
+    fake_saved_comment.user = fake_user
 
     fake_existing_like = Mock(spec=CommentLikes)
-    fake_existing_like.comment_id = fake_comment_id
-    fake_existing_like.member_id = fake_member_id
+    fake_existing_like.comment_id = fake_ids['comment_id']
+    fake_existing_like.member_id = fake_ids['member_id']
 
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_existing_comment
-    mock_comment_repo.save.return_value = fake_saved_comment
-
-    mock_comment_likes_repo = Mock()
-    mock_comment_likes_repo.get_by_comment_and_member.return_value = fake_existing_like
-    mock_comment_likes_repo.delete.return_value = True
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.comment_likes_repo = mock_comment_likes_repo
-    service.member_repo = mock_member_repo
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
+    mock_repositories['comment_repo'].save.return_value = fake_saved_comment
+    mock_repositories['comment_likes_repo'].get_by_comment_and_member.return_value = fake_existing_like
+    mock_repositories['comment_likes_repo'].delete.return_value = True
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.unlike_comment(fake_comment_id, fake_member_id)
+    result = comment_service.unlike_comment(fake_ids['comment_id'], fake_ids['member_id'])
 
     # Assert
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_comment_id)
-    mock_comment_likes_repo.get_by_comment_and_member.assert_called_once_with(fake_comment_id, fake_member_id)
-    mock_comment_likes_repo.delete.assert_called_once_with(fake_existing_like)
-    mock_comment_repo.save.assert_called_once_with(fake_existing_comment)
-    assert fake_existing_comment.likes_count == 0  # Verificar que foi decrementado
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_likes_repo'].get_by_comment_and_member.assert_called_once_with(fake_ids['comment_id'], fake_ids['member_id'])
+    mock_repositories['comment_likes_repo'].delete.assert_called_once_with(fake_existing_like)
+    mock_repositories['comment_repo'].save.assert_called_once_with(fake_existing_comment)
+    assert fake_existing_comment.likes_count == DEFAULT_LIKES_COUNT
     assert result is not None
     assert isinstance(result, CommentResponse)
-    assert str(result.id) == fake_comment_id
-    assert result.likes_count == 0
-    assert result.content == "Comment to unlike"
+    assert str(result.id) == str(fake_ids['comment_id'])
+    assert result.likes_count == DEFAULT_LIKES_COUNT
+    assert result.content == 'Comment to unlike'
 
 
 @pytest.mark.unit
-def test_list_likes_comment_service_success():
+def test_list_likes_comment_service_success(comment_service, mock_repositories, mock_services, fake_ids):
     """
     Tests the `list_likes_comment` method of CommentService.
 
@@ -899,65 +696,47 @@ def test_list_likes_comment_service_success():
     - Then it should return a list of community member responses
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-    fake_member_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
-
     fake_existing_comment = Mock(spec=Comment)
-    fake_existing_comment.id = fake_comment_id
-    fake_existing_comment.content = "Comment with likes"
+    fake_existing_comment.id = fake_ids['comment_id']
+    fake_existing_comment.content = 'Comment with likes'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 3
-    fake_existing_comment.report_count = 0
+    fake_existing_comment.report_count = DEFAULT_REPORT_COUNT
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
 
-    # Mock do membro da comunidade que curtiu
     fake_community_member = Mock(spec=CommunityMember)
-    fake_community_member.id = fake_member_id
-    fake_community_member.user_id = fake_user_id
-    fake_community_member.community_id = fake_community_id
+    fake_community_member.id = fake_ids['member_id']
+    fake_community_member.user_id = fake_ids['user_id']
+    fake_community_member.community_id = fake_ids['community_id']
     fake_community_member.role = CommunityMemberRoleEnum.MEMBER
-    fake_community_member.status_participation = "active"
+    fake_community_member.status_participation = 'active'
 
-    # Mock da resposta do membro
     fake_member_response = Mock(spec=CommunityMemberResponse)
-    fake_member_response.user_id = fake_user_id
-    fake_member_response.community_id = fake_community_id
+    fake_member_response.user_id = fake_ids['user_id']
+    fake_member_response.community_id = fake_ids['community_id']
     fake_member_response.role = CommunityMemberRoleEnum.MEMBER
 
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_existing_comment
-
-    mock_comment_likes_repo = Mock()
-    mock_comment_likes_repo.list_by_comment.return_value = [fake_community_member]
-
-    mock_community_service = Mock()
-    mock_community_service._map_member_to_response.return_value = fake_member_response
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.comment_likes_repo = mock_comment_likes_repo
-    service.community_service = mock_community_service
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
+    mock_repositories['comment_likes_repo'].list_by_comment.return_value = [fake_community_member]
+    mock_services['community_service']._map_member_to_response.return_value = fake_member_response
 
     # Act
-    result = service.list_likes_comment(fake_comment_id)
+    result = comment_service.list_likes_comment(fake_ids['comment_id'])
 
     # Assert
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_comment_id)
-    mock_comment_likes_repo.list_by_comment.assert_called_once_with(fake_comment_id)
-    mock_community_service._map_member_to_response.assert_called_once_with(fake_community_member)
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_likes_repo'].list_by_comment.assert_called_once_with(fake_ids['comment_id'])
+    mock_services['community_service']._map_member_to_response.assert_called_once_with(fake_community_member)
     assert result is not None
     assert len(result) == 1
-    assert result[0].user_id == fake_user_id
-    assert result[0].community_id == fake_community_id
+    assert result[0].user_id == fake_ids['user_id']
+    assert result[0].community_id == fake_ids['community_id']
     assert result[0].role == CommunityMemberRoleEnum.MEMBER
 
 
 @pytest.mark.unit
-def test_report_comment_service_success():
+def test_report_comment_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
     """
     Tests the `report_comment` method of CommentService.
 
@@ -967,77 +746,55 @@ def test_report_comment_service_success():
     - Then it should increment report count and maintain active status
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
     fake_member_role = CommunityMemberRoleEnum.MEMBER
 
     fake_existing_comment = Mock(spec=Comment)
-    fake_existing_comment.id = fake_comment_id
-    fake_existing_comment.post_id = fake_post_id
-    fake_existing_comment.user_id = fake_user_id
-    fake_existing_comment.content = "Comment to report"
+    fake_existing_comment.id = fake_ids['comment_id']
+    fake_existing_comment.post_id = fake_ids['post_id']
+    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.content = 'Comment to report'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 2
-    fake_existing_comment.report_count = 0  # Inicial
+    fake_existing_comment.report_count = DEFAULT_REPORT_COUNT
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
+    fake_existing_comment.post = fake_post
+    fake_existing_comment.user = fake_user
 
     fake_saved_comment = Mock(spec=Comment)
-    fake_saved_comment.id = fake_comment_id
-    fake_saved_comment.post_id = fake_post_id
-    fake_saved_comment.user_id = fake_user_id
-    fake_saved_comment.content = "Comment to report"
-    fake_saved_comment.status = CommentStatusEnum.ACTIVE  # Ainda ativo
+    fake_saved_comment.id = fake_ids['comment_id']
+    fake_saved_comment.post_id = fake_ids['post_id']
+    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.content = 'Comment to report'
+    fake_saved_comment.status = CommentStatusEnum.ACTIVE
     fake_saved_comment.likes_count = 2
-    fake_saved_comment.report_count = 1  # Incrementado após report
+    fake_saved_comment.report_count = 1
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
+    fake_saved_comment.post = fake_post
+    fake_saved_comment.user = fake_user
 
-    # Mock relacionamentos para ambos os comentários
-    for comment in [fake_existing_comment, fake_saved_comment]:
-        fake_post = Mock(spec=Post)
-        fake_post.id = fake_post_id
-        fake_post.title = "Test Post"
-        fake_post.community_id = fake_community_id
-        comment.post = fake_post
-
-        fake_user = Mock(spec=User)
-        fake_user.id = fake_user_id
-        fake_user.name = "Test User"
-        fake_user.profile_image_url = "https://example.com/profile.jpg"
-        comment.user = fake_user
-
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_existing_comment
-    mock_comment_repo.save.return_value = fake_saved_comment
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.member_repo = mock_member_repo
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
+    mock_repositories['comment_repo'].save.return_value = fake_saved_comment
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.report_comment(fake_comment_id)
+    result = comment_service.report_comment(fake_ids['comment_id'])
 
     # Assert
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_comment_id)
-    mock_comment_repo.save.assert_called_once_with(fake_existing_comment)
-    assert fake_existing_comment.report_count == 1  # Verificar que foi incrementado
-    assert fake_existing_comment.status == CommentStatusEnum.ACTIVE  # Ainda ativo
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_repo'].save.assert_called_once_with(fake_existing_comment)
+    assert fake_existing_comment.report_count == 1
+    assert fake_existing_comment.status == CommentStatusEnum.ACTIVE
     assert result is not None
     assert isinstance(result, CommentResponse)
-    assert str(result.id) == fake_comment_id
+    assert str(result.id) == str(fake_ids['comment_id'])
     assert result.report_count == 1
     assert result.status == CommentStatusEnum.ACTIVE
 
 
 @pytest.mark.unit
-def test_report_comment_threshold_service_success():
+def test_report_comment_threshold_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
     """
     Tests the `report_comment` method of CommentService when reaching threshold.
 
@@ -1047,73 +804,50 @@ def test_report_comment_threshold_service_success():
     - Then it should change status to reported when threshold is reached
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
     fake_member_role = CommunityMemberRoleEnum.MEMBER
 
-    # Set report count to threshold - 1 (threshold is 10 according to service)
     fake_existing_comment = Mock(spec=Comment)
-    fake_existing_comment.id = fake_comment_id
-    fake_existing_comment.post_id = fake_post_id
-    fake_existing_comment.user_id = fake_user_id
-    fake_existing_comment.content = "Comment at threshold"
+    fake_existing_comment.id = fake_ids['comment_id']
+    fake_existing_comment.post_id = fake_ids['post_id']
+    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.content = 'Comment at threshold'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 1
-    fake_existing_comment.report_count = 9  # Um antes do threshold
+    fake_existing_comment.report_count = REPORT_THRESHOLD - 1
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
+    fake_existing_comment.post = fake_post
+    fake_existing_comment.user = fake_user
 
     fake_saved_comment = Mock(spec=Comment)
-    fake_saved_comment.id = fake_comment_id
-    fake_saved_comment.post_id = fake_post_id
-    fake_saved_comment.user_id = fake_user_id
-    fake_saved_comment.content = "Comment at threshold"
-    fake_saved_comment.status = CommentStatusEnum.REPORTED  # Mudou para reported
+    fake_saved_comment.id = fake_ids['comment_id']
+    fake_saved_comment.post_id = fake_ids['post_id']
+    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.content = 'Comment at threshold'
+    fake_saved_comment.status = CommentStatusEnum.REPORTED
     fake_saved_comment.likes_count = 1
-    fake_saved_comment.report_count = 10  # Atingiu o threshold
+    fake_saved_comment.report_count = REPORT_THRESHOLD
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
+    fake_saved_comment.post = fake_post
+    fake_saved_comment.user = fake_user
 
-    # Mock relacionamentos para ambos os comentários
-    for comment in [fake_existing_comment, fake_saved_comment]:
-        fake_post = Mock(spec=Post)
-        fake_post.id = fake_post_id
-        fake_post.title = "Test Post"
-        fake_post.community_id = fake_community_id
-        comment.post = fake_post
-
-        fake_user = Mock(spec=User)
-        fake_user.id = fake_user_id
-        fake_user.name = "Test User"
-        fake_user.profile_image_url = "https://example.com/profile.jpg"
-        comment.user = fake_user
-
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_existing_comment
-    mock_comment_repo.save.return_value = fake_saved_comment
-
-    mock_member_repo = Mock()
-    mock_member_repo.get_member_role.return_value = fake_member_role
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.member_repo = mock_member_repo
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
+    mock_repositories['comment_repo'].save.return_value = fake_saved_comment
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = service.report_comment(fake_comment_id)
+    result = comment_service.report_comment(fake_ids['comment_id'])
 
     # Assert
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_comment_id)
-    mock_comment_repo.save.assert_called_once_with(fake_existing_comment)
-    assert fake_existing_comment.report_count == 10  # Atingiu o threshold
-    assert fake_existing_comment.status == CommentStatusEnum.REPORTED  # Status mudou
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_repo'].save.assert_called_once_with(fake_existing_comment)
+    assert fake_existing_comment.report_count == REPORT_THRESHOLD
+    assert fake_existing_comment.status == CommentStatusEnum.REPORTED
     assert result is not None
     assert isinstance(result, CommentResponse)
-    assert str(result.id) == fake_comment_id
-    assert result.report_count == 10
+    assert str(result.id) == str(fake_ids['comment_id'])
+    assert result.report_count == REPORT_THRESHOLD
     assert result.status == CommentStatusEnum.REPORTED
 
 
@@ -1122,7 +856,7 @@ def test_report_comment_threshold_service_success():
 # =============================================================================
 
 @pytest.mark.unit
-def test_create_comment_with_nonexistent_post_raises_error():
+def test_create_comment_with_nonexistent_post_raises_error(comment_service, mock_repositories, fake_ids):
     """
     Tests that creating a comment with nonexistent post raises PostNotFoundError.
 
@@ -1132,33 +866,25 @@ def test_create_comment_with_nonexistent_post_raises_error():
     - Then it should raise PostNotFoundError
     """
     # Arrange
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-
     fake_comment_create = CommentCreate(
-        post_id=fake_post_id,
-        user_id=fake_user_id,
-        content="Comment with nonexistent post",
+        post_id=fake_ids['post_id'],
+        user_id=fake_ids['user_id'],
+        content='Comment with nonexistent post',
         parent_id=None,
         status=CommentStatusEnum.ACTIVE,
     )
 
-    mock_tm = Mock()
-    mock_post_repo = Mock()
-    mock_post_repo.get_by_id.return_value = None  # Post not found
-
-    service = CommentService(mock_tm)
-    service.post_repo = mock_post_repo
+    mock_repositories['post_repo'].get_by_id.return_value = None
 
     # Act & Assert
     with pytest.raises(PostNotFoundError):
-        service.create_comment(fake_comment_create)
+        comment_service.create_comment(fake_comment_create)
 
-    mock_post_repo.get_by_id.assert_called_once_with(fake_post_id)
+    mock_repositories['post_repo'].get_by_id.assert_called_once_with(fake_ids['post_id'])
 
 
 @pytest.mark.unit
-def test_create_comment_with_nonexistent_parent_raises_error():
+def test_create_comment_with_nonexistent_parent_raises_error(comment_service, mock_repositories, fake_ids, fake_post):
     """
     Tests that creating a reply with nonexistent parent raises CommentNotFoundError.
 
@@ -1168,41 +894,27 @@ def test_create_comment_with_nonexistent_parent_raises_error():
     - Then it should raise CommentNotFoundError
     """
     # Arrange
-    fake_post_id = str(uuid4())
-    fake_user_id = str(uuid4())
-    fake_parent_id = str(uuid4())
-
     fake_comment_create = CommentCreate(
-        post_id=fake_post_id,
-        user_id=fake_user_id,
-        content="Reply with nonexistent parent",
-        parent_id=fake_parent_id,
+        post_id=fake_ids['post_id'],
+        user_id=fake_ids['user_id'],
+        content='Reply with nonexistent parent',
+        parent_id=fake_ids['parent_id'],
         status=CommentStatusEnum.ACTIVE,
     )
 
-    fake_post = Mock(spec=Post)
-
-    mock_tm = Mock()
-    mock_post_repo = Mock()
-    mock_post_repo.get_by_id.return_value = fake_post  # Post exists
-
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = None  # Parent comment not found
-
-    service = CommentService(mock_tm)
-    service.post_repo = mock_post_repo
-    service.comment_repo = mock_comment_repo
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+    mock_repositories['comment_repo'].get_by_id.return_value = None
 
     # Act & Assert
     with pytest.raises(CommentNotFoundError):
-        service.create_comment(fake_comment_create)
+        comment_service.create_comment(fake_comment_create)
 
-    mock_post_repo.get_by_id.assert_called_once_with(fake_post_id)
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_parent_id)
+    mock_repositories['post_repo'].get_by_id.assert_called_once_with(fake_ids['post_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['parent_id'])
 
 
 @pytest.mark.unit
-def test_get_nonexistent_comment_raises_error():
+def test_get_nonexistent_comment_raises_error(comment_service, mock_repositories, fake_ids):
     """
     Tests that getting a nonexistent comment raises CommentNotFoundError.
 
@@ -1212,24 +924,17 @@ def test_get_nonexistent_comment_raises_error():
     - Then it should raise CommentNotFoundError
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = None
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
+    mock_repositories['comment_repo'].get_by_id.return_value = None
 
     # Act & Assert
     with pytest.raises(CommentNotFoundError):
-        service.get_comment(fake_comment_id)
+        comment_service.get_comment(fake_ids['comment_id'])
 
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_comment_id)
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
 
 
 @pytest.mark.unit
-def test_unlike_comment_without_like_raises_error():
+def test_unlike_comment_without_like_raises_error(comment_service, mock_repositories, fake_ids, fake_comment):
     """
     Tests that unliking a comment without previous like raises CommentLikesNotFoundError.
 
@@ -1239,32 +944,19 @@ def test_unlike_comment_without_like_raises_error():
     - Then it should raise CommentLikesNotFoundError
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-    fake_member_id = str(uuid4())
-
-    fake_comment = Mock(spec=Comment)
-
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_comment  # Comment exists
-
-    mock_comment_likes_repo = Mock()
-    mock_comment_likes_repo.get_by_comment_and_member.return_value = None  # Like not found
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
-    service.comment_likes_repo = mock_comment_likes_repo
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_comment
+    mock_repositories['comment_likes_repo'].get_by_comment_and_member.return_value = None
 
     # Act & Assert
     with pytest.raises(CommentLikesNotFoundError):
-        service.unlike_comment(fake_comment_id, fake_member_id)
+        comment_service.unlike_comment(fake_ids['comment_id'], fake_ids['member_id'])
 
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_comment_id)
-    mock_comment_likes_repo.get_by_comment_and_member.assert_called_once_with(fake_comment_id, fake_member_id)
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_likes_repo'].get_by_comment_and_member.assert_called_once_with(fake_ids['comment_id'], fake_ids['member_id'])
 
 
 @pytest.mark.unit
-def test_report_suspended_comment_raises_error():
+def test_report_suspended_comment_raises_error(comment_service, mock_repositories, fake_ids):
     """
     Tests that reporting a suspended comment raises CommentSuspendedError.
 
@@ -1274,20 +966,13 @@ def test_report_suspended_comment_raises_error():
     - Then it should raise CommentSuspendedError
     """
     # Arrange
-    fake_comment_id = str(uuid4())
-
     fake_comment = Mock(spec=Comment)
     fake_comment.status = CommentStatusEnum.SUSPENDED
 
-    mock_tm = Mock()
-    mock_comment_repo = Mock()
-    mock_comment_repo.get_by_id.return_value = fake_comment
-
-    service = CommentService(mock_tm)
-    service.comment_repo = mock_comment_repo
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_comment
 
     # Act & Assert
     with pytest.raises(CommentSuspendedError):
-        service.report_comment(fake_comment_id)
+        comment_service.report_comment(fake_ids['comment_id'])
 
-    mock_comment_repo.get_by_id.assert_called_once_with(fake_comment_id)
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
