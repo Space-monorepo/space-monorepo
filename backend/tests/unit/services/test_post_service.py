@@ -37,10 +37,10 @@ def test_create_post_service_success():
     fake_post_id = uuid4()
     fake_user_id = str(uuid4())
     fake_community_id = str(uuid4())
-    fake_title = "Test Post Title"
-    fake_content = "Test post content"
+    fake_title = 'Test Post Title'
+    fake_content = 'Test post content'
     fake_type_post = PostTypeEnum.ANNOUNCEMENT
-    fake_image_url = "https://example.com/image.jpg"
+    fake_image_url = 'https://example.com/image.jpg'
     fake_status = PostStatusEnum.ACTIVE
     fake_role = CommunityMemberRoleEnum.MEMBER
 
@@ -67,17 +67,19 @@ def test_create_post_service_success():
     fake_created_post.likes_count = 0
     fake_created_post.comments_count = 0
     fake_created_post.report_count = 0
-    fake_created_post.created_at = "2024-01-01T00:00:00Z"
-    fake_created_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_created_post.created_at = '2024-01-01T00:00:00Z'
+    fake_created_post.updated_at = '2024-01-01T00:00:00Z'
 
     # Mock objects
     fake_community = Mock()
-    fake_community.name = "Test Community"
+    fake_community.id = fake_community_id
+    fake_community.name = 'Test Community'
+    fake_community.image_url = 'https://example.com/community.jpg'
     fake_created_post.community = fake_community
 
     fake_user = Mock()
-    fake_user.name = "Test User"
-    fake_user.profile_image_url = "https://example.com/profile.jpg"
+    fake_user.name = 'Test User'
+    fake_user.profile_image_url = 'https://example.com/profile.jpg'
     fake_created_post.user = fake_user
 
     fake_member_association = Mock()
@@ -98,7 +100,9 @@ def test_create_post_service_success():
     result = service.create_post(fake_post_create)
 
     # Assert
-    mock_community_service.get_member_association.assert_called_once_with(fake_user_id, fake_community_id)
+    mock_community_service.get_member_association.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
     mock_post_repo.save.assert_called_once()
     assert result is not None
     assert isinstance(result, PostResponse)
@@ -130,8 +134,8 @@ def test_get_post_by_id_service_success():
     fake_post_id = str(uuid4())
     fake_user_id = str(uuid4())
     fake_community_id = str(uuid4())
-    fake_title = "Test Post Title"
-    fake_content = "Test post content"
+    fake_title = 'Test Post Title'
+    fake_content = 'Test post content'
     fake_type_post = PostTypeEnum.ANNOUNCEMENT
     fake_role = CommunityMemberRoleEnum.MEMBER
 
@@ -142,23 +146,25 @@ def test_get_post_by_id_service_success():
     fake_post.title = fake_title
     fake_post.content = fake_content
     fake_post.type_post = fake_type_post
-    fake_post.image_url = "https://example.com/image.jpg"
+    fake_post.image_url = 'https://example.com/image.jpg'
     fake_post.status = PostStatusEnum.ACTIVE
     fake_post.user_role_in_community = fake_role
     fake_post.likes_count = 5
     fake_post.comments_count = 3
     fake_post.report_count = 0
-    fake_post.created_at = "2024-01-01T00:00:00Z"
-    fake_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_post.created_at = '2024-01-01T00:00:00Z'
+    fake_post.updated_at = '2024-01-01T00:00:00Z'
 
     # Mock relacionamentos
     fake_community = Mock()
-    fake_community.name = "Test Community"
+    fake_community.id = fake_community_id
+    fake_community.name = 'Test Community'
+    fake_community.image_url = 'https://example.com/community.jpg'
     fake_post.community = fake_community
 
     fake_user = Mock()
-    fake_user.name = "Test User"
-    fake_user.profile_image_url = "https://example.com/profile.jpg"
+    fake_user.name = 'Test User'
+    fake_user.profile_image_url = 'https://example.com/profile.jpg'
     fake_post.user = fake_user
 
     mock_tm = Mock()
@@ -206,8 +212,8 @@ def test_list_posts_by_user_service_success():
     fake_post.id = fake_post_id
     fake_post.user_id = fake_user_id
     fake_post.community_id = fake_community_id
-    fake_post.title = "User Post Title"
-    fake_post.content = "User post content"
+    fake_post.title = 'User Post Title'
+    fake_post.content = 'User post content'
     fake_post.type_post = PostTypeEnum.ANNOUNCEMENT
     fake_post.image_url = None
     fake_post.status = PostStatusEnum.ACTIVE
@@ -215,17 +221,19 @@ def test_list_posts_by_user_service_success():
     fake_post.likes_count = 2
     fake_post.comments_count = 1
     fake_post.report_count = 0
-    fake_post.created_at = "2024-01-01T00:00:00Z"
-    fake_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_post.created_at = '2024-01-01T00:00:00Z'
+    fake_post.updated_at = '2024-01-01T00:00:00Z'
 
     # Mock relacionamentos
     fake_community = Mock()
-    fake_community.name = "User Community"
+    fake_community.id = fake_community_id
+    fake_community.name = 'User Community'
+    fake_community.image_url = 'https://example.com/community.jpg'
     fake_post.community = fake_community
 
     fake_user = Mock()
-    fake_user.name = "Test User"
-    fake_user.profile_image_url = "https://example.com/profile.jpg"
+    fake_user.name = 'Test User'
+    fake_user.profile_image_url = 'https://example.com/profile.jpg'
     fake_post.user = fake_user
 
     mock_tm = Mock()
@@ -239,7 +247,9 @@ def test_list_posts_by_user_service_success():
     result = service.list_posts_by_user(fake_user_id, fake_pagination_params)
 
     # Assert
-    mock_post_repo.list_posts_by_user.assert_called_once_with(fake_user_id, fake_pagination_params)
+    mock_post_repo.list_posts_by_user.assert_called_once_with(
+        fake_user_id, fake_pagination_params
+    )
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
@@ -271,26 +281,28 @@ def test_list_posts_by_community_service_success():
     fake_post.id = fake_post_id
     fake_post.user_id = fake_user_id
     fake_post.community_id = fake_community_id
-    fake_post.title = "Community Post Title"
-    fake_post.content = "Community post content"
+    fake_post.title = 'Community Post Title'
+    fake_post.content = 'Community post content'
     fake_post.type_post = PostTypeEnum.CAMPAIGN
-    fake_post.image_url = "https://example.com/campaign.jpg"
+    fake_post.image_url = 'https://example.com/campaign.jpg'
     fake_post.status = PostStatusEnum.ACTIVE
     fake_post.user_role_in_community = CommunityMemberRoleEnum.ADMIN
     fake_post.likes_count = 10
     fake_post.comments_count = 5
     fake_post.report_count = 1
-    fake_post.created_at = "2024-01-01T00:00:00Z"
-    fake_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_post.created_at = '2024-01-01T00:00:00Z'
+    fake_post.updated_at = '2024-01-01T00:00:00Z'
 
     # Mock relacionamentos
     fake_community = Mock()
-    fake_community.name = "Test Community"
+    fake_community.id = fake_community_id
+    fake_community.name = 'Test Community'
+    fake_community.image_url = 'https://example.com/community.jpg'
     fake_post.community = fake_community
 
     fake_user = Mock()
-    fake_user.name = "Community Admin"
-    fake_user.profile_image_url = "https://example.com/admin.jpg"
+    fake_user.name = 'Community Admin'
+    fake_user.profile_image_url = 'https://example.com/admin.jpg'
     fake_post.user = fake_user
 
     mock_tm = Mock()
@@ -304,7 +316,9 @@ def test_list_posts_by_community_service_success():
     result = service.list_posts_by_community(fake_community_id, fake_pagination_params)
 
     # Assert
-    mock_post_repo.list_posts_by_community.assert_called_once_with(fake_community_id, fake_pagination_params)
+    mock_post_repo.list_posts_by_community.assert_called_once_with(
+        fake_community_id, fake_pagination_params
+    )
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
@@ -334,15 +348,19 @@ def test_get_user_feed_service_success():
 
     # Criar múltiplos posts com tipos diferentes
     fake_posts = []
-    post_types = [PostTypeEnum.CAMPAIGN, PostTypeEnum.COMPLAINT, PostTypeEnum.ANNOUNCEMENT]
-    
+    post_types = [
+        PostTypeEnum.CAMPAIGN,
+        PostTypeEnum.COMPLAINT,
+        PostTypeEnum.ANNOUNCEMENT,
+    ]
+
     for i, post_type in enumerate(post_types):
         fake_post = Mock(spec=Post)
         fake_post.id = uuid4()
         fake_post.user_id = fake_user_id
         fake_post.community_id = fake_community_id
-        fake_post.title = f"Feed Post {i+1}"
-        fake_post.content = f"Feed content {i+1}"
+        fake_post.title = f'Feed Post {i + 1}'
+        fake_post.content = f'Feed content {i + 1}'
         fake_post.type_post = post_type
         fake_post.image_url = None
         fake_post.status = PostStatusEnum.ACTIVE
@@ -350,17 +368,19 @@ def test_get_user_feed_service_success():
         fake_post.likes_count = i + 1
         fake_post.comments_count = i
         fake_post.report_count = 0
-        fake_post.created_at = "2024-01-01T00:00:00Z"
-        fake_post.updated_at = "2024-01-01T00:00:00Z"
+        fake_post.created_at = '2024-01-01T00:00:00Z'
+        fake_post.updated_at = '2024-01-01T00:00:00Z'
 
         # Mock relacionamentos
         fake_community = Mock()
-        fake_community.name = f"Feed Community {i+1}"
+        fake_community.id = uuid4()
+        fake_community.name = f'Feed Community {i + 1}'
+        fake_community.image_url = f'https://example.com/community{i + 1}.jpg'
         fake_post.community = fake_community
 
         fake_user = Mock()
-        fake_user.name = f"Feed User {i+1}"
-        fake_user.profile_image_url = f"https://example.com/user{i+1}.jpg"
+        fake_user.name = f'Feed User {i + 1}'
+        fake_user.profile_image_url = f'https://example.com/user{i + 1}.jpg'
         fake_post.user = fake_user
 
         fake_posts.append(fake_post)
@@ -376,7 +396,9 @@ def test_get_user_feed_service_success():
     result = service.get_user_feed(fake_user_id, fake_pagination_params)
 
     # Assert
-    mock_post_repo.get_user_feed.assert_called_once_with(fake_user_id, fake_pagination_params)
+    mock_post_repo.get_user_feed.assert_called_once_with(
+        fake_user_id, fake_pagination_params
+    )
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 3
@@ -403,8 +425,8 @@ def test_update_post_service_success():
     fake_post_id = uuid4()
     fake_user_id = uuid4()
     fake_community_id = uuid4()
-    fake_original_content = "Original content"
-    fake_updated_content = "Content updated"
+    fake_original_content = 'Original content'
+    fake_updated_content = 'Content updated'
 
     fake_post_update = PostUpdate(content=fake_updated_content)
 
@@ -413,7 +435,7 @@ def test_update_post_service_success():
     fake_existing_post.id = fake_post_id
     fake_existing_post.user_id = fake_user_id
     fake_existing_post.community_id = fake_community_id
-    fake_existing_post.title = "Test Post Title"
+    fake_existing_post.title = 'Test Post Title'
     fake_existing_post.content = fake_original_content
     fake_existing_post.type_post = PostTypeEnum.ANNOUNCEMENT
     fake_existing_post.image_url = None
@@ -422,15 +444,15 @@ def test_update_post_service_success():
     fake_existing_post.likes_count = 3
     fake_existing_post.comments_count = 2
     fake_existing_post.report_count = 0
-    fake_existing_post.created_at = "2024-01-01T00:00:00Z"
-    fake_existing_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_existing_post.created_at = '2024-01-01T00:00:00Z'
+    fake_existing_post.updated_at = '2024-01-01T00:00:00Z'
 
     # Mock do post atualizado (retornado após save)
     fake_saved_post = Mock(spec=Post)
     fake_saved_post.id = fake_post_id
     fake_saved_post.user_id = fake_user_id
     fake_saved_post.community_id = fake_community_id
-    fake_saved_post.title = "Test Post Title"
+    fake_saved_post.title = 'Test Post Title'
     fake_saved_post.content = fake_updated_content  # Conteúdo atualizado
     fake_saved_post.type_post = PostTypeEnum.ANNOUNCEMENT
     fake_saved_post.image_url = None
@@ -439,18 +461,20 @@ def test_update_post_service_success():
     fake_saved_post.likes_count = 3
     fake_saved_post.comments_count = 2
     fake_saved_post.report_count = 0
-    fake_saved_post.created_at = "2024-01-01T00:00:00Z"
-    fake_saved_post.updated_at = "2024-01-01T01:00:00Z"  # Updated timestamp
+    fake_saved_post.created_at = '2024-01-01T00:00:00Z'
+    fake_saved_post.updated_at = '2024-01-01T01:00:00Z'  # Updated timestamp
 
     # Mock relacionamentos para ambos os posts
     for post in [fake_existing_post, fake_saved_post]:
         fake_community = Mock()
-        fake_community.name = "Test Community"
+        fake_community.id = fake_community_id
+        fake_community.name = 'Test Community'
+        fake_community.image_url = 'https://example.com/community.jpg'
         post.community = fake_community
 
         fake_user = Mock()
-        fake_user.name = "Test User"
-        fake_user.profile_image_url = "https://example.com/profile.jpg"
+        fake_user.name = 'Test User'
+        fake_user.profile_image_url = 'https://example.com/profile.jpg'
         post.user = fake_user
 
     mock_tm = Mock()
@@ -468,12 +492,14 @@ def test_update_post_service_success():
     # Assert
     assert mock_post_repo.get_by_id.call_count == 2  # Chamado duas vezes
     mock_post_repo.save.assert_called_once_with(fake_existing_post)
-    assert fake_existing_post.content == fake_updated_content  # Conteúdo foi atualizado no objeto
+    assert (
+        fake_existing_post.content == fake_updated_content
+    )  # Conteúdo foi atualizado no objeto
     assert result is not None
     assert isinstance(result, PostResponse)
     assert result.id == fake_post_id
     assert result.content == fake_updated_content
-    assert result.title == "Test Post Title"
+    assert result.title == 'Test Post Title'
     assert result.user.id == fake_user_id
     assert result.community.id == fake_community_id
 
@@ -497,8 +523,8 @@ def test_delete_post_service_success():
     fake_existing_post.id = fake_post_id
     fake_existing_post.user_id = fake_user_id
     fake_existing_post.community_id = fake_community_id
-    fake_existing_post.title = "Post to Delete"
-    fake_existing_post.content = "Content to be deleted"
+    fake_existing_post.title = 'Post to Delete'
+    fake_existing_post.content = 'Content to be deleted'
     fake_existing_post.type_post = PostTypeEnum.ANNOUNCEMENT
     fake_existing_post.image_url = None
     fake_existing_post.status = PostStatusEnum.ACTIVE
@@ -506,8 +532,8 @@ def test_delete_post_service_success():
     fake_existing_post.likes_count = 0
     fake_existing_post.comments_count = 0
     fake_existing_post.report_count = 0
-    fake_existing_post.created_at = "2024-01-01T00:00:00Z"
-    fake_existing_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_existing_post.created_at = '2024-01-01T00:00:00Z'
+    fake_existing_post.updated_at = '2024-01-01T00:00:00Z'
 
     mock_tm = Mock()
     mock_post_repo = Mock()
@@ -546,8 +572,8 @@ def test_like_post_service_success():
     fake_existing_post.id = fake_post_id
     fake_existing_post.user_id = fake_user_id
     fake_existing_post.community_id = fake_community_id
-    fake_existing_post.title = "Post to Like"
-    fake_existing_post.content = "Content to be liked"
+    fake_existing_post.title = 'Post to Like'
+    fake_existing_post.content = 'Content to be liked'
     fake_existing_post.type_post = PostTypeEnum.ANNOUNCEMENT
     fake_existing_post.image_url = None
     fake_existing_post.status = PostStatusEnum.ACTIVE
@@ -555,15 +581,15 @@ def test_like_post_service_success():
     fake_existing_post.likes_count = 0  # Começando com 0 likes
     fake_existing_post.comments_count = 2
     fake_existing_post.report_count = 0
-    fake_existing_post.created_at = "2024-01-01T00:00:00Z"
-    fake_existing_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_existing_post.created_at = '2024-01-01T00:00:00Z'
+    fake_existing_post.updated_at = '2024-01-01T00:00:00Z'
 
     fake_saved_post = Mock(spec=Post)
     fake_saved_post.id = fake_post_id
     fake_saved_post.user_id = fake_user_id
     fake_saved_post.community_id = fake_community_id
-    fake_saved_post.title = "Post to Like"
-    fake_saved_post.content = "Content to be liked"
+    fake_saved_post.title = 'Post to Like'
+    fake_saved_post.content = 'Content to be liked'
     fake_saved_post.type_post = PostTypeEnum.ANNOUNCEMENT
     fake_saved_post.image_url = None
     fake_saved_post.status = PostStatusEnum.ACTIVE
@@ -571,18 +597,20 @@ def test_like_post_service_success():
     fake_saved_post.likes_count = 1  # Incrementado após like
     fake_saved_post.comments_count = 2
     fake_saved_post.report_count = 0
-    fake_saved_post.created_at = "2024-01-01T00:00:00Z"
-    fake_saved_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_saved_post.created_at = '2024-01-01T00:00:00Z'
+    fake_saved_post.updated_at = '2024-01-01T00:00:00Z'
 
     # Mock relacionamentos para ambos os posts
     for post in [fake_existing_post, fake_saved_post]:
         fake_community = Mock()
-        fake_community.name = "Test Community"
+        fake_community.id = fake_community_id
+        fake_community.name = 'Test Community'
+        fake_community.image_url = 'https://example.com/community.jpg'
         post.community = fake_community
 
         fake_user = Mock()
-        fake_user.name = "Test User"
-        fake_user.profile_image_url = "https://example.com/profile.jpg"
+        fake_user.name = 'Test User'
+        fake_user.profile_image_url = 'https://example.com/profile.jpg'
         post.user = fake_user
 
     fake_member_association = Mock()
@@ -620,7 +648,7 @@ def test_like_post_service_success():
     assert isinstance(result, PostResponse)
     assert str(result.id) == fake_post_id
     assert result.likes_count == 1
-    assert result.title == "Post to Like"
+    assert result.title == 'Post to Like'
 
 
 @pytest.mark.unit
@@ -643,8 +671,8 @@ def test_unlike_post_service_success():
     fake_existing_post.id = fake_post_id
     fake_existing_post.user_id = fake_user_id
     fake_existing_post.community_id = fake_community_id
-    fake_existing_post.title = "Post to Unlike"
-    fake_existing_post.content = "Content to be unliked"
+    fake_existing_post.title = 'Post to Unlike'
+    fake_existing_post.content = 'Content to be unliked'
     fake_existing_post.type_post = PostTypeEnum.ANNOUNCEMENT
     fake_existing_post.image_url = None
     fake_existing_post.status = PostStatusEnum.ACTIVE
@@ -652,15 +680,15 @@ def test_unlike_post_service_success():
     fake_existing_post.likes_count = 1  # Começando com 1 like
     fake_existing_post.comments_count = 2
     fake_existing_post.report_count = 0
-    fake_existing_post.created_at = "2024-01-01T00:00:00Z"
-    fake_existing_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_existing_post.created_at = '2024-01-01T00:00:00Z'
+    fake_existing_post.updated_at = '2024-01-01T00:00:00Z'
 
     fake_saved_post = Mock(spec=Post)
     fake_saved_post.id = fake_post_id
     fake_saved_post.user_id = fake_user_id
     fake_saved_post.community_id = fake_community_id
-    fake_saved_post.title = "Post to Unlike"
-    fake_saved_post.content = "Content to be unliked"
+    fake_saved_post.title = 'Post to Unlike'
+    fake_saved_post.content = 'Content to be unliked'
     fake_saved_post.type_post = PostTypeEnum.ANNOUNCEMENT
     fake_saved_post.image_url = None
     fake_saved_post.status = PostStatusEnum.ACTIVE
@@ -668,18 +696,20 @@ def test_unlike_post_service_success():
     fake_saved_post.likes_count = 0  # Decrementado após unlike
     fake_saved_post.comments_count = 2
     fake_saved_post.report_count = 0
-    fake_saved_post.created_at = "2024-01-01T00:00:00Z"
-    fake_saved_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_saved_post.created_at = '2024-01-01T00:00:00Z'
+    fake_saved_post.updated_at = '2024-01-01T00:00:00Z'
 
     # Mock relacionamentos para ambos os posts
     for post in [fake_existing_post, fake_saved_post]:
         fake_community = Mock()
-        fake_community.name = "Test Community"
+        fake_community.id = fake_community_id
+        fake_community.name = 'Test Community'
+        fake_community.image_url = 'https://example.com/community.jpg'
         post.community = fake_community
 
         fake_user = Mock()
-        fake_user.name = "Test User"
-        fake_user.profile_image_url = "https://example.com/profile.jpg"
+        fake_user.name = 'Test User'
+        fake_user.profile_image_url = 'https://example.com/profile.jpg'
         post.user = fake_user
 
     fake_member_association = Mock()
@@ -718,7 +748,7 @@ def test_unlike_post_service_success():
     assert isinstance(result, PostResponse)
     assert str(result.id) == fake_post_id
     assert result.likes_count == 0
-    assert result.title == "Post to Unlike"
+    assert result.title == 'Post to Unlike'
 
 
 @pytest.mark.unit
@@ -741,8 +771,8 @@ def test_list_likes_post_service_success():
     fake_existing_post.id = fake_post_id
     fake_existing_post.user_id = fake_user_id
     fake_existing_post.community_id = fake_community_id
-    fake_existing_post.title = "Post with Likes"
-    fake_existing_post.content = "Content with likes"
+    fake_existing_post.title = 'Post with Likes'
+    fake_existing_post.content = 'Content with likes'
     fake_existing_post.type_post = PostTypeEnum.ANNOUNCEMENT
     fake_existing_post.image_url = None
     fake_existing_post.status = PostStatusEnum.ACTIVE
@@ -750,8 +780,8 @@ def test_list_likes_post_service_success():
     fake_existing_post.likes_count = 1
     fake_existing_post.comments_count = 0
     fake_existing_post.report_count = 0
-    fake_existing_post.created_at = "2024-01-01T00:00:00Z"
-    fake_existing_post.updated_at = "2024-01-01T00:00:00Z"
+    fake_existing_post.created_at = '2024-01-01T00:00:00Z'
+    fake_existing_post.updated_at = '2024-01-01T00:00:00Z'
 
     # Mock do membro da comunidade que curtiu
     fake_community_member = Mock()
@@ -759,14 +789,14 @@ def test_list_likes_post_service_success():
     fake_community_member.user_id = fake_user_id
     fake_community_member.community_id = fake_community_id
     fake_community_member.role = CommunityMemberRoleEnum.MEMBER
-    fake_community_member.status_participation = "active"
+    fake_community_member.status_participation = 'active'
 
     # Mock da resposta do membro
     fake_member_response = Mock()
     fake_member_response.user_id = fake_user_id
     fake_member_response.community_id = fake_community_id
     fake_member_response.role = CommunityMemberRoleEnum.MEMBER
-    fake_member_response.status_participation = "active"
+    fake_member_response.status_participation = 'active'
 
     mock_tm = Mock()
     mock_post_repo = Mock()
@@ -789,7 +819,9 @@ def test_list_likes_post_service_success():
     # Assert
     mock_post_repo.get_by_id.assert_called_once_with(fake_post_id)
     mock_post_likes_repo.list_by_post.assert_called_once_with(fake_post_id)
-    mock_community_service._map_member_to_response.assert_called_once_with(fake_community_member)
+    mock_community_service._map_member_to_response.assert_called_once_with(
+        fake_community_member
+    )
     assert result is not None
     assert len(result) == 1
     assert result[0].user_id == fake_user_id
@@ -811,8 +843,8 @@ def test_create_campaign_service_success():
     fake_post_id = str(uuid4())
     fake_user_id = str(uuid4())
     fake_community_id = str(uuid4())
-    fake_title = "Campaign Title"
-    fake_content = "Campaign content"
+    fake_title = 'Campaign Title'
+    fake_content = 'Campaign content'
 
     fake_post_create = PostCreate(
         user_id=fake_user_id,
@@ -827,12 +859,13 @@ def test_create_campaign_service_success():
     # Mock do post criado - usando mocks com spec
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = fake_community_id
-    fake_community.name = "Test Community"
+    fake_community.name = 'Test Community'
+    fake_community.image_url = 'https://example.com/community.jpg'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = fake_user_id
-    fake_user.name = "Test User"
-    fake_user.profile_picture = "https://example.com/profile.jpg"
+    fake_user.name = 'Test User'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
     fake_user.role = CommunityMemberRoleEnum.MEMBER
 
     fake_created_post_response = Mock(spec=PostResponse)
@@ -854,7 +887,7 @@ def test_create_campaign_service_success():
     fake_campaign = Mock(spec=CampaignPost)
     fake_campaign.post_id = fake_post_id
     fake_campaign.target_participants = 100  # Valor padrão
-    fake_campaign.current_participants = 0   # Valor padrão
+    fake_campaign.current_participants = 0  # Valor padrão
     fake_campaign.status_campaign = CampaignStatusEnum.PENDING  # Valor padrão
 
     mock_tm = Mock()
@@ -863,7 +896,7 @@ def test_create_campaign_service_success():
 
     service = PostService(mock_tm)
     service.campaign_repo = mock_campaign_repo
-    
+
     # Mock dos métodos que create_campaign chama
     service.create_post = Mock(return_value=fake_created_post_response)
     service.get_post = Mock(return_value=fake_created_post_response)
@@ -875,10 +908,10 @@ def test_create_campaign_service_success():
     service.create_post.assert_called_once_with(fake_post_create)
     service.get_post.assert_called_once_with(fake_post_id)
     mock_campaign_repo.save.assert_called_once()
-    
+
     saved_campaign_call = mock_campaign_repo.save.call_args[0][0]
     assert saved_campaign_call.post_id == fake_post_id
-    
+
     assert result is not None
     assert str(result.post.id) == fake_post_id
     assert result.target_participants == 100
@@ -946,16 +979,16 @@ def test_participate_campaign_service_success():
     mock_community_service.get_member.assert_called_once_with(fake_member_id)
     mock_campaign_repo.save.assert_called_once_with(fake_campaign)
     mock_campaign_participants_repo.save.assert_called_once()
-    
+
     # Verificar que current_participants foi incrementado
     assert fake_campaign.current_participants == 1
-    
+
     # Verificar o CampaignParticipants criado
     saved_participant_call = mock_campaign_participants_repo.save.call_args[0][0]
     assert saved_participant_call.campaign_id == fake_post_id
     assert saved_participant_call.member_id == fake_member_id
     assert saved_participant_call.user_id == fake_member.user_id
-    
+
     # Verificar o resultado
     assert result is not None
     assert result.campaign_id == fake_post_id
@@ -986,12 +1019,13 @@ def test_list_user_campaigns_subscriptions_service_success():
     # Mock do PostResponse
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = uuid4()
-    fake_community.name = "Campaign Community"
+    fake_community.name = 'Campaign Community'
+    fake_community.image_url = 'https://example.com/community.jpg'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = fake_user_id
-    fake_user.name = "Campaign User"
-    fake_user.profile_picture = "https://example.com/profile.jpg"
+    fake_user.name = 'Campaign User'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
     fake_user.role = CommunityMemberRoleEnum.MEMBER
 
     fake_post_response = Mock(spec=PostResponse)
@@ -999,8 +1033,8 @@ def test_list_user_campaigns_subscriptions_service_success():
     fake_post_response.community = fake_community
     fake_post_response.user = fake_user
     fake_post_response.type_post = PostTypeEnum.CAMPAIGN
-    fake_post_response.title = "Campaign Title"
-    fake_post_response.content = "Campaign content"
+    fake_post_response.title = 'Campaign Title'
+    fake_post_response.content = 'Campaign content'
     fake_post_response.image_url = None
     fake_post_response.status = PostStatusEnum.ACTIVE
     fake_post_response.likes_count = 5
@@ -1011,17 +1045,24 @@ def test_list_user_campaigns_subscriptions_service_success():
 
     mock_tm = Mock()
     mock_campaign_repo = Mock()
-    mock_campaign_repo.list_user_campaigns_subscriptions.return_value = ([fake_campaign], 1)
+    mock_campaign_repo.list_user_campaigns_subscriptions.return_value = (
+        [fake_campaign],
+        1,
+    )
 
     service = PostService(mock_tm)
     service.campaign_repo = mock_campaign_repo
     service.get_post = Mock(return_value=fake_post_response)
 
     # Act
-    result = service.list_user_campaigns_subscriptions(fake_user_id, fake_pagination_params)
+    result = service.list_user_campaigns_subscriptions(
+        fake_user_id, fake_pagination_params
+    )
 
     # Assert
-    mock_campaign_repo.list_user_campaigns_subscriptions.assert_called_once_with(fake_user_id, fake_pagination_params)
+    mock_campaign_repo.list_user_campaigns_subscriptions.assert_called_once_with(
+        fake_user_id, fake_pagination_params
+    )
     service.get_post.assert_called_once_with(fake_post_id)
     assert result is not None
     assert result.items is not None
@@ -1050,8 +1091,8 @@ def test_create_complaint_service_success():
     fake_post_id = str(uuid4())
     fake_user_id = str(uuid4())
     fake_community_id = str(uuid4())
-    fake_title = "Complaint Title"
-    fake_content = "Complaint content"
+    fake_title = 'Complaint Title'
+    fake_content = 'Complaint content'
 
     fake_post_create = PostCreate(
         user_id=fake_user_id,
@@ -1066,12 +1107,13 @@ def test_create_complaint_service_success():
     # Mock do PostResponse criado
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = fake_community_id
-    fake_community.name = "Test Community"
+    fake_community.name = 'Test Community'
+    fake_community.image_url = 'https://example.com/community.jpg'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = fake_user_id
-    fake_user.name = "Test User"
-    fake_user.profile_picture = "https://example.com/profile.jpg"
+    fake_user.name = 'Test User'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
     fake_user.role = CommunityMemberRoleEnum.MEMBER
 
     fake_created_post_response = Mock(spec=PostResponse)
@@ -1102,7 +1144,7 @@ def test_create_complaint_service_success():
 
     service = PostService(mock_tm)
     service.complaint_repo = mock_complaint_repo
-    
+
     # Mock dos métodos que create_complaint chama
     service.create_post = Mock(return_value=fake_created_post_response)
     service.get_post = Mock(return_value=fake_created_post_response)
@@ -1114,11 +1156,11 @@ def test_create_complaint_service_success():
     service.create_post.assert_called_once_with(fake_post_create)
     service.get_post.assert_called_once_with(fake_post_id)
     mock_complaint_repo.save.assert_called_once()
-    
+
     # Verificar o ComplaintPost criado
     saved_complaint_call = mock_complaint_repo.save.call_args[0][0]
     assert saved_complaint_call.post_id == fake_post_id
-    
+
     # Verificar o resultado
     assert result is not None
     assert str(result.post.id) == fake_post_id
@@ -1141,9 +1183,9 @@ def test_create_poll_service_success():
     fake_post_id = str(uuid4())
     fake_user_id = str(uuid4())
     fake_community_id = str(uuid4())
-    fake_title = "Poll Title"
-    fake_content = "Poll content"
-    fake_question = "Question test"
+    fake_title = 'Poll Title'
+    fake_content = 'Poll content'
+    fake_question = 'Question test'
     fake_options = ['Option 1', 'Option 2', 'Option 3']
 
     fake_post_create = PostCreate(
@@ -1165,12 +1207,13 @@ def test_create_poll_service_success():
     # Mock do PostResponse criado
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = fake_community_id
-    fake_community.name = "Test Community"
+    fake_community.name = 'Test Community'
+    fake_community.image_url = 'https://example.com/community.jpg'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = fake_user_id
-    fake_user.name = "Test User"
-    fake_user.profile_picture = "https://example.com/profile.jpg"
+    fake_user.name = 'Test User'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
     fake_user.role = CommunityMemberRoleEnum.MEMBER
 
     fake_created_post_response = Mock(spec=PostResponse)
@@ -1213,7 +1256,7 @@ def test_create_poll_service_success():
     service = PostService(mock_tm)
     service.poll_posts_repo = mock_poll_posts_repo
     service.poll_options_repo = mock_poll_options_repo
-    
+
     # Mock dos métodos que create_poll chama
     service.create_post = Mock(return_value=fake_created_post_response)
     service.get_post = Mock(return_value=fake_created_post_response)
@@ -1226,12 +1269,12 @@ def test_create_poll_service_success():
     service.get_post.assert_called_once_with(fake_post_id)
     mock_poll_posts_repo.save.assert_called_once()
     assert mock_poll_options_repo.save.call_count == 3
-    
+
     # Verificar o PollPosts criado
     saved_poll_call = mock_poll_posts_repo.save.call_args[0][0]
     assert saved_poll_call.post_id == fake_post_id
     assert saved_poll_call.question == fake_question
-    
+
     # Verificar o resultado
     assert result is not None
     assert str(result.post.id) == fake_post_id
@@ -1254,7 +1297,7 @@ def test_get_poll_service_success():
     """
     # Arrange
     fake_post_id = uuid4()
-    fake_question = "What is your favorite color?"
+    fake_question = 'What is your favorite color?'
 
     # Mock das opções da enquete
     fake_poll_options = []
@@ -1310,7 +1353,7 @@ def test_vote_poll_service_success():
     # Arrange
     fake_post_id = uuid4()
     fake_poll_option_id = uuid4()
-    fake_question = "What is your favorite programming language?"
+    fake_question = 'What is your favorite programming language?'
 
     # Mock da opção que será votada
     fake_voted_option = Mock(spec=PollOptions)
@@ -1342,12 +1385,13 @@ def test_vote_poll_service_success():
     # Mock do PostResponse
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = uuid4()
-    fake_community.name = "Tech Community"
+    fake_community.name = 'Tech Community'
+    fake_community.image_url = 'https://example.com/community.jpg'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = uuid4()
-    fake_user.name = "Poll Creator"
-    fake_user.profile_picture = "https://example.com/profile.jpg"
+    fake_user.name = 'Poll Creator'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
     fake_user.role = CommunityMemberRoleEnum.ADMIN
 
     fake_post_response = Mock(spec=PostResponse)
@@ -1355,8 +1399,8 @@ def test_vote_poll_service_success():
     fake_post_response.community = fake_community
     fake_post_response.user = fake_user
     fake_post_response.type_post = PostTypeEnum.POLL
-    fake_post_response.title = "Programming Languages Poll"
-    fake_post_response.content = "Vote for your favorite language"
+    fake_post_response.title = 'Programming Languages Poll'
+    fake_post_response.content = 'Vote for your favorite language'
     fake_post_response.image_url = None
     fake_post_response.status = PostStatusEnum.ACTIVE
     fake_post_response.likes_count = 5
@@ -1383,16 +1427,16 @@ def test_vote_poll_service_success():
     mock_poll_options_repo.save.assert_called_once_with(fake_voted_option)
     service.get_poll.assert_called_once_with(fake_post_id)
     service.get_post.assert_called_once_with(fake_post_id)
-    
+
     # Verificar que o voto foi incrementado
     assert fake_voted_option.votes_count == 1
-    
+
     # Verificar o resultado
     assert result is not None
     assert result.post.id == fake_post_id
     assert result.question == fake_question
     assert len(result.options) == 3
-    
+
     # As opções devem estar ordenadas por answer (alfabética)
     assert result.options[0].answer == 'Java'  # Alfabeticamente primeiro
     assert result.options[0].votes_count == 0

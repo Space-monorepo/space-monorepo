@@ -9,6 +9,7 @@ from app.api.comment.schema import (
     CommentUpdate,
 )
 
+
 @pytest.mark.integration
 def test_create_comment_route(authenticate_client, community_member_on_db, post_on_db):
     comment = CommentCreate(
@@ -35,7 +36,9 @@ def test_create_comment_route(authenticate_client, community_member_on_db, post_
 
 
 @pytest.mark.integration
-def test_create_comment_reply_route(authenticate_client, community_member_on_db, comment_on_db):
+def test_create_comment_reply_route(
+    authenticate_client, community_member_on_db, comment_on_db
+):
     reply = CommentCreate(
         post_id=comment_on_db.post_id,
         user_id=community_member_on_db.user_id,
@@ -70,7 +73,9 @@ def test_get_comment_route(authenticate_client, comment_on_db, community_member_
 
 
 @pytest.mark.integration
-def test_list_comments_by_post_route(authenticate_client, comment_on_db, community_member_on_db):
+def test_list_comments_by_post_route(
+    authenticate_client, comment_on_db, community_member_on_db
+):
     response = authenticate_client.get(
         f'/comments/{community_member_on_db.community_id}/post/{comment_on_db.post_id}/list-comments'
     )
@@ -82,7 +87,9 @@ def test_list_comments_by_post_route(authenticate_client, comment_on_db, communi
 
 
 @pytest.mark.integration
-def test_list_comments_by_user_route(authenticate_client, comment_on_db, community_member_on_db):
+def test_list_comments_by_user_route(
+    authenticate_client, comment_on_db, community_member_on_db
+):
     response = authenticate_client.get(
         f'/comments/{community_member_on_db.community_id}/user/{comment_on_db.user_id}/list-comments'
     )
@@ -94,7 +101,9 @@ def test_list_comments_by_user_route(authenticate_client, comment_on_db, communi
 
 
 @pytest.mark.integration
-def test_list_replies_by_parent_route(authenticate_client, comment_reply_on_db, comment_on_db, community_member_on_db):
+def test_list_replies_by_parent_route(
+    authenticate_client, comment_reply_on_db, comment_on_db, community_member_on_db
+):
     response = authenticate_client.get(
         f'/comments/{community_member_on_db.community_id}/comment/{comment_on_db.id}/list-replies'
     )
@@ -106,7 +115,9 @@ def test_list_replies_by_parent_route(authenticate_client, comment_reply_on_db, 
 
 
 @pytest.mark.integration
-def test_update_comment_content_route(authenticate_client, comment_on_db, community_member_on_db):
+def test_update_comment_content_route(
+    authenticate_client, comment_on_db, community_member_on_db
+):
     comment_update = CommentUpdate(
         content='Conteúdo atualizado via rota',
     )
@@ -121,7 +132,9 @@ def test_update_comment_content_route(authenticate_client, comment_on_db, commun
 
 
 @pytest.mark.integration
-def test_update_comment_status_route(authenticate_client, comment_on_db, community_member_on_db):
+def test_update_comment_status_route(
+    authenticate_client, comment_on_db, community_member_on_db
+):
     comment_update = CommentUpdate(
         status=CommentStatusEnum.SUSPENDED,
     )
@@ -168,7 +181,9 @@ def test_update_comment_from_not_owner_route(
 
 
 @pytest.mark.integration
-def test_delete_comment_route(authenticate_client, comment_on_db, community_member_on_db):
+def test_delete_comment_route(
+    authenticate_client, comment_on_db, community_member_on_db
+):
     response = authenticate_client.delete(
         f'/comments/{community_member_on_db.community_id}/comment/{comment_on_db.id}'
     )
@@ -209,15 +224,21 @@ def test_unlike_comment_route(
     assert response.status_code == status.HTTP_200_OK
     assert response.json()['likes_count'] == initial_likes_count
 
-    like_db = session_sql.query(CommentLikes).filter(
-        CommentLikes.comment_id == comment_on_db.id,
-        CommentLikes.member_id == community_member_on_db.id
-    ).first()
+    like_db = (
+        session_sql.query(CommentLikes)
+        .filter(
+            CommentLikes.comment_id == comment_on_db.id,
+            CommentLikes.member_id == community_member_on_db.id,
+        )
+        .first()
+    )
     assert like_db is None
 
 
 @pytest.mark.integration
-def test_list_likes_comment_route(authenticate_client, comment_on_db, community_member_on_db):
+def test_list_likes_comment_route(
+    authenticate_client, comment_on_db, community_member_on_db
+):
     response = authenticate_client.post(
         f'/comments/{community_member_on_db.community_id}/comment/{comment_on_db.id}/like'
     )
@@ -233,7 +254,9 @@ def test_list_likes_comment_route(authenticate_client, comment_on_db, community_
 
 
 @pytest.mark.integration
-def test_report_comment_route(session_sql, authenticate_client, comment_on_db, community_member_on_db):
+def test_report_comment_route(
+    session_sql, authenticate_client, comment_on_db, community_member_on_db
+):
     original_report_count = comment_on_db.report_count
 
     response = authenticate_client.patch(
@@ -242,7 +265,9 @@ def test_report_comment_route(session_sql, authenticate_client, comment_on_db, c
     assert response.status_code == status.HTTP_200_OK
     assert response.json()['report_count'] == original_report_count + 1
 
-    comment_db = session_sql.query(Comment).filter(Comment.id == comment_on_db.id).first()
+    comment_db = (
+        session_sql.query(Comment).filter(Comment.id == comment_on_db.id).first()
+    )
     assert comment_db.report_count == original_report_count + 1
 
 
@@ -293,7 +318,9 @@ def test_delete_comment_decrements_post_comments_count_route(
 
 
 @pytest.mark.integration
-def test_get_nonexistent_comment_route(authenticate_client, community_member_on_db, post_on_db):
+def test_get_nonexistent_comment_route(
+    authenticate_client, community_member_on_db, post_on_db
+):
     import uuid
 
     response = authenticate_client.get(
@@ -306,7 +333,9 @@ def test_get_nonexistent_comment_route(authenticate_client, community_member_on_
 def test_update_nonexistent_comment_route(authenticate_client, community_member_on_db):
     import uuid
 
-    comment_update = CommentUpdate(content='Tentativa de atualizar comentário inexistente')
+    comment_update = CommentUpdate(
+        content='Tentativa de atualizar comentário inexistente'
+    )
 
     response = authenticate_client.patch(
         f'/comments/{community_member_on_db.community_id}/comment/{uuid.uuid4()}',
@@ -336,7 +365,9 @@ def test_like_nonexistent_comment_route(authenticate_client, community_member_on
 
 
 @pytest.mark.integration
-def test_unlike_comment_without_like_route(authenticate_client, comment_on_db, community_member_on_db):
+def test_unlike_comment_without_like_route(
+    authenticate_client, comment_on_db, community_member_on_db
+):
     response = authenticate_client.post(
         f'/comments/{community_member_on_db.community_id}/comment/{comment_on_db.id}/unlike'
     )
@@ -344,7 +375,9 @@ def test_unlike_comment_without_like_route(authenticate_client, comment_on_db, c
 
 
 @pytest.mark.integration
-def test_unlike_comment_with_invalid_id_route(authenticate_client, comment_on_db, community_member_on_db):
+def test_unlike_comment_with_invalid_id_route(
+    authenticate_client, comment_on_db, community_member_on_db
+):
     response = authenticate_client.post(
         f'/comments/{community_member_on_db.community_id}/comment/{uuid.uuid4()}/unlike'
     )
@@ -352,7 +385,9 @@ def test_unlike_comment_with_invalid_id_route(authenticate_client, comment_on_db
 
 
 @pytest.mark.integration
-def test_create_comment_with_invalid_content_route(authenticate_client, community_member_on_db, post_on_db):
+def test_create_comment_with_invalid_content_route(
+    authenticate_client, community_member_on_db, post_on_db
+):
     invalid_comment_data = {
         'post_id': str(post_on_db.id),
         'user_id': str(community_member_on_db.user_id),
@@ -369,7 +404,9 @@ def test_create_comment_with_invalid_content_route(authenticate_client, communit
 
 
 @pytest.mark.integration
-def test_create_comment_with_nonexistent_post_route(authenticate_client, community_member_on_db):
+def test_create_comment_with_nonexistent_post_route(
+    authenticate_client, community_member_on_db
+):
     comment = CommentCreate(
         post_id=str(uuid.uuid4()),
         user_id=community_member_on_db.user_id,
@@ -424,7 +461,9 @@ def test_create_comment_reply_with_invalid_parent_route(
 
 
 @pytest.mark.integration
-def test_comment_includes_member_role(authenticate_client, community_member_on_db, post_on_db):
+def test_comment_includes_member_role(
+    authenticate_client, community_member_on_db, post_on_db
+):
     comment = CommentCreate(
         post_id=post_on_db.id,
         user_id=community_member_on_db.user_id,
@@ -446,7 +485,9 @@ def test_comment_includes_member_role(authenticate_client, community_member_on_d
 
 
 @pytest.mark.integration
-def test_list_comments_includes_member_role(authenticate_client, comment_on_db, community_member_on_db):
+def test_list_comments_includes_member_role(
+    authenticate_client, comment_on_db, community_member_on_db
+):
     response = authenticate_client.get(
         f'/comments/{community_member_on_db.community_id}/post/{comment_on_db.post_id}/list-comments'
     )

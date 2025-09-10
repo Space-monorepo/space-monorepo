@@ -35,7 +35,9 @@ class CommunityService:
             id=member.id,
             user=member.user,
             community=CommunityRelated(
-                id=member.community.id, name=member.community.name
+                id=member.community.id,
+                name=member.community.name,
+                image_url=member.community.image_url,
             ),
             role=member.role,
             status_participation=member.status_participation,
@@ -51,7 +53,11 @@ class CommunityService:
 
     def create_community(self, community: CommunityCreate) -> Community:
         try:
-            community_model = Community(**community.model_dump())
+            community_data = community.model_dump()
+            # Convert HttpUrl to string for database storage
+            if 'image_url' in community_data and community_data['image_url'] is not None:
+                community_data['image_url'] = str(community_data['image_url'])
+            community_model = Community(**community_data)
             community = self.community_repo.save(community_model)
             return community
         except Exception as e:
@@ -92,7 +98,12 @@ class CommunityService:
     ) -> Community:
         community = self.get_community(community_id)
         for key, value in community_update.model_dump(exclude_unset=True).items():
-            setattr(community, key, value)
+            # Convert HttpUrl to string for database storage
+            if key == 'image_url' and value is not None:
+                converted_value = str(value)
+            else:
+                converted_value = value
+            setattr(community, key, converted_value)
         try:
             community = self.community_repo.save(community)
             return community

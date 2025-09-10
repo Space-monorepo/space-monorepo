@@ -1,4 +1,3 @@
-
 def test_message_create_schema():
     pass
 

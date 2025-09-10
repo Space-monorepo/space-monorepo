@@ -3,6 +3,7 @@ import os
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     ENVIRONMENT: str
 
@@ -10,7 +11,7 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     DATABASE_URL: str
-    
+
     MONGO_URI: str | None = None
     MONGO_INITDB_DATABASE: str | None = None
     RESET_DB: bool | None = None

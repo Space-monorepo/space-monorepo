@@ -9,14 +9,13 @@ from app.api.post.schemas import (
     CampaignResponse,
     CampaignStatusEnum,
     CampaignUpdate,
-    CommunityMemberRoleEnum,
     CommunityRelated,
     ComplaintLevelEnum,
     ComplaintResponse,
     ComplaintStatusEnum,
     ComplaintUpdate,
-    PollOptionResponse,
     PollCreate,
+    PollOptionResponse,
     PollResponse,
     PostAuthor,
     PostCreate,
@@ -81,6 +80,7 @@ def test_post_response_schema():
         community=CommunityRelated(
             id=community_id,
             name='Test Community',
+            image_url='https://example.com/community-image.jpg',
         ),
         user=PostAuthor(
             id=user_id,
@@ -100,14 +100,15 @@ def test_post_response_schema():
         updated_at=updated_at,
     )
 
-    assert post.model_dump() == {
-        'id': post_id,
+    assert post.model_dump(mode='json') == {
+        'id': str(post_id),
         'community': {
-            'id': community_id,
+            'id': str(community_id),
             'name': 'Test Community',
+            'image_url': 'https://example.com/community-image.jpg',
         },
         'user': {
-            'id': user_id,
+            'id': str(user_id),
             'name': 'Test User',
             'role': 'member',
             'profile_picture': 'https://example.com/profile.jpg',
@@ -120,8 +121,8 @@ def test_post_response_schema():
         'likes_count': 0,
         'comments_count': 0,
         'report_count': 0,
-        'created_at': created_at,
-        'updated_at': updated_at,
+        'created_at': created_at.isoformat(),
+        'updated_at': updated_at.isoformat(),
     }
 
 
@@ -160,7 +161,9 @@ def test_post_author_invalid_schema():
 @pytest.mark.unit
 def test_post_community_related_invalid_schema():
     with pytest.raises(ValidationError):
-        CommunityRelated(id=uuid.uuid4(), name='')
+        CommunityRelated(
+            id=uuid.uuid4(), name='', image_url='https://example.com/image.jpg'
+        )
 
 
 @pytest.mark.unit
@@ -168,7 +171,9 @@ def test_post_response_invalid_schema():
     with pytest.raises(ValidationError):
         PostResponse(
             id=uuid.uuid4(),
-            community=CommunityRelated(id=uuid.uuid4(), name=''),
+            community=CommunityRelated(
+                id=uuid.uuid4(), name='', image_url='https://example.com/image.jpg'
+            ),
             user=PostAuthor(id=uuid.uuid4(), name='', role='', profile_picture=''),
             type_post=PostTypeEnum.CAMPAIGN,
             title='Example title',
@@ -204,7 +209,11 @@ def test_campaign_response_schema():
     created_at = datetime.now()
     updated_at = datetime.now()
 
-    community = CommunityRelated(id=community_id, name='Test Community')
+    community = CommunityRelated(
+        id=community_id,
+        name='Test Community',
+        image_url='https://example.com/community-image.jpg',
+    )
 
     user = PostAuthor(
         id=user_id,
@@ -235,33 +244,34 @@ def test_campaign_response_schema():
         current_participants=150,
         status_campaign=CampaignStatusEnum.APPROVED,
     )
-    assert campaign_response.model_dump() == {
+    assert campaign_response.model_dump(mode='json') == {
         'post': {
-            'id': post_id,
+            'id': str(post_id),
             'community': {
-                'id': community_id,
+                'id': str(community_id),
                 'name': 'Test Community',
+                'image_url': 'https://example.com/community-image.jpg',
             },
             'user': {
-                'id': user_id,
+                'id': str(user_id),
                 'name': 'Test User',
-                'role': CommunityMemberRoleEnum.MEMBER,
+                'role': 'member',
                 'profile_picture': 'https://example.com/profile.jpg',
             },
-            'type_post': PostTypeEnum.CAMPAIGN,
+            'type_post': 'campaign',
             'title': 'Example title',
             'content': 'Example content',
             'image_url': None,
-            'status': PostStatusEnum.ACTIVE,
+            'status': 'active',
             'likes_count': 0,
             'comments_count': 0,
             'report_count': 0,
-            'created_at': created_at,
-            'updated_at': updated_at,
+            'created_at': created_at.isoformat(),
+            'updated_at': updated_at.isoformat(),
         },
         'target_participants': 200,
         'current_participants': 150,
-        'status_campaign': CampaignStatusEnum.APPROVED,
+        'status_campaign': 'approved',
     }
 
 
@@ -351,6 +361,7 @@ def test_complaint_response_schema():
     community = CommunityRelated(
         id=uuid.uuid4(),
         name='Test Community',
+        image_url='https://example.com/community-image.jpg',
     )
 
     user = PostAuthor(
@@ -382,33 +393,34 @@ def test_complaint_response_schema():
         status_complaint=ComplaintStatusEnum.PENDING,
         level_complaint=ComplaintLevelEnum.LOW,
     )
-    assert complaint_response.model_dump() == {
+    assert complaint_response.model_dump(mode='json') == {
         'post': {
-            'id': post_id,
+            'id': str(post_id),
             'community': {
-                'id': community.id,
+                'id': str(community.id),
                 'name': 'Test Community',
+                'image_url': 'https://example.com/community-image.jpg',
             },
             'user': {
-                'id': user_id,
+                'id': str(user_id),
                 'name': 'Test User',
                 'role': 'member',
                 'profile_picture': 'https://example.com/profile.jpg',
             },
-            'type_post': PostTypeEnum.CAMPAIGN,
+            'type_post': 'campaign',
             'title': 'Example title',
             'content': 'Example content',
             'image_url': None,
-            'status': PostStatusEnum.ACTIVE,
+            'status': 'active',
             'likes_count': 0,
             'comments_count': 0,
             'report_count': 0,
-            'created_at': created_at,
-            'updated_at': created_at,
+            'created_at': created_at.isoformat(),
+            'updated_at': created_at.isoformat(),
         },
         'confirmations_count': 1,
-        'status_complaint': ComplaintStatusEnum.PENDING,
-        'level_complaint': ComplaintLevelEnum.LOW,
+        'status_complaint': 'pending',
+        'level_complaint': 'low',
     }
 
 
@@ -458,6 +470,7 @@ def test_poll_response_schema():
     community = CommunityRelated(
         id=community_id,
         name='Test Community',
+        image_url='https://example.com/community-image.jpg',
     )
 
     user = PostAuthor(
@@ -502,44 +515,45 @@ def test_poll_response_schema():
             ),
         ],
     )
-    assert poll_response.model_dump() == {
+    assert poll_response.model_dump(mode='json') == {
         'post': {
-            'id': post_id,
+            'id': str(post_id),
             'community': {
-                'id': community_id,
+                'id': str(community_id),
                 'name': 'Test Community',
+                'image_url': 'https://example.com/community-image.jpg',
             },
             'user': {
-                'id': user_id,
+                'id': str(user_id),
                 'name': 'Test User',
                 'role': 'member',
                 'profile_picture': 'https://example.com/profile.jpg',
             },
-            'type_post': PostTypeEnum.POLL,
+            'type_post': 'poll',
             'title': 'Example title',
             'content': 'Example content',
             'image_url': None,
-            'status': PostStatusEnum.ACTIVE,
+            'status': 'active',
             'likes_count': 0,
             'comments_count': 0,
             'report_count': 0,
-            'created_at': created_at,
-            'updated_at': created_at,
+            'created_at': created_at.isoformat(),
+            'updated_at': created_at.isoformat(),
         },
         'question': 'Example question',
         'options': [
             {
-                'id': option_id_1,
+                'id': str(option_id_1),
                 'answer': 'Option 1',
                 'votes_count': 0,
             },
             {
-                'id': option_id_2,
+                'id': str(option_id_2),
                 'answer': 'Option 2',
                 'votes_count': 0,
             },
             {
-                'id': option_id_3,
+                'id': str(option_id_3),
                 'answer': 'Option 3',
                 'votes_count': 0,
             },

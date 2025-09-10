@@ -48,7 +48,9 @@ def require_roles(allowed_roles: list[str]):
     ) -> CommunityMember:
         with TransactionManager(session) as tm:
             try:
-                member = CommunityService(tm).get_member_association(user.id, community_id)
+                member = CommunityService(tm).get_member_association(
+                    user.id, community_id
+                )
             except CommunityMemberNotFoundError:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
