@@ -13,11 +13,12 @@ from app.api.comment.schema import (
     CommentUpdate,
     PostRelated,
 )
+from app.api.communities.schema import CommunityMemberRoleEnum
 
 
 def test_comment_create_schema():
-    post_id = uuid.uuid4()
-    user_id = uuid.uuid4()
+    post_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
 
     comment = CommentCreate(
         post_id=post_id,
@@ -37,9 +38,9 @@ def test_comment_create_schema():
 
 
 def test_comment_create_with_parent_schema():
-    post_id = uuid.uuid4()
-    user_id = uuid.uuid4()
-    parent_id = uuid.uuid4()
+    post_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    parent_id = str(uuid.uuid4())
 
     comment = CommentCreate(
         post_id=post_id,
@@ -81,6 +82,17 @@ def test_comment_update_partial_schema():
     }
 
 
+def test_comment_update_status_only_schema():
+    comment = CommentUpdate(
+        status=CommentStatusEnum.REPORTED,
+    )
+
+    assert comment.model_dump() == {
+        'content': None,
+        'status': 'reported',
+    }
+
+
 def test_comment_author_schema():
     user_id = uuid.uuid4()
 
@@ -88,12 +100,50 @@ def test_comment_author_schema():
         id=user_id,
         name='João Silva',
         profile_image_url='https://example.com/profile.jpg',
+        member_role=CommunityMemberRoleEnum.MEMBER,
     )
 
     assert author.model_dump() == {
         'id': user_id,
         'name': 'João Silva',
         'profile_image_url': 'https://example.com/profile.jpg',
+        'member_role': 'member',
+    }
+
+
+def test_comment_author_with_admin_role_schema():
+    user_id = uuid.uuid4()
+
+    author = CommentAuthor(
+        id=user_id,
+        name='Admin User',
+        profile_image_url='https://example.com/admin.jpg',
+        member_role=CommunityMemberRoleEnum.ADMIN,
+    )
+
+    assert author.model_dump() == {
+        'id': user_id,
+        'name': 'Admin User',
+        'profile_image_url': 'https://example.com/admin.jpg',
+        'member_role': 'admin',
+    }
+
+
+def test_comment_author_with_moderator_role_schema():
+    user_id = uuid.uuid4()
+
+    author = CommentAuthor(
+        id=user_id,
+        name='Moderator User',
+        profile_image_url=None,
+        member_role=CommunityMemberRoleEnum.MODERATOR,
+    )
+
+    assert author.model_dump() == {
+        'id': user_id,
+        'name': 'Moderator User',
+        'profile_image_url': None,
+        'member_role': 'moderator',
     }
 
 
@@ -104,12 +154,32 @@ def test_comment_author_without_profile_image_schema():
         id=user_id,
         name='Maria Santos',
         profile_image_url=None,
+        member_role=CommunityMemberRoleEnum.MEMBER,
     )
 
     assert author.model_dump() == {
         'id': user_id,
         'name': 'Maria Santos',
         'profile_image_url': None,
+        'member_role': 'member',
+    }
+
+
+def test_comment_author_without_member_role_schema():
+    user_id = uuid.uuid4()
+
+    author = CommentAuthor(
+        id=user_id,
+        name='Guest User',
+        profile_image_url=None,
+        member_role=None,
+    )
+
+    assert author.model_dump() == {
+        'id': user_id,
+        'name': 'Guest User',
+        'profile_image_url': None,
+        'member_role': None,
     }
 
 
@@ -142,6 +212,7 @@ def test_comment_response_schema():
         id=user_id,
         name='João Silva',
         profile_image_url='https://example.com/profile.jpg',
+        member_role=CommunityMemberRoleEnum.MEMBER,
     )
 
     comment = CommentResponse(
@@ -167,6 +238,7 @@ def test_comment_response_schema():
             'id': user_id,
             'name': 'João Silva',
             'profile_image_url': 'https://example.com/profile.jpg',
+            'member_role': 'member',
         },
         'content': 'Este é um comentário de teste',
         'status': 'active',
@@ -196,12 +268,14 @@ def test_comment_response_with_replies_schema():
         id=user_id,
         name='João Silva',
         profile_image_url='https://example.com/profile.jpg',
+        member_role=CommunityMemberRoleEnum.ADMIN,
     )
 
     reply_author = CommentAuthor(
         id=reply_user_id,
         name='Maria Santos',
         profile_image_url=None,
+        member_role=CommunityMemberRoleEnum.MODERATOR,
     )
 
     reply = CommentResponse(
@@ -240,6 +314,7 @@ def test_comment_response_with_replies_schema():
             'id': user_id,
             'name': 'João Silva',
             'profile_image_url': 'https://example.com/profile.jpg',
+            'member_role': 'admin',
         },
         'content': 'Este é um comentário de teste',
         'status': 'active',
@@ -258,6 +333,7 @@ def test_comment_response_with_replies_schema():
                     'id': reply_user_id,
                     'name': 'Maria Santos',
                     'profile_image_url': None,
+                    'member_role': 'moderator',
                 },
                 'content': 'Esta é uma resposta',
                 'status': CommentStatusEnum.ACTIVE,
@@ -292,8 +368,8 @@ def test_comment_like_response_schema():
 def test_comment_create_invalid_schema():
     with pytest.raises(ValidationError):
         CommentCreate(
-            post_id=uuid.uuid4(),
-            user_id=uuid.uuid4(),
+            post_id=str(uuid.uuid4()),
+            user_id=str(uuid.uuid4()),
             content='',
             parent_id=None,
             status=CommentStatusEnum.ACTIVE,
@@ -303,8 +379,8 @@ def test_comment_create_invalid_schema():
 def test_comment_create_content_too_long_invalid_schema():
     with pytest.raises(ValidationError):
         CommentCreate(
-            post_id=uuid.uuid4(),
-            user_id=uuid.uuid4(),
+            post_id=str(uuid.uuid4()),
+            user_id=str(uuid.uuid4()),
             content='a' * 1001,
             parent_id=None,
             status=CommentStatusEnum.ACTIVE,
@@ -319,12 +395,21 @@ def test_comment_update_invalid_schema():
         )
 
 
+def test_comment_update_content_too_long_invalid_schema():
+    with pytest.raises(ValidationError):
+        CommentUpdate(
+            content='a' * 1001,
+            status=CommentStatusEnum.ACTIVE,
+        )
+
+
 def test_comment_author_invalid_schema():
     with pytest.raises(ValidationError):
         CommentAuthor(
             id=uuid.uuid4(),
             name='',
             profile_image_url=None,
+            member_role=CommunityMemberRoleEnum.MEMBER,
         )
 
     with pytest.raises(ValidationError):
@@ -332,6 +417,7 @@ def test_comment_author_invalid_schema():
             id=uuid.uuid4(),
             name='a' * 256,
             profile_image_url=None,
+            member_role=CommunityMemberRoleEnum.MEMBER,
         )
 
 
@@ -358,6 +444,7 @@ def test_comment_response_invalid_schema():
                 id=uuid.uuid4(),
                 name='João Silva',
                 profile_image_url=None,
+                member_role=CommunityMemberRoleEnum.MEMBER,
             ),
             content='Conteúdo válido',
             status=CommentStatusEnum.ACTIVE,
@@ -373,3 +460,9 @@ def test_comment_status_enum_values():
     assert CommentStatusEnum.ACTIVE == 'active'
     assert CommentStatusEnum.REPORTED == 'reported'
     assert CommentStatusEnum.SUSPENDED == 'suspended'
+
+
+def test_community_member_role_enum_values():
+    assert CommunityMemberRoleEnum.ADMIN == 'admin'
+    assert CommunityMemberRoleEnum.MODERATOR == 'moderator'
+    assert CommunityMemberRoleEnum.MEMBER == 'member'
