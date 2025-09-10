@@ -93,7 +93,7 @@ def test_update_post_route(authenticate_client, post_on_db, community_member_on_
         content='Updated content',
     )
 
-    response = authenticate_client.patch( 
+    response = authenticate_client.patch(
         f'/posts/{post_on_db.community_id}/post/{post_on_db.id}',
         json=post_update.model_dump(mode='json'),
     )
@@ -103,7 +103,9 @@ def test_update_post_route(authenticate_client, post_on_db, community_member_on_
 
 
 @pytest.mark.integration
-def test_update_post_status_route(authenticate_client, post_on_db, community_member_on_db):
+def test_update_post_status_route(
+    authenticate_client, post_on_db, community_member_on_db
+):
     post_update = PostUpdate(
         status=PostStatusEnum.SUSPENDED,
     )
@@ -300,22 +302,30 @@ def test_vote_poll_route(authenticate_client, community_member_on_db, poll_optio
 
 @pytest.mark.integration
 def test_get_user_feed_route(authenticate_client, community_member_on_db, post_on_db):
-    response = authenticate_client.get(
-        '/posts/feed'
-    )
+    response = authenticate_client.get('/posts/feed')
     assert response.status_code == status.HTTP_200_OK
     assert response.json()['items'][0]['id'] == str(post_on_db.id)
 
 
 @pytest.mark.integration
 def test_list_user_campaigns_route(
-    authenticate_client, community_member_on_db, campaign_post_on_db, campaign_participants_on_db
+    authenticate_client,
+    community_member_on_db,
+    campaign_post_on_db,
+    campaign_participants_on_db,
 ):
-    response = authenticate_client.get(
-        '/posts/post/list-user-campaigns'
-    )
+    response = authenticate_client.get('/posts/post/list-user-campaigns')
     assert response.status_code == status.HTTP_200_OK
     assert response.json()['items'][0]['post']['id'] == str(campaign_post_on_db.post_id)
-    assert response.json()['items'][0]['target_participants'] == campaign_post_on_db.target_participants
-    assert response.json()['items'][0]['current_participants'] == campaign_post_on_db.current_participants
-    assert response.json()['items'][0]['status_campaign'] == campaign_post_on_db.status_campaign
+    assert (
+        response.json()['items'][0]['target_participants']
+        == campaign_post_on_db.target_participants
+    )
+    assert (
+        response.json()['items'][0]['current_participants']
+        == campaign_post_on_db.current_participants
+    )
+    assert (
+        response.json()['items'][0]['status_campaign']
+        == campaign_post_on_db.status_campaign
+    )

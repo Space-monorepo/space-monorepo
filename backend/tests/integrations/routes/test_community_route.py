@@ -14,6 +14,7 @@ def test_get_community_by_id_route(authenticate_client, community_on_db):
     assert response_data['name'] == community_on_db.name
     assert response_data['description'] == community_on_db.description
     assert response_data['type_community'] == community_on_db.type_community
+    assert response_data['image_url'] == community_on_db.image_url
 
 
 @pytest.mark.integration
@@ -29,27 +30,36 @@ def test_list_communities_route(authenticate_client, community_on_db):
 
 
 @pytest.mark.integration
-def test_update_community_route(authenticate_client, community_on_db, community_member_on_db):
+def test_update_community_route(
+    authenticate_client, community_on_db, community_member_on_db
+):
     community_update = CommunityUpdate(
-        name="Updated Community Name",
-        description="This is an updated description for the community"
+        name='Updated Community Name',
+        description='This is an updated description for the community',
+        image_url='https://example.com/updated-image.jpg',
     )
 
     response = authenticate_client.patch(
         f'/communities/{community_on_db.id}',
-        json=community_update.model_dump(exclude_unset=True)
+        json=community_update.model_dump(mode='json', exclude_unset=True),
     )
     response_data = response.json()
 
     assert response.status_code == status.HTTP_200_OK
     assert response_data['id'] == str(community_on_db.id)
-    assert response_data['name'] == "Updated Community Name"
-    assert response_data['description'] == "This is an updated description for the community"
+    assert response_data['name'] == 'Updated Community Name'
+    assert (
+        response_data['description']
+        == 'This is an updated description for the community'
+    )
     assert response_data['type_community'] == community_on_db.type_community
+    assert response_data['image_url'] == 'https://example.com/updated-image.jpg'
 
 
 @pytest.mark.integration
-def test_delete_community_route_as_admin(authenticate_client, community_on_db, community_member_on_db):
+def test_delete_community_route_as_admin(
+    authenticate_client, community_on_db, community_member_on_db
+):
     community_id = community_on_db.id
     response = authenticate_client.delete(f'/communities/{community_id}')
     assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -59,7 +69,9 @@ def test_delete_community_route_as_admin(authenticate_client, community_on_db, c
 
 
 @pytest.mark.integration
-def test_delete_community_route_as_non_admin(authenticate_member_client, community_on_db, commun_member_on_db):
+def test_delete_community_route_as_non_admin(
+    authenticate_member_client, community_on_db, commun_member_on_db
+):
     response = authenticate_member_client.delete(f'/communities/{community_on_db.id}')
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -69,7 +81,9 @@ def test_delete_community_route_as_non_admin(authenticate_member_client, communi
 
 
 @pytest.mark.integration
-def test_list_community_members_route(authenticate_client, community_on_db, community_member_on_db):
+def test_list_community_members_route(
+    authenticate_client, community_on_db, community_member_on_db
+):
     response = authenticate_client.get(f'/communities/{community_on_db.id}/members')
     response_data = response.json()
 
@@ -78,12 +92,16 @@ def test_list_community_members_route(authenticate_client, community_on_db, comm
     assert 'total' in response_data
     assert len(response_data['items']) > 0
     assert response_data['items'][0]['user']['id'] == str(community_member_on_db.user_id)
-    assert response_data['items'][0]['community']['id'] == str(community_member_on_db.community_id)
+    assert response_data['items'][0]['community']['id'] == str(
+        community_member_on_db.community_id
+    )
     assert response_data['items'][0]['role'] == community_member_on_db.role
 
 
 @pytest.mark.integration
-def test_list_user_communities_route(authenticate_client, user_on_db, community_on_db, community_member_on_db):
+def test_list_user_communities_route(
+    authenticate_client, user_on_db, community_on_db, community_member_on_db
+):
     response = authenticate_client.get(f'/communities/user/{user_on_db.id}/communities')
     response_data = response.json()
 
@@ -93,10 +111,13 @@ def test_list_user_communities_route(authenticate_client, user_on_db, community_
     assert len(response_data['items']) > 0
     assert response_data['items'][0]['id'] == str(community_on_db.id)
     assert response_data['items'][0]['name'] == community_on_db.name
+    assert response_data['items'][0]['image_url'] == community_on_db.image_url
 
 
 @pytest.mark.integration
-def test_list_community_moderators_route(authenticate_client, community_on_db, community_member_on_db):
+def test_list_community_moderators_route(
+    authenticate_client, community_on_db, community_member_on_db
+):
     response = authenticate_client.get(f'/communities/{community_on_db.id}/moderators')
     response_data = response.json()
 
@@ -105,5 +126,7 @@ def test_list_community_moderators_route(authenticate_client, community_on_db, c
     assert 'total' in response_data
     assert len(response_data['items']) > 0
     assert response_data['items'][0]['user']['id'] == str(community_member_on_db.user_id)
-    assert response_data['items'][0]['community']['id'] == str(community_member_on_db.community_id)
+    assert response_data['items'][0]['community']['id'] == str(
+        community_member_on_db.community_id
+    )
     assert response_data['items'][0]['role'] == community_member_on_db.role

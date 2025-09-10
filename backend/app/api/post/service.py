@@ -62,7 +62,11 @@ class PostService:
     def _map_post_to_response(post: Post) -> PostResponse:
         return PostResponse(
             id=post.id,
-            community=CommunityRelated(id=post.community_id, name=post.community.name),
+            community=CommunityRelated(
+                id=post.community_id,
+                name=post.community.name,
+                image_url=post.community.image_url,
+            ),
             user=PostAuthor(
                 id=post.user_id,
                 name=post.user.name,

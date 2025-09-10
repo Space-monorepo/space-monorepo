@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from app.api.users.schema import UserResponse
 
@@ -12,6 +12,7 @@ class CommunityRelated(BaseModel):
     name: str = Field(
         ..., min_length=1, max_length=255, description='Name of the community'
     )
+    image_url: HttpUrl | None = Field(None, description='The image URL of the community')
 
 
 class CommunityTypeEnum(str, Enum):
@@ -47,6 +48,7 @@ class CommunityCreate(BaseModel):
     type_community: CommunityTypeEnum = Field(
         ..., description='The type of the community'
     )
+    image_url: HttpUrl | None = Field(None, description='The image URL of the community')
 
 
 class CommunityUpdate(BaseModel):
@@ -59,6 +61,7 @@ class CommunityUpdate(BaseModel):
     type_community: CommunityTypeEnum | None = Field(
         None, description='The type of the community'
     )
+    image_url: HttpUrl | None = Field(None, description='The image URL of the community')
 
 
 class CommunityResponse(CommunityCreate):
@@ -79,6 +82,7 @@ class CommunityResponse(CommunityCreate):
                 'name': 'PUC Campinas',
                 'description': 'A community for PUC Campinas',
                 'type_community': 'university',
+                'image_url': 'https://example.com/images/puc-campinas.jpg',
                 'created_at': '2025-01-01T00:00:00Z',
                 'updated_at': '2025-01-01T00:00:00Z',
             }

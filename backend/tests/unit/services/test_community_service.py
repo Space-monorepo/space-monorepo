@@ -1,27 +1,28 @@
-import pytest
+from datetime import datetime
 from unittest.mock import Mock
 from uuid import uuid4
-from datetime import datetime
+
+import pytest
 
 from app.api.communities.exceptions import (
-    CommunityMemberNotFoundError,
     CommunityMemberAlreadyExistsError,
+    CommunityMemberNotFoundError,
     CommunityNotFoundError,
     UnexpectedCommunityError,
-    UnexpectedCommunityMemberError
+    UnexpectedCommunityMemberError,
 )
 from app.api.communities.model import Community, CommunityMember
 from app.api.communities.schema import (
     CommunityCreate,
-    CommunityTypeEnum,
-    CommunityUpdate,
+    CommunityMemberCreate,
+    CommunityMemberResponse,
     CommunityMemberRoleEnum,
     CommunityMemberStatusEnum,
-    CommunityMemberCreate,
-    CommunityMemberResponse
+    CommunityTypeEnum,
+    CommunityUpdate,
 )
-from app.api.users.schema import UserStatusEnum
 from app.api.communities.service import CommunityService
+from app.api.users.schema import UserStatusEnum
 from app.utils.schema import PaginationSearchParams
 
 
@@ -87,6 +88,56 @@ def test_create_community_service_success():
 
 
 @pytest.mark.unit
+def test_create_community_with_image_url_service_success():
+    """
+    Tests the `create_community` method of CommunityService with image_url.
+
+    Scenario:
+    - Given valid community creation data including an image_url
+    - When the service creates the community successfully
+    - Then it should convert HttpUrl to string and return the expected Community model
+    """
+    # Arrange
+    fake_community_id = uuid4()
+    fake_community_data = CommunityCreate(
+        name='Test Community',
+        description='Test Description',
+        type_community=CommunityTypeEnum.UNIVERSITY,
+        image_url='https://example.com/test-image.jpg',
+    )
+
+    expect_community_model = Mock(spec=Community)
+    expect_community_model.id = fake_community_id
+    expect_community_model.name = 'Test Community'
+    expect_community_model.description = 'Test Description'
+    expect_community_model.type_community = CommunityTypeEnum.UNIVERSITY
+    expect_community_model.image_url = 'https://example.com/test-image.jpg'
+
+    mock_tm = Mock()
+    mock_community_repo = Mock()
+    mock_community_repo.save.return_value = expect_community_model
+
+    service = CommunityService(mock_tm)
+    service.community_repo = mock_community_repo
+
+    # Act
+    result = service.create_community(fake_community_data)
+
+    # Assert
+    mock_community_repo.save.assert_called_once()
+    # Verify that the Community model was created with string image_url, not HttpUrl
+    saved_community_args = mock_community_repo.save.call_args[0][0]
+    assert hasattr(saved_community_args, '__dict__')
+
+    assert result is not None
+    assert result.id == fake_community_id
+    assert result.name == 'Test Community'
+    assert result.description == 'Test Description'
+    assert result.type_community == CommunityTypeEnum.UNIVERSITY
+    assert result.image_url == 'https://example.com/test-image.jpg'
+
+
+@pytest.mark.unit
 def test_create_community_service_unexpected_error():
     """
     Tests the `create_community` method of CommunityService - unexpected error scenario.
@@ -105,7 +156,7 @@ def test_create_community_service_unexpected_error():
 
     mock_tm = Mock()
     mock_community_repo = Mock()
-    mock_community_repo.save.side_effect = Exception("Database error")
+    mock_community_repo.save.side_effect = Exception('Database error')
 
     service = CommunityService(mock_tm)
     service.community_repo = mock_community_repo
@@ -202,6 +253,7 @@ def test_list_communities_service_success():
     fake_community_model.name = 'Test Community'
     fake_community_model.description = 'Test Description'
     fake_community_model.type_community = CommunityTypeEnum.UNIVERSITY
+    fake_community_model.image_url = 'https://example.com/community-image.jpg'
     fake_community_model.created_at = fake_datetime
     fake_community_model.updated_at = fake_datetime
 
@@ -251,6 +303,7 @@ def test_list_communities_with_search_service_success():
     fake_community_model.name = fake_community_name
     fake_community_model.description = 'Test Description'
     fake_community_model.type_community = CommunityTypeEnum.UNIVERSITY
+    fake_community_model.image_url = 'https://example.com/community-image.jpg'
     fake_community_model.created_at = fake_datetime
     fake_community_model.updated_at = fake_datetime
 
@@ -289,7 +342,7 @@ def test_update_community_service_success():
     fake_community_update = CommunityUpdate(
         name='Updated Community',
         description='Updated Description',
-        type_community=CommunityTypeEnum.COMMERCIAL
+        type_community=CommunityTypeEnum.COMMERCIAL,
     )
 
     fake_existing_community = Mock(spec=Community)
@@ -322,6 +375,55 @@ def test_update_community_service_success():
     assert result.name == 'Updated Community'
     assert result.description == 'Updated Description'
     assert result.type_community == CommunityTypeEnum.COMMERCIAL
+
+
+@pytest.mark.unit
+def test_update_community_with_image_url_service_success():
+    """
+    Tests the `update_community` method of CommunityService with image_url.
+
+    Scenario:
+    - Given a community ID and update data including an image_url
+    - When the service updates the community successfully
+    - Then it should convert HttpUrl to string and return the updated Community model
+    """
+    # Arrange
+    fake_community_id = str(uuid4())
+    fake_community_update = CommunityUpdate(
+        name='Updated Community',
+        image_url='https://example.com/new-image.jpg',
+    )
+
+    fake_existing_community = Mock(spec=Community)
+    fake_existing_community.id = fake_community_id
+    fake_existing_community.name = 'Original Community'
+    fake_existing_community.image_url = None
+
+    fake_updated_community = Mock(spec=Community)
+    fake_updated_community.id = fake_community_id
+    fake_updated_community.name = 'Updated Community'
+    fake_updated_community.image_url = 'https://example.com/new-image.jpg'
+
+    mock_tm = Mock()
+    mock_community_repo = Mock()
+    mock_community_repo.get_by_id.return_value = fake_existing_community
+    mock_community_repo.save.return_value = fake_updated_community
+
+    service = CommunityService(mock_tm)
+    service.community_repo = mock_community_repo
+
+    # Act
+    result = service.update_community(fake_community_id, fake_community_update)
+
+    # Assert
+    mock_community_repo.get_by_id.assert_called_once_with(fake_community_id)
+    mock_community_repo.save.assert_called_once_with(fake_existing_community)
+
+    # Verify that setattr was called with string value, not HttpUrl object
+    assert fake_existing_community.image_url == 'https://example.com/new-image.jpg'
+    assert result is not None
+    assert result.name == 'Updated Community'
+    assert result.image_url == 'https://example.com/new-image.jpg'
 
 
 @pytest.mark.unit
@@ -418,7 +520,7 @@ def test_update_community_service_unexpected_error():
     mock_tm = Mock()
     mock_community_repo = Mock()
     mock_community_repo.get_by_id.return_value = fake_existing_community
-    mock_community_repo.save.side_effect = Exception("Database error")
+    mock_community_repo.save.side_effect = Exception('Database error')
 
     service = CommunityService(mock_tm)
     service.community_repo = mock_community_repo
@@ -510,7 +612,7 @@ def test_delete_community_service_unexpected_error():
     mock_tm = Mock()
     mock_community_repo = Mock()
     mock_community_repo.get_by_id.return_value = fake_community_model
-    mock_community_repo.delete.side_effect = Exception("Database error")
+    mock_community_repo.delete.side_effect = Exception('Database error')
 
     service = CommunityService(mock_tm)
     service.community_repo = mock_community_repo
@@ -597,6 +699,7 @@ def test_list_user_communities_service_success():
     fake_community_model.name = 'Test Community'
     fake_community_model.description = 'Test Description'
     fake_community_model.type_community = CommunityTypeEnum.UNIVERSITY
+    fake_community_model.image_url = 'https://example.com/community-image.jpg'
     fake_community_model.created_at = datetime.now()
     fake_community_model.updated_at = datetime.now()
 
@@ -611,7 +714,9 @@ def test_list_user_communities_service_success():
     result = service.list_user_communities(fake_user_id, fake_params)
 
     # Assert
-    mock_member_repo.list_communities_by_user.assert_called_once_with(fake_user_id, fake_params)
+    mock_member_repo.list_communities_by_user.assert_called_once_with(
+        fake_user_id, fake_params
+    )
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
@@ -665,7 +770,9 @@ def test_list_moderators_service_success():
 
     # Assert
     mock_community_repo.get_by_id.assert_called_once_with(fake_community_id)
-    mock_member_repo.list_moderators.assert_called_once_with(fake_community_id, fake_params)
+    mock_member_repo.list_moderators.assert_called_once_with(
+        fake_community_id, fake_params
+    )
     service._map_member_to_response.assert_called_once_with(fake_moderator_model)
     assert result is not None
     assert result.items is not None
@@ -703,15 +810,16 @@ def test_create_member_service_success():
     # Create real community mock with proper attributes for _map_member_to_response
     fake_community_model = Mock(spec=Community)
     fake_community_model.id = fake_community_id
-    fake_community_model.name = "Test Community"
+    fake_community_model.name = 'Test Community'
+    fake_community_model.image_url = 'https://example.com/community-image.jpg'
 
     # Create properly configured user mock with all required UserResponse fields
     fake_user_model = Mock()
     fake_user_model.id = fake_user_id
-    fake_user_model.email = "test@example.com"
-    fake_user_model.name = "Test User"
-    fake_user_model.hashed_password = "hashedpassword123456789"
-    fake_user_model.profile_image_url = "https://example.com/profile.jpg"
+    fake_user_model.email = 'test@example.com'
+    fake_user_model.name = 'Test User'
+    fake_user_model.hashed_password = 'hashedpassword123456789'
+    fake_user_model.profile_image_url = 'https://example.com/profile.jpg'
     fake_user_model.reputation_level = 5
     fake_user_model.status = UserStatusEnum.active
     fake_user_model.created_at = datetime.now()
@@ -750,7 +858,9 @@ def test_create_member_service_success():
     # Assert
     mock_community_repo.get_by_id.assert_called_once_with(fake_community_id)
     mock_user_service.get_user.assert_called_once_with(fake_user_id)
-    mock_member_repo.member_exists.assert_called_once_with(fake_user_id, fake_community_id)
+    mock_member_repo.member_exists.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
     mock_member_repo.save.assert_called_once()
     # Verify the real _map_member_to_response was executed by checking the result
     assert result is not None
@@ -763,9 +873,9 @@ def test_create_member_service_success():
     assert hasattr(result, 'community')
     assert hasattr(result, 'entered_in')
     # Verify user data is properly mapped
-    assert result.user.email == "test@example.com"
-    assert result.user.name == "Test User"
-    assert result.community.name == "Test Community"
+    assert result.user.email == 'test@example.com'
+    assert result.user.name == 'Test User'
+    assert result.community.name == 'Test Community'
 
 
 @pytest.mark.unit
@@ -814,7 +924,9 @@ def test_create_member_service_member_already_exists():
 
     mock_community_repo.get_by_id.assert_called_once_with(fake_community_id)
     mock_user_service.get_user.assert_called_once_with(fake_user_id)
-    mock_member_repo.member_exists.assert_called_once_with(fake_user_id, fake_community_id)
+    mock_member_repo.member_exists.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
 
 
 @pytest.mark.unit
@@ -849,7 +961,7 @@ def test_create_member_service_unexpected_error():
     mock_community_repo.get_by_id.return_value = fake_community_model
     mock_member_repo = Mock()
     mock_member_repo.member_exists.return_value = False
-    mock_member_repo.save.side_effect = Exception("Database error")
+    mock_member_repo.save.side_effect = Exception('Database error')
     mock_user_service = Mock()
     mock_user_service.get_user.return_value = fake_user_model
 
@@ -864,7 +976,9 @@ def test_create_member_service_unexpected_error():
 
     mock_community_repo.get_by_id.assert_called_once_with(fake_community_id)
     mock_user_service.get_user.assert_called_once_with(fake_user_id)
-    mock_member_repo.member_exists.assert_called_once_with(fake_user_id, fake_community_id)
+    mock_member_repo.member_exists.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
     mock_member_repo.save.assert_called_once()
 
 
@@ -947,7 +1061,7 @@ def test_remove_member_service_unexpected_error():
     mock_tm = Mock()
     mock_member_repo = Mock()
     mock_member_repo.get_by_id.return_value = fake_member_model
-    mock_member_repo.delete.side_effect = Exception("Database error")
+    mock_member_repo.delete.side_effect = Exception('Database error')
 
     service = CommunityService(mock_tm)
     service.member_repo = mock_member_repo
@@ -1067,7 +1181,7 @@ def test_update_member_role_service_unexpected_error():
     mock_tm = Mock()
     mock_member_repo = Mock()
     mock_member_repo.get_by_id.return_value = fake_member_model
-    mock_member_repo.save.side_effect = Exception("Database error")
+    mock_member_repo.save.side_effect = Exception('Database error')
 
     service = CommunityService(mock_tm)
     service.member_repo = mock_member_repo
@@ -1125,7 +1239,9 @@ def test_get_member_association_service_success():
     # Assert
     mock_community_repo.get_by_id.assert_called_once_with(fake_community_id)
     mock_user_service.get_user.assert_called_once_with(fake_user_id)
-    mock_member_repo.get_member_association.assert_called_once_with(fake_user_id, fake_community_id)
+    mock_member_repo.get_member_association.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
     assert result is not None
     assert result.user_id == fake_user_id
     assert result.community_id == fake_community_id
@@ -1171,7 +1287,9 @@ def test_get_member_association_service_not_found():
 
     mock_community_repo.get_by_id.assert_called_once_with(fake_community_id)
     mock_user_service.get_user.assert_called_once_with(fake_user_id)
-    mock_member_repo.get_member_association.assert_called_once_with(fake_user_id, fake_community_id)
+    mock_member_repo.get_member_association.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
 
 
 @pytest.mark.unit
