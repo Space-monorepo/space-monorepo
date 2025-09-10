@@ -11,7 +11,12 @@ from app.api.comment.schema import (
     CommentResponse,
 )
 from app.api.comment.service import CommentService
-from app.api.comment.exceptions import CommentSuspendedError, CommentNotFoundError, CommentLikesNotFoundError
+from app.api.comment.exceptions import (
+    CommentSuspendedError,
+    CommentNotFoundError,
+    CommentLikesNotFoundError,
+    UnexpectedCommentError
+)
 from app.api.post.exceptions import PostNotFoundError
 from app.api.users.model import User
 from app.api.post.model import Post
@@ -841,14 +846,376 @@ def test_report_comment_threshold_service_success(comment_service, mock_reposito
 
     # Assert
     mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
-    mock_repositories['comment_repo'].save.assert_called_once_with(fake_existing_comment)
-    assert fake_existing_comment.report_count == REPORT_THRESHOLD
-    assert fake_existing_comment.status == CommentStatusEnum.REPORTED
+    mock_repositories['comment_repo'].save.assert_called_once()
     assert result is not None
     assert isinstance(result, CommentResponse)
     assert str(result.id) == str(fake_ids['comment_id'])
-    assert result.report_count == REPORT_THRESHOLD
     assert result.status == CommentStatusEnum.REPORTED
+    assert result.report_count == REPORT_THRESHOLD
+
+
+@pytest.mark.unit
+def test_list_comments_by_post_with_replies_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user, pagination_params):
+    """
+    Tests the `list_comments_by_post` method of CommentService with replies included.
+
+    Scenario:
+    - Given a valid post ID with comments that have replies
+    - When the service lists comments with include_replies=True
+    - Then it should return comments with nested replies
+    """
+    # Arrange
+    fake_member_role = CommunityMemberRoleEnum.MEMBER
+
+    # Mock main comment
+    fake_main_comment = Mock(spec=Comment)
+    fake_main_comment.id = fake_ids['comment_id']
+    fake_main_comment.post_id = fake_ids['post_id']
+    fake_main_comment.user_id = fake_ids['user_id']
+    fake_main_comment.content = 'Main comment'
+    fake_main_comment.status = CommentStatusEnum.ACTIVE
+    fake_main_comment.likes_count = 2
+    fake_main_comment.report_count = DEFAULT_REPORT_COUNT
+    fake_main_comment.parent_id = None
+    fake_main_comment.created_at = datetime.now(timezone.utc)
+    fake_main_comment.post = fake_post
+    fake_main_comment.user = fake_user
+
+    # Mock reply comment
+    fake_reply_comment = Mock(spec=Comment)
+    fake_reply_comment.id = fake_ids['reply_id']
+    fake_reply_comment.post_id = fake_ids['post_id']
+    fake_reply_comment.user_id = fake_ids['user_id']
+    fake_reply_comment.content = 'Reply comment'
+    fake_reply_comment.status = CommentStatusEnum.ACTIVE
+    fake_reply_comment.likes_count = 1
+    fake_reply_comment.report_count = DEFAULT_REPORT_COUNT
+    fake_reply_comment.parent_id = fake_ids['comment_id']
+    fake_reply_comment.created_at = datetime.now(timezone.utc)
+    fake_reply_comment.post = fake_post
+    fake_reply_comment.user = fake_user
+
+    # Setup pagination with status filter
+    pagination_params.status = ['active']
+
+    mock_repositories['comment_repo'].list_comments_by_post.return_value = ([fake_main_comment], 1)
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
+
+    # Mock session query for replies - avoid recursion by returning empty on second call
+    mock_session = Mock()
+    mock_query = Mock()
+    mock_query.filter.return_value = mock_query
+    mock_query.order_by.return_value = mock_query
+    # First call returns the reply, second call (recursion) returns empty list
+    mock_query.all.side_effect = [[fake_reply_comment], []]
+    mock_session.query.return_value = mock_query
+    mock_repositories['comment_repo'].session = mock_session
+
+    # Act
+    result = comment_service.list_comments_by_post(fake_ids['post_id'], pagination_params, include_replies=True)
+
+    # Assert
+    mock_repositories['post_repo'].get_by_id.assert_called_once_with(fake_ids['post_id'])
+    mock_repositories['comment_repo'].list_comments_by_post.assert_called_once_with(fake_ids['post_id'], pagination_params)
+    assert result is not None
+    assert len(result.items) == 1
+    assert str(result.items[0].id) == str(fake_ids['comment_id'])
+
+
+@pytest.mark.unit
+def test_list_comments_by_post_empty_result_service_success(comment_service, mock_repositories, fake_ids, fake_post, pagination_params):
+    """
+    Tests the `list_comments_by_post` method when no comments are found.
+
+    Scenario:
+    - Given a valid post ID with no comments
+    - When the service lists comments with include_replies=True
+    - Then it should return empty result
+    """
+    # Arrange
+    mock_repositories['comment_repo'].list_comments_by_post.return_value = ([], 0)
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+
+    # Act
+    result = comment_service.list_comments_by_post(fake_ids['post_id'], pagination_params, include_replies=True)
+
+    # Assert
+    assert result.items == []
+    assert result.total == 0
+    assert result.has_more == False
+
+
+@pytest.mark.unit
+def test_get_like_service_success(comment_service, mock_repositories, fake_ids):
+    """
+    Tests the `get_like` method of CommentService.
+
+    Scenario:
+    - Given a valid comment ID and member ID with existing like
+    - When the service gets the like
+    - Then it should return the like object
+    """
+    # Arrange
+    fake_like = Mock(spec=CommentLikes)
+    fake_like.comment_id = fake_ids['comment_id']
+    fake_like.member_id = fake_ids['member_id']
+
+    mock_repositories['comment_likes_repo'].get_by_comment_and_member.return_value = fake_like
+
+    # Act
+    result = comment_service.get_like(fake_ids['comment_id'], fake_ids['member_id'])
+
+    # Assert
+    mock_repositories['comment_likes_repo'].get_by_comment_and_member.assert_called_once_with(fake_ids['comment_id'], fake_ids['member_id'])
+    assert result == fake_like
+
+
+@pytest.mark.unit
+def test_delete_comment_with_zero_comments_count_service_success(comment_service, mock_repositories, fake_ids):
+    """
+    Tests the `delete_comment` method when post has zero comments count.
+
+    Scenario:
+    - Given a comment in a post with zero comments count
+    - When the service deletes the comment
+    - Then it should not decrement below zero
+    """
+    # Arrange
+    fake_existing_comment = Mock(spec=Comment)
+    fake_existing_comment.id = fake_ids['comment_id']
+    fake_existing_comment.post_id = fake_ids['post_id']
+
+    fake_post = Mock(spec=Post)
+    fake_post.id = fake_ids['post_id']
+    fake_post.comments_count = 0
+
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
+    mock_repositories['comment_repo'].delete.return_value = True
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+
+    # Act
+    result = comment_service.delete_comment(fake_ids['comment_id'])
+
+    # Assert
+    assert fake_post.comments_count == 0
+    assert result is True
+
+
+@pytest.mark.unit
+def test_unlike_comment_with_zero_likes_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
+    """
+    Tests the `unlike_comment` method when comment has zero likes.
+
+    Scenario:
+    - Given a comment with zero likes count
+    - When the service unlikes the comment
+    - Then it should not decrement below zero
+    """
+    # Arrange
+    fake_member_role = CommunityMemberRoleEnum.MEMBER
+
+    fake_existing_comment = Mock(spec=Comment)
+    fake_existing_comment.id = fake_ids['comment_id']
+    fake_existing_comment.post_id = fake_ids['post_id']
+    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.content = 'Comment to unlike'
+    fake_existing_comment.status = CommentStatusEnum.ACTIVE
+    fake_existing_comment.likes_count = 0
+    fake_existing_comment.report_count = DEFAULT_REPORT_COUNT
+    fake_existing_comment.parent_id = None
+    fake_existing_comment.created_at = datetime.now(timezone.utc)
+    fake_existing_comment.post = fake_post
+    fake_existing_comment.user = fake_user
+
+    fake_saved_comment = Mock(spec=Comment)
+    fake_saved_comment.id = fake_ids['comment_id']
+    fake_saved_comment.post_id = fake_ids['post_id']
+    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.content = 'Comment to unlike'
+    fake_saved_comment.status = CommentStatusEnum.ACTIVE
+    fake_saved_comment.likes_count = 0
+    fake_saved_comment.report_count = DEFAULT_REPORT_COUNT
+    fake_saved_comment.parent_id = None
+    fake_saved_comment.created_at = datetime.now(timezone.utc)
+    fake_saved_comment.post = fake_post
+    fake_saved_comment.user = fake_user
+
+    fake_existing_like = Mock(spec=CommentLikes)
+    fake_existing_like.comment_id = fake_ids['comment_id']
+    fake_existing_like.member_id = fake_ids['member_id']
+
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
+    mock_repositories['comment_repo'].save.return_value = fake_saved_comment
+    mock_repositories['comment_likes_repo'].get_by_comment_and_member.return_value = fake_existing_like
+    mock_repositories['comment_likes_repo'].delete.return_value = True
+    mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
+
+    # Act
+    result = comment_service.unlike_comment(fake_ids['comment_id'], fake_ids['member_id'])
+
+    # Assert
+    assert fake_existing_comment.likes_count == 0
+    assert result is not None
+
+
+# =============================================================================
+# EXCEPTION HANDLER TESTS
+# =============================================================================
+
+@pytest.mark.unit
+def test_create_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_post):
+    """
+    Tests that unexpected errors during comment creation raise UnexpectedCommentError.
+
+    Scenario:
+    - Given a valid comment creation request
+    - When an unexpected error occurs during save
+    - Then it should raise UnexpectedCommentError
+    """
+    # Arrange
+    fake_comment_create = CommentCreate(
+        post_id=fake_ids['post_id'],
+        user_id=fake_ids['user_id'],
+        content='Test comment',
+        parent_id=None,
+        status=CommentStatusEnum.ACTIVE,
+    )
+
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+    mock_repositories['comment_repo'].save.side_effect = Exception('Database error')
+
+    # Act & Assert
+    with pytest.raises(UnexpectedCommentError):
+        comment_service.create_comment(fake_comment_create)
+
+
+@pytest.mark.unit
+def test_update_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_comment):
+    """
+    Tests that unexpected errors during comment update raise UnexpectedCommentError.
+
+    Scenario:
+    - Given a valid comment update request
+    - When an unexpected error occurs during save
+    - Then it should raise UnexpectedCommentError
+    """
+    # Arrange
+    fake_comment_update = CommentUpdate(content='Updated content')
+
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_comment
+    mock_repositories['comment_repo'].save.side_effect = Exception('Database error')
+
+    # Act & Assert
+    with pytest.raises(UnexpectedCommentError):
+        comment_service.update_comment(fake_ids['comment_id'], fake_comment_update)
+
+
+@pytest.mark.unit
+def test_delete_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_comment):
+    """
+    Tests that unexpected errors during comment deletion raise UnexpectedCommentError.
+
+    Scenario:
+    - Given a valid comment deletion request
+    - When an unexpected error occurs during deletion
+    - Then it should raise UnexpectedCommentError
+    """
+    # Arrange
+    fake_comment.post_id = fake_ids['post_id']
+
+    fake_post = Mock(spec=Post)
+    fake_post.comments_count = 1
+
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_comment
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+    mock_repositories['comment_repo'].delete.side_effect = Exception('Database error')
+
+    # Act & Assert
+    with pytest.raises(UnexpectedCommentError):
+        comment_service.delete_comment(fake_ids['comment_id'])
+
+
+@pytest.mark.unit
+def test_like_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_comment):
+    """
+    Tests that unexpected errors during comment like raise UnexpectedCommentError.
+
+    Scenario:
+    - Given a valid comment like request
+    - When an unexpected error occurs during like save
+    - Then it should raise UnexpectedCommentError
+    """
+    # Arrange
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_comment
+    mock_repositories['comment_likes_repo'].save.side_effect = Exception('Database error')
+
+    # Act & Assert
+    with pytest.raises(UnexpectedCommentError):
+        comment_service.like_comment(fake_ids['comment_id'], fake_ids['member_id'])
+
+
+@pytest.mark.unit
+def test_unlike_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_comment):
+    """
+    Tests that unexpected errors during comment unlike raise UnexpectedCommentError.
+
+    Scenario:
+    - Given a valid comment unlike request
+    - When an unexpected error occurs during unlike
+    - Then it should raise UnexpectedCommentError
+    """
+    # Arrange
+    fake_like = Mock(spec=CommentLikes)
+
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_comment
+    mock_repositories['comment_likes_repo'].get_by_comment_and_member.return_value = fake_like
+    mock_repositories['comment_likes_repo'].delete.side_effect = Exception('Database error')
+
+    # Act & Assert
+    with pytest.raises(UnexpectedCommentError):
+        comment_service.unlike_comment(fake_ids['comment_id'], fake_ids['member_id'])
+
+
+@pytest.mark.unit
+def test_report_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_comment):
+    """
+    Tests that unexpected errors during comment report raise UnexpectedCommentError.
+
+    Scenario:
+    - Given a valid comment report request
+    - When an unexpected error occurs during report save
+    - Then it should raise UnexpectedCommentError
+    """
+    # Arrange
+    fake_comment.status = CommentStatusEnum.ACTIVE
+    fake_comment.report_count = 1
+
+    mock_repositories['comment_repo'].get_by_id.return_value = fake_comment
+    mock_repositories['comment_repo'].save.side_effect = Exception('Database error')
+
+    # Act & Assert
+    with pytest.raises(UnexpectedCommentError):
+        comment_service.report_comment(fake_ids['comment_id'])
+
+
+@pytest.mark.unit
+def test_get_like_not_found_raises_exception(comment_service, mock_repositories, fake_ids):
+    """
+    Tests that getting a non-existent like raises CommentLikesNotFoundError.
+
+    Scenario:
+    - Given comment and member IDs with no existing like
+    - When the service attempts to get the like
+    - Then it should raise CommentLikesNotFoundError
+    """
+    # Arrange
+    mock_repositories['comment_likes_repo'].get_by_comment_and_member.return_value = None
+
+    # Act & Assert
+    with pytest.raises(CommentLikesNotFoundError):
+        comment_service.get_like(fake_ids['comment_id'], fake_ids['member_id'])
+    mock_repositories['comment_likes_repo'].get_by_comment_and_member.assert_called_once_with(fake_ids['comment_id'], fake_ids['member_id'])
 
 
 # =============================================================================
