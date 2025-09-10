@@ -610,7 +610,7 @@ export default function PostList() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-full text-red-500">
+      <div className="flex flex-col justify-center items-center h-full w-full pr-72 mt-62 text-center text-red-500">
         Erro ao carregar posts: {error.message}
       </div>
     );
