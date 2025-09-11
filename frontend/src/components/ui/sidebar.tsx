@@ -43,7 +43,7 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "bg-gray-100 text-gray-900 flex flex-col h-screen border-r fixed border-gray-200 transition-all duration-300 ease-in-out z-40",
+        "bg-gray-100 text-gray-900 flex flex-col h-screen border-r fixed border-gray-200 transition-all duration-300 ease-in-out",
         "max-md:hidden", // Esconde a sidebar em telas menores que md
         isOpen ? "w-64" : "w-26"
       )}
