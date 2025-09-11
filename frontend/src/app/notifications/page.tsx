@@ -68,14 +68,6 @@ export default function NotificacoesPage() {
     setSelectedNotification(notificationsTabs[tab]?.[0] || null)
   }
 
-  const getConnectionCount = () => {
-    return notificationsTabs.Conexões.filter((n) => n.actions?.includes("Conectar-se")).length
-  }
-
-  const getInteractionCount = () => {
-    return notificationsTabs.Interações.length
-  }
-
   return (
     <div className="min-h-screen bg-gray-100 text-[#161616]">
       <Sidebar variant="static" />
@@ -98,19 +90,7 @@ export default function NotificacoesPage() {
                   }`}
                 onClick={() => handleTabChange(tab)}
               >
-                <div className="flex items-center justify-between">
-                  <span>{tab}</span>
-                  {tab === "Conexões" && getConnectionCount() > 0 && (
-                    <span className="bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {getConnectionCount()}
-                    </span>
-                  )}
-                  {tab === "Interações" && getInteractionCount() > 0 && (
-                    <span className="bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {getInteractionCount()}
-                    </span>
-                  )}
-                </div>
+                <span>{tab}</span>
               </button>
             ))}
           </nav>
@@ -135,11 +115,8 @@ export default function NotificacoesPage() {
           {activeTab === "Conexões" && (
             <div className="p-4 border-b border-[#e0e0e0] flex gap-4">
               <button className="text-sm">Conexões</button>
-              <button className="text-sm flex items-center gap-1">
+              <button className="text-sm">
                 Pendentes
-                <span className="bg-[#161616] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  {getConnectionCount()}
-                </span>
               </button>
             </div>
           )}
@@ -147,11 +124,8 @@ export default function NotificacoesPage() {
           {/* Special header for Interações */}
           {activeTab === "Interações" && (
             <div className="p-4 border-b border-[#e0e0e0] flex gap-4">
-              <button className="text-sm flex items-center gap-1">
+              <button className="text-sm">
                 Interações
-                <span className="bg-[#161616] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                  {getInteractionCount()}
-                </span>
               </button>
             </div>
           )}
