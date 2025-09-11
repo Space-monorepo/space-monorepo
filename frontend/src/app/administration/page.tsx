@@ -48,10 +48,10 @@ export default function AdministrationPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-white text-[#161616] font-manrope">
+      <div className="min-h-screen bg-white text-[#161616] font-manrope no-scrollbar">
         <Sidebar variant="static" />
-        <div className="ml-64 max-md:ml-0">
-          <main className="flex flex-col gap-8 items-start pt-10 mx-auto my-0 w-full max-w-[1600px] px-6 max-md:gap-6 max-md:px-5 max-md:pt-8 max-md:max-w-[991px] max-sm:gap-5 max-sm:px-4 max-sm:pt-6 max-sm:max-w-screen-sm">
+        <div className="ml-64 max-md:ml-0 no-scrollbar">
+          <main className="flex flex-col gap-8 items-start pt-10 mx-auto my-0 w-full max-w-[1600px] px-6 max-md:gap-6 max-md:px-5 max-md:pt-8 max-md:max-w-[991px] max-sm:gap-5 max-sm:px-4 max-sm:pt-6 max-sm:max-w-screen-sm no-scrollbar">
             <header className="flex flex-col gap-4 items-start w-full">
               <h1 className="text-xl leading-10 text-zinc-900 max-md:text-lg max-md:leading-9 max-sm:text-base max-sm:leading-8">
                 Administração
