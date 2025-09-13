@@ -13,6 +13,58 @@ export default function NotificacoesPage() {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
   const { notifications, loading, error } = useNotifications()
 
+  // State for connections functionality
+  const [connections, setConnections] = useState([
+    {
+      id: "1",
+      timestamp: "3 horas atrás",
+      message: "Felipe Sousa deseja conectar-se com você",
+      username: "@felipesousa",
+      community: "Comunidade: PUC-Campinas",
+      isPending: true
+    },
+    {
+      id: "2",
+      timestamp: "1 semana atrás",
+      message: "Briann Gomes conectou-se com você",
+      username: "@brianngomes",
+      community: "Comunidade: Condomínio",
+      isPending: false
+    },
+    {
+      id: "3",
+      timestamp: "2 semanas atrás",
+      message: "Gabriel Padreca deseja conectar-se com você",
+      username: "@gabrielpadreca",
+      community: "Comunidade: Apple Campinas",
+      isPending: true
+    },
+    {
+      id: "4",
+      timestamp: "2 semanas atrás",
+      message: "Guilherme Sousa conectou-se com você",
+      username: "@guilhermesousa",
+      community: "Comunidade: PUC-Campinas",
+      isPending: false
+    }
+  ])
+
+  const pendingCount = connections.filter(conn => conn.isPending).length
+
+  const handleConnect = (id: string) => {
+    setConnections(prev =>
+      prev.map(conn =>
+        conn.id === id
+          ? { ...conn, isPending: false, message: conn.message.replace("deseja conectar-se com você", "conectou-se com você") }
+          : conn
+      )
+    );
+  };
+
+  const handleReject = (id: string) => {
+    setConnections(prev => prev.filter(conn => conn.id !== id));
+  };
+
   // Mapear os dados da API para o formato usado no componente
   const notificationsTabs: Record<NotificationType, Notification[]> = {
     Campanhas: notifications.campaigns,
@@ -69,7 +121,7 @@ export default function NotificacoesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 text-[#161616]">
+    <div className="min-h-screen bg-white text-[#161616]">
       <Sidebar variant="static" />
       <div className="flex">
         {/* Left Navigation - Fixo igual CommunityAdminPage */}
@@ -96,84 +148,39 @@ export default function NotificacoesPage() {
           </nav>
         </div>
 
-        {/* Middle Section - Notifications List */}
-        <div className="w-80 fixed top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
-          {/* Header */}
-          <div className="p-4 border-b border-[#e0e0e0] flex items-center justify-between">
-            <h2 className="font-medium">{activeTab}</h2>
-            <div className="flex gap-2">
-              <button className="p-1 hover:bg-[#f4f4f4]">
-                <Filter className="h-4 w-4 text-[#525252]" />
-              </button>
-              <button className="p-1 hover:bg-[#f4f4f4]">
-                <SortDesc className="h-4 w-4 text-[#525252]" />
-              </button>
+        {/* Middle Section - Notifications List (removido para Conexões) */}
+        {activeTab !== "Conexões" && (
+          <div className="w-80 fixed top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
+            {/* Header */}
+            <div className="p-4 border-b border-[#e0e0e0] flex items-center justify-between">
+              <h2 className="font-medium">{activeTab}</h2>
+              <div className="flex gap-2">
+                <button className="p-1 hover:bg-[#f4f4f4]">
+                  <Filter className="h-4 w-4 text-[#525252]" />
+                </button>
+                <button className="p-1 hover:bg-[#f4f4f4]">
+                  <SortDesc className="h-4 w-4 text-[#525252]" />
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Special header for Conexões */}
-          {activeTab === "Conexões" && (
-            <div className="p-4 border-b border-[#e0e0e0] flex gap-4">
-              <button className="text-sm">Conexões</button>
-              <button className="text-sm">
-                Pendentes
-              </button>
-            </div>
-          )}
+            {/* Special header for Interações */}
+            {activeTab === "Interações" && (
+              <div className="p-4 border-b border-[#e0e0e0] flex gap-4">
+                <button className="text-sm">
+                  Interações
+                </button>
+              </div>
+            )}
 
-          {/* Special header for Interações */}
-          {activeTab === "Interações" && (
-            <div className="p-4 border-b border-[#e0e0e0] flex gap-4">
-              <button className="text-sm">
-                Interações
-              </button>
-            </div>
-          )}
-
-          {/* Notifications List */}
-          <div className="overflow-auto">
-            {currentNotifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedNotification?.id === notification.id ? "bg-[#f4f4f4]" : ""
-                  }`}
-                onClick={() => setSelectedNotification(notification)}
-              >
-                {activeTab === "Conexões" || activeTab === "Interações" ? (
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="/ProfilePic3.svg?height=40&width=40"
-                        alt="User"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-sm">{notification.title}</p>
-                        {notification.actions && (
-                          <div className="flex gap-2">
-                            {notification.actions.map((action: string, index: number) => (
-                              <button
-                                key={index}
-                                className={`px-3 py-1 text-xs ${action === "Conectar-se" || action === "Curtir"
-                                  ? "bg-[#161616] text-white"
-                                  : "bg-[#f4f4f4] hover:bg-[#e0e0e0]"
-                                  }`}
-                              >
-                                {action === "X" ? <X className="h-3 w-3" /> : action}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-[#525252]">{notification.author.name}</p>
-                      <p className="text-xs text-[#525252]">Comunidade: {notification.community.name}</p>
-                      <p className="text-xs text-[#525252] mt-1">{notification.date}</p>
-                    </div>
-                  </div>
-                ) : (
+            {/* Notifications List */}
+            <div className="overflow-auto">
+              {currentNotifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedNotification?.id === notification.id ? "bg-[#f4f4f4]" : ""}`}
+                  onClick={() => setSelectedNotification(notification)}
+                >
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs text-[#525252]">{notification.date}</span>
@@ -193,13 +200,13 @@ export default function NotificacoesPage() {
                       </span>
                     )}
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Right Section - Detailed View */}
+        {/* Right Section - Detailed View for Campanhas and Avisos oficiais */}
         {selectedNotification && (activeTab === "Campanhas" || activeTab === "Avisos oficiais") && (
           <div className="flex-1 bg-gray-100 px-6 py-8 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             <div className="max-w-full">
@@ -345,6 +352,105 @@ export default function NotificacoesPage() {
                   </section>
                 </article>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Right Section - ConnectionsList Layout for Conexões */}
+        {activeTab === "Conexões" && (
+          <div className="flex-1 bg-white px-6 py-8 fixed top-6 right-0 bottom-0 left-[calc(300px+320px)] overflow-y-auto no-scrollbar">
+            <div className="max-w-[680px]">
+              {/* Header Section */}
+              <header className="flex flex-wrap gap-10 justify-between items-center py-2.5 pr-6 pl-4 w-full max-md:pr-5 max-md:max-w-full">
+                <nav className="flex gap-4 items-center self-stretch my-auto whitespace-nowrap min-w-60 w-[385px]">
+                  <h1 className="self-stretch my-auto text-sm leading-none text-neutral-600">
+                    Conexões
+                  </h1>
+                  <div className="self-stretch my-auto text-[10px] text-black font-semibold">
+                    •
+                  </div>
+                  <div className="flex gap-4 items-center self-stretch my-auto">
+                    <span className="self-stretch my-auto text-sm leading-none text-neutral-600">
+                      Pendentes
+                    </span>
+                    <div className="flex gap-2.5 justify-center items-center self-stretch px-2 my-auto w-6 h-6 text-xs font-semibold leading-none text-gray-200 rounded-2xl bg-zinc-900">
+                      <span className="self-stretch my-auto">
+                        {pendingCount}
+                      </span>
+                    </div>
+                  </div>
+                </nav>
+                <div className="flex gap-2 items-center self-stretch my-auto">
+                  <button type="button" aria-label="Action 1">
+                    <img
+                      src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/074681a549e783096b458262f6c0fe30416fe3b1?placeholderIfAbsent=true"
+                      className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
+                      alt=""
+                    />
+                  </button>
+                  <button type="button" aria-label="Action 2">
+                    <img
+                      src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/8fab779e10432bd198f30df3d0e10f8370547d71?placeholderIfAbsent=true"
+                      className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
+                      alt=""
+                    />
+                  </button>
+                </div>
+              </header>
+
+              {/* Connections List Section */}
+              <section className="mt-6 w-full max-md:max-w-full">
+                {connections.map((connection) => {
+                  return (
+                    <article
+                      key={connection.id}
+                      className={`flex flex-col justify-center px-6 py-4 w-full bg-white max-md:px-5 max-md:max-w-full ${connection.isPending ? 'hover:bg-zinc-100 transition-colors' : ''}`}
+                    >
+                      <div className="w-full max-md:max-w-full">
+                        <time className="text-xs leading-loose text-neutral-600 max-md:max-w-full">
+                          {connection.timestamp}
+                        </time>
+                        <div className="mt-2 w-full max-md:max-w-full">
+                          <div className="flex flex-wrap gap-6 items-start w-full max-md:max-w-full">
+                            <p className="flex-1 shrink text-base text-black basis-8 max-md:max-w-full">
+                              {connection.message}
+                            </p>
+                            {connection.isPending && (
+                              <>
+                                <button
+                                  onClick={() => handleConnect(connection.id)}
+                                  className="flex gap-8 items-center px-4 py-2 text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100 hover:bg-neutral-700 transition-colors"
+                                >
+                                  <span className="self-stretch my-auto text-zinc-100">
+                                    Conectar-se
+                                  </span>
+                                </button>
+                                <button
+                                  onClick={() => handleReject(connection.id)}
+                                  className="flex gap-8 items-center px-4 py-3 w-12 bg-neutral-200 hover:bg-neutral-300 transition-colors"
+                                  aria-label="Rejeitar conexão"
+                                >
+                                  <img
+                                    src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/4ce6a2455078d411faf868ea1736e62dc887f0db?placeholderIfAbsent=true"
+                                    className="object-contain self-stretch my-auto w-4 aspect-square"
+                                    alt=""
+                                  />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs leading-loose text-neutral-600 max-md:max-w-full">
+                            {connection.username}
+                          </p>
+                          <p className="mt-1 text-xs leading-loose text-neutral-600 max-md:max-w-full">
+                            {connection.community}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </section>
             </div>
           </div>
         )}
