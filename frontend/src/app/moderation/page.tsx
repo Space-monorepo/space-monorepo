@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Filter, Eye } from "lucide-react";
+import { ArrowLeft, Filter, Eye, Heart, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
@@ -16,6 +16,7 @@ import useCommunityById from "@/app/api/src/hooks/community/useCommunityById";
 import useCommunityUserActions from "@/app/api/src/hooks/community/useCommunityUserActions";
 import useCommunityPosts from "@/app/api/src/hooks/post/useCommunityPosts";
 import useCampaignDetails from "@/app/api/src/hooks/post/useCampaignDetails";
+import useModerationReports from "@/app/api/src/hooks/moderation/useModerationReports";
 import { PostResponse } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
 import {
@@ -62,7 +63,7 @@ type Campaign = {
 };
 
 type Report = {
-    id: number;
+    id: string;
     title: string;
     reporter: string;
     user: UserInfo;
@@ -79,8 +80,63 @@ type Report = {
     accesses?: number;
 };
 
+type UserReport = {
+    id: string;
+    reportedUser: UserInfo;
+    reporter: UserInfo;
+    reason: string;
+    description: string;
+    date: string;
+    status: "Em análise" | "Resolvido" | "Arquivado";
+    severity: "Crítica" | "Moderada" | "Leve";
+    confirmations: number;
+    category: string;
+};
+
+type PostReport = {
+    id: string;
+    reportedPost: {
+        id: string;
+        title: string;
+        content: string;
+        author: UserInfo;
+        image?: string;
+        likes: number;
+        comments: number;
+        date: string;
+    };
+    reporter: UserInfo;
+    reason: string;
+    description: string;
+    date: string;
+    status: "Em análise" | "Resolvido" | "Arquivado";
+    severity: "Crítica" | "Moderada" | "Leve";
+    confirmations: number;
+    category: string;
+};
+
+type CommentReport = {
+    id: string;
+    reportedComment: {
+        id: string;
+        content: string;
+        author: UserInfo;
+        date: string;
+        postTitle: string;
+        likes: number;
+    };
+    reporter: UserInfo;
+    reason: string;
+    description: string;
+    date: string;
+    status: "Em análise" | "Resolvido" | "Arquivado";
+    severity: "Crítica" | "Moderada" | "Leve";
+    confirmations: number;
+    category: string;
+};
+
 type Announcement = {
-    id: number;
+    id: string;
     title: string;
     author: string;
     user: UserInfo;
@@ -94,7 +150,7 @@ type Announcement = {
 };
 
 type Poll = {
-    id: number;
+    id: string;
     title: string;
     author: string;
     user: UserInfo;
@@ -172,10 +228,30 @@ export default function ModerationPage() {
         clearDetails,
     } = useCampaignDetails();
 
+    // Hook para dados de moderação (reportes reais)
+    const {
+        reportedUsers,
+        reportedPosts,
+        reportedComments,
+        loading: moderationLoading,
+        error: moderationError,
+        fetchReportedUsers,
+        fetchReportedPosts,
+        fetchReportedComments,
+        suspendUser,
+        removePost,
+        removeComment,
+        tolerateReport,
+    } = useModerationReports();
+
     // Estados existentes
     const [activeTab, setActiveTab] = useState("Reportes");
+    const [reportesActiveTab, setReportesActiveTab] = useState("usuarios"); // usuarios, publicacoes, comentarios
     const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+    const [selectedUserReport, setSelectedUserReport] = useState<UserReport | null>(null);
+    const [selectedPostReport, setSelectedPostReport] = useState<PostReport | null>(null);
+    const [selectedCommentReport, setSelectedCommentReport] = useState<CommentReport | null>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
     const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
@@ -207,9 +283,13 @@ export default function ModerationPage() {
         if (selectedCommunity) {
             fetchCommunity(selectedCommunity.id);
             fetchCommunityPosts(selectedCommunity.id);
+            // Buscar dados de moderação
+            fetchReportedUsers(selectedCommunity.id);
+            fetchReportedPosts(selectedCommunity.id);
+            fetchReportedComments(selectedCommunity.id);
             // loadMembersRef.current(selectedCommunity.id);
         }
-    }, [selectedCommunity?.id]);
+    }, [selectedCommunity?.id, fetchReportedUsers, fetchReportedPosts, fetchReportedComments]);
 
     // Atualizar a ref quando loadMembers mudar
     useEffect(() => {
@@ -262,8 +342,94 @@ export default function ModerationPage() {
         image: post.image_url || undefined,
     });
 
+    // Converter dados da API de moderação para os tipos do componente
+    const convertApiUserToUserReport = (apiUser: any): UserReport => ({
+        id: apiUser.id,
+        reportedUser: {
+            id: apiUser.id,
+            name: apiUser.name,
+            profile_picture: apiUser.profile_picture,
+            role: apiUser.role || "member",
+        },
+        reporter: {
+            id: "system",
+            name: "Sistema",
+            profile_picture: "/system-avatar.png",
+            role: "admin",
+        },
+        reason: apiUser.suspension_reason || "Violação das diretrizes da comunidade",
+        description: `Usuário reportado por comportamento inadequado. Status atual: ${apiUser.status}`,
+        date: new Date(apiUser.created_at).toLocaleDateString("pt-BR"),
+        status: apiUser.status === "suspended" ? "Resolvido" : "Em análise",
+        severity: apiUser.report_count > 10 ? "Crítica" : apiUser.report_count > 5 ? "Moderada" : "Leve",
+        confirmations: apiUser.report_count || 0,
+        category: "Comportamento",
+    });
+
+    const convertApiPostToPostReport = (apiPost: any): PostReport => ({
+        id: apiPost.id,
+        reportedPost: {
+            id: apiPost.id,
+            title: apiPost.title,
+            content: apiPost.content,
+            author: {
+                id: apiPost.user.id,
+                name: apiPost.user.name,
+                profile_picture: apiPost.user.profile_picture,
+                role: apiPost.user.role || "member",
+            },
+            image: apiPost.image_url,
+            likes: apiPost.likes_count || 0,
+            comments: apiPost.comments_count || 0,
+            date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
+        },
+        reporter: {
+            id: "community",
+            name: "Comunidade",
+            profile_picture: "/community-avatar.png",
+            role: "member",
+        },
+        reason: "Conteúdo inapropriado",
+        description: "Publicação foi reportada pela comunidade por violar as diretrizes de conteúdo.",
+        date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
+        status: "Em análise",
+        severity: apiPost.report_count > 15 ? "Crítica" : apiPost.report_count > 8 ? "Moderada" : "Leve",
+        confirmations: apiPost.report_count || 0,
+        category: "Conteúdo",
+    });
+
+    const convertApiCommentToCommentReport = (apiComment: any): CommentReport => ({
+        id: apiComment.id,
+        reportedComment: {
+            id: apiComment.id,
+            content: apiComment.content,
+            author: {
+                id: apiComment.user.id,
+                name: apiComment.user.name,
+                profile_picture: apiComment.user.profile_picture,
+                role: apiComment.user.role || "member",
+            },
+            date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
+            postTitle: apiComment.post?.title || "Post não encontrado",
+            likes: apiComment.likes_count || 0,
+        },
+        reporter: {
+            id: "community",
+            name: "Comunidade",
+            profile_picture: "/community-avatar.png",
+            role: "member",
+        },
+        reason: "Linguagem inadequada",
+        description: "Comentário foi reportado pela comunidade por conter linguagem inadequada ou ofensiva.",
+        date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
+        status: "Em análise",
+        severity: apiComment.report_count > 5 ? "Crítica" : apiComment.report_count > 2 ? "Moderada" : "Leve",
+        confirmations: apiComment.report_count || 0,
+        category: "Comportamento",
+    });
+
     const convertPostToReport = (post: PostResponse): Report => ({
-        id: parseInt(post.id) || 0,
+        id: post.id,
         title: post.title,
         reporter: post.user.name,
         user: {
@@ -286,7 +452,7 @@ export default function ModerationPage() {
     });
 
     const convertPostToAnnouncement = (post: PostResponse): Announcement => ({
-        id: parseInt(post.id) || 0,
+        id: post.id,
         title: post.title,
         author: post.user.name,
         user: {
@@ -305,7 +471,7 @@ export default function ModerationPage() {
     });
 
     const convertPostToPoll = (post: PostResponse): Poll => ({
-        id: parseInt(post.id) || 0,
+        id: post.id,
         title: post.title,
         author: post.user.name,
         user: {
@@ -330,23 +496,53 @@ export default function ModerationPage() {
     const announcements: Announcement[] = (apiAnnouncements || []).map(convertPostToAnnouncement);
     const polls: Poll[] = (apiPolls || []).map(convertPostToPoll);
 
+    // Dados reais de moderação convertidos dos dados da API
+    const userReports: UserReport[] = (reportedUsers || []).map(convertApiUserToUserReport);
+    const postReports: PostReport[] = (reportedPosts || []).map(convertApiPostToPostReport);
+    const commentReports: CommentReport[] = (reportedComments || []).map(convertApiCommentToCommentReport);
+
     // Set default selected items when changing tabs
     const handleTabChange = (tab: string) => {
         setActiveTab(tab);
         setSelectedCampaign(null);
         setSelectedReport(null);
+        setSelectedUserReport(null);
+        setSelectedPostReport(null);
+        setSelectedCommentReport(null);
         setSelectedAnnouncement(null);
         setSelectedPoll(null);
         clearDetails();
 
-        if (tab === "Reportes" && campaigns.length > 0) {
-            setSelectedCampaign(campaigns[0]);
+        if (tab === "Reportes") {
+            // Reset para primeira tab de reportes e selecionar primeiro item
+            setReportesActiveTab("usuarios");
+            if (userReports.length > 0) {
+                setSelectedUserReport(userReports[0]);
+            }
         } else if (tab === "Denúncias" && reports.length > 0) {
             setSelectedReport(reports[0]);
         } else if (tab === "Enquetes" && polls.length > 0) {
             setSelectedPoll(polls[0]);
         } else if (tab === "Anúncios" && announcements.length > 0) {
             setSelectedAnnouncement(announcements[0]);
+        }
+    };
+
+    // Função para mudar tabs dentro dos reportes
+    const handleReportesTabChange = (reportTab: string) => {
+        setReportesActiveTab(reportTab);
+        // Limpar seleções anteriores
+        setSelectedUserReport(null);
+        setSelectedPostReport(null);
+        setSelectedCommentReport(null);
+
+        // Selecionar primeiro item da nova tab
+        if (reportTab === "usuarios" && userReports.length > 0) {
+            setSelectedUserReport(userReports[0]);
+        } else if (reportTab === "publicacoes" && postReports.length > 0) {
+            setSelectedPostReport(postReports[0]);
+        } else if (reportTab === "comentarios" && commentReports.length > 0) {
+            setSelectedCommentReport(commentReports[0]);
         }
     };
 
@@ -384,17 +580,6 @@ export default function ModerationPage() {
             setIsRejectModalOpen(false);
         }
     };
-
-    // Initialize default selected items if none are selected
-    if (activeTab === "Reportes" && !selectedCampaign && campaigns.length > 0) {
-        setSelectedCampaign(campaigns[0]);
-    } else if (activeTab === "Denúncias" && !selectedReport && reports.length > 0) {
-        setSelectedReport(reports[0]);
-    } else if (activeTab === "Enquetes" && !selectedPoll && polls.length > 0) {
-        setSelectedPoll(polls[0]);
-    } else if (activeTab === "Anúncios" && !selectedAnnouncement && announcements.length > 0) {
-        setSelectedAnnouncement(announcements[0]);
-    }
 
     const getSeverityColor = (severity: string) => {
         switch (severity) {
@@ -486,6 +671,65 @@ export default function ModerationPage() {
 
     const handleResolveReport = () => {
         setIsResolveModalOpen(true);
+    };
+
+    // Handlers reais para ações de moderação
+    const handleActuallyTolerate = async (subject: string, reason: string) => {
+        if (!selectedCommunity) return;
+
+        try {
+            let type: 'user' | 'post' | 'comment' = 'user';
+            let id = '';
+
+            if (selectedUserReport) {
+                type = 'user';
+                id = selectedUserReport.reportedUser.id;
+            } else if (selectedPostReport) {
+                type = 'post';
+                id = selectedPostReport.reportedPost.id;
+            } else if (selectedCommentReport) {
+                type = 'comment';
+                id = selectedCommentReport.reportedComment.id;
+            }
+
+            await tolerateReport(selectedCommunity.id, type, id);
+            toast.success("Reporte tolerado com sucesso!");
+
+            // Limpar seleções
+            setSelectedUserReport(null);
+            setSelectedPostReport(null);
+            setSelectedCommentReport(null);
+        } catch (error: any) {
+            toast.error(error.message || "Erro ao tolerar reporte");
+        } finally {
+            setIsDissolveModalOpen(false);
+        }
+    };
+
+    const handleActuallyResolve = async (subject: string, message: string) => {
+        if (!selectedCommunity) return;
+
+        try {
+            if (selectedUserReport) {
+                await suspendUser(selectedCommunity.id, selectedUserReport.reportedUser.id);
+                toast.success("Usuário suspenso com sucesso!");
+            } else if (selectedPostReport) {
+                await removePost(selectedCommunity.id, selectedPostReport.reportedPost.id);
+                toast.success("Publicação removida com sucesso!");
+            } else if (selectedCommentReport) {
+                await removeComment(selectedCommunity.id, selectedCommentReport.reportedComment.id);
+                toast.success("Comentário removido com sucesso!");
+            }
+
+            // Limpar seleções
+            setSelectedUserReport(null);
+            setSelectedPostReport(null);
+            setSelectedCommentReport(null);
+        } catch (error: any) {
+            toast.error(error.message || "Erro ao resolver reporte");
+        } finally {
+            setIsResolveModalOpen(false);
+        }
     };
 
     // Componentes inline para a aba Comunidades
@@ -599,7 +843,7 @@ export default function ModerationPage() {
                 {/* Left Navigation - Fixed */}
                 <div className="fixed left-64 top-1 w-64 bg-white border-r border-[#e0e0e0] h-screen z-20 overflow-y-auto">
                     {/* Header */}
-                    <div className="sticky top-0 p-6 border-b border-[#e0e0e0] bg-white">
+                    <div className="sticky top-0 p-6 border-[#e0e0e0] bg-white">
                         <div className="flex items-center gap-3 mb-4">
                             <Link href="/administration" className="p-1 hover:bg-[#e5e5e5]">
                                 <ArrowLeft className="h-5 w-5 text-[#525252]" />
@@ -659,7 +903,7 @@ export default function ModerationPage() {
                     {/* Middle Section - Content List */}
                     <div className="w-80 fixed top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
                         {/* Header with filters */}
-                        <div className="sticky top-0 p-4 border-b border-[#e0e0e0] flex items-center gap-2 bg-white z-20">
+                        <div className="sticky top-0 p-4 border-[#e0e0e0] flex items-center gap-2 bg-white z-20">
                             <button className="p-2 hover:bg-[#f4f4f4]">
                                 <FilterEdit className="h-4 w-4 text-[#525252]" />
                             </button>
@@ -679,41 +923,172 @@ export default function ModerationPage() {
                         </div>
 
                         {/* Content List */}
-                        <div className="h-full overflow-y-auto pb-20">
-                            {/* Reports List */}
-                            {activeTab === "Reportes" &&
-                                campaigns.map((campaign) => (
-                                    <div
-                                        key={campaign.id}
-                                        className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedCampaign?.id === campaign.id
-                                            ? "bg-[#f4f4f4]"
-                                            : ""
-                                            }`}
-                                        onClick={() => handleCampaignSelection(campaign)}
-                                    >
-                                        <div className="mb-2">
-                                            <h3 className="font-medium text-sm mb-1">
-                                                {campaign.title}
-                                            </h3>
-                                            <p className="text-xs text-[#525252] mb-1">
-                                                Líder: {campaign.leader}
-                                            </p>
-                                            <p className="text-xs text-[#525252] mb-2">
-                                                {campaign.participants.toLocaleString()} participantes
-                                            </p>
-                                            <p className="text-xs text-[#525252] mb-2">
-                                                {campaign.date}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            {getCampaignStatusBadge(campaign.status)}
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-xs text-[#525252]">{campaign.accesses || 0}</span>
-                                                <Eye className="h-3 w-3 text-[#525252]" />
-                                            </div>
-                                        </div>
+                        <div className="h-full overflow-y-auto pb-20 no-scrollbar">
+                            {/* Reports Tab with List Options */}
+                            {activeTab === "Reportes" && (
+                                <>
+                                    {/* Lista vertical de opções de reportes */}
+                                    <div className="space-y-0 mt-10">
+                                        <button
+                                            className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "usuarios"
+                                                ? "bg-[#f4f4f4] text-[#161616] font-medium"
+                                                : "text-[#525252]"
+                                                }`}
+                                            onClick={() => handleReportesTabChange("usuarios")}
+                                        >
+                                            Usuários
+                                        </button>
+                                        <button
+                                            className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "publicacoes"
+                                                ? "bg-[#f4f4f4] text-[#161616] font-medium"
+                                                : "text-[#525252]"
+                                                }`}
+                                            onClick={() => handleReportesTabChange("publicacoes")}
+                                        >
+                                            Publicações
+                                        </button>
+                                        <button
+                                            className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "comentarios"
+                                                ? "bg-[#f4f4f4] text-[#161616] font-medium"
+                                                : "text-[#525252]"
+                                                }`}
+                                            onClick={() => handleReportesTabChange("comentarios")}
+                                        >
+                                            Comentários
+                                        </button>
                                     </div>
-                                ))}
+
+                                    {/* Lista de reportes de usuários */}
+                                    {reportesActiveTab === "usuarios" &&
+                                        userReports.map((userReport) => (
+                                            <div
+                                                key={userReport.id}
+                                                className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedUserReport?.id === userReport.id
+                                                    ? "bg-[#f4f4f4]"
+                                                    : ""
+                                                    }`}
+                                                onClick={() => setSelectedUserReport(userReport)}
+                                            >
+                                                <div className="flex items-start gap-3 mb-2">
+                                                    <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0">
+                                                        {userReport.reportedUser.profile_picture && (
+                                                            <img
+                                                                src={userReport.reportedUser.profile_picture}
+                                                                alt={userReport.reportedUser.name}
+                                                                className="w-full h-full rounded-full object-cover"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <h3 className="font-medium text-sm mb-1">
+                                                            {userReport.reportedUser.name}
+                                                        </h3>
+                                                        <p className="text-xs text-[#525252] mb-1">
+                                                            Motivo: {userReport.reason}
+                                                        </p>
+                                                        <p className="text-xs text-[#525252] mb-1">
+                                                            {userReport.confirmations} reportes
+                                                        </p>
+                                                        <p className="text-xs text-[#525252] mb-2">
+                                                            {userReport.date}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    {getSeverityBadge(userReport.severity)}
+                                                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600">
+                                                        {userReport.reportedUser.role}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                    {/* Lista de reportes de publicações */}
+                                    {reportesActiveTab === "publicacoes" &&
+                                        postReports.map((postReport) => (
+                                            <div
+                                                key={postReport.id}
+                                                className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedPostReport?.id === postReport.id
+                                                    ? "bg-[#f4f4f4]"
+                                                    : ""
+                                                    }`}
+                                                onClick={() => setSelectedPostReport(postReport)}
+                                            >
+                                                <div className="mb-2">
+                                                    <h3 className="font-medium text-sm mb-1">
+                                                        {postReport.reportedPost.title}
+                                                    </h3>
+                                                    <p className="text-xs text-[#525252] mb-1">
+                                                        Autor: {postReport.reportedPost.author.name}
+                                                    </p>
+                                                    <p className="text-xs text-[#525252] mb-1">
+                                                        Motivo: {postReport.reason}
+                                                    </p>
+                                                    <p className="text-xs text-[#525252] mb-1">
+                                                        {postReport.confirmations} reportes
+                                                    </p>
+                                                    <p className="text-xs text-[#525252] mb-2">
+                                                        {postReport.date}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    {getSeverityBadge(postReport.severity)}
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-xs text-[#525252]">{postReport.reportedPost.likes}</span>
+                                                            <Heart className="h-3 w-3 text-[#525252]" />
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-xs text-[#525252]">{postReport.reportedPost.comments}</span>
+                                                            <MessageSquare className="h-3 w-3 text-[#525252]" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                    {/* Lista de reportes de comentários */}
+                                    {reportesActiveTab === "comentarios" &&
+                                        commentReports.map((commentReport) => (
+                                            <div
+                                                key={commentReport.id}
+                                                className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedCommentReport?.id === commentReport.id
+                                                    ? "bg-[#f4f4f4]"
+                                                    : ""
+                                                    }`}
+                                                onClick={() => setSelectedCommentReport(commentReport)}
+                                            >
+                                                <div className="mb-2">
+                                                    <h3 className="font-medium text-sm mb-1">
+                                                        Comentário de {commentReport.reportedComment.author.name}
+                                                    </h3>
+                                                    <p className="text-xs text-[#525252] mb-1">
+                                                        Post: {commentReport.reportedComment.postTitle}
+                                                    </p>
+                                                    <p className="text-xs text-[#525252] mb-1">
+                                                        Motivo: {commentReport.reason}
+                                                    </p>
+                                                    <p className="text-xs text-[#525252] mb-1">
+                                                        {commentReport.confirmations} reportes
+                                                    </p>
+                                                    <p className="text-xs text-[#525252] mb-2">
+                                                        {commentReport.date}
+                                                    </p>
+                                                    <p className="text-xs text-[#525252] mb-2 italic truncate">
+                                                        "{commentReport.reportedComment.content}"
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    {getSeverityBadge(commentReport.severity)}
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-xs text-[#525252]">{commentReport.reportedComment.likes}</span>
+                                                        <Heart className="h-3 w-3 text-[#525252]" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </>
+                            )}
 
                             {/* Reports List */}
                             {activeTab === "Denúncias" &&
@@ -834,8 +1209,8 @@ export default function ModerationPage() {
 
                     {/* Right Section - Details Panel */}
                     <div className="ml-80">
-                        {/* Report Details */}
-                        {activeTab === "Reportes" && selectedCampaign && (
+                        {/* Report Details - Usuários */}
+                        {activeTab === "Reportes" && reportesActiveTab === "usuarios" && selectedUserReport && (
                             <div className="max-w-full">
                                 <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
                                     <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
@@ -844,44 +1219,73 @@ export default function ModerationPage() {
                                                 <div className="flex justify-between items-start w-full max-md:max-w-full">
                                                     <div className="flex items-center min-w-60">
                                                         <img
-                                                            src={selectedCampaign.user.profile_picture || "/no-profile-pic.png"}
-                                                            alt={`${selectedCampaign.user.name} profile picture`}
+                                                            src={selectedUserReport.reportedUser.profile_picture || "/no-profile-pic.png"}
+                                                            alt={`${selectedUserReport.reportedUser.name} profile picture`}
                                                             className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
                                                         />
                                                         <div className="self-stretch my-auto min-w-60 w-[342px]">
                                                             <div className="flex gap-2 items-center w-full h-[23px]">
                                                                 <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                                                                     <span className="self-stretch my-auto text-sm text-neutral-800">
-                                                                        {selectedCampaign.leader}
+                                                                        {selectedUserReport.reportedUser.name}
                                                                     </span>
                                                                     <CheckmarkFilled
-                                                                        className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedCampaign.user.role)}`}
+                                                                        className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedUserReport.reportedUser.role)}`}
                                                                         aria-label="Verificado"
                                                                     />
-                                                                    <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedCampaign.user.role)}`}>
-                                                                        {translateUserRole(selectedCampaign.user.role || "leader")}
+                                                                    <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedUserReport.reportedUser.role)}`}>
+                                                                        {translateUserRole(selectedUserReport.reportedUser.role || "member")}
                                                                     </span>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        {getSeverityBadge(selectedUserReport.severity)}
+                                                        <span className="text-xs text-[#525252]">
+                                                            {selectedUserReport.confirmations} reportes
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
                                                     <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
                                                         <span className="self-stretch my-auto font-semibold text-neutral-800">
-                                                            Título:{" "}
+                                                            Motivo do reporte:
                                                         </span>
                                                         <span className="self-stretch my-auto text-neutral-800">
-                                                            {selectedCampaign.title}
+                                                            {selectedUserReport.reason}
                                                         </span>
                                                     </div>
-                                                    <div className="mt-2 w-full max-md:max-w-full">
+                                                    <div className="mt-4 flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                                            Reportado por:
+                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <img
+                                                                src={selectedUserReport.reporter.profile_picture || "/no-profile-pic.png"}
+                                                                alt={selectedUserReport.reporter.name}
+                                                                className="w-6 h-6 rounded-full object-cover"
+                                                            />
+                                                            <span className="self-stretch my-auto text-neutral-800">
+                                                                {selectedUserReport.reporter.name}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-4 w-full max-md:max-w-full">
                                                         <h3 className="font-semibold leading-6 text-justify text-neutral-800">
-                                                            Descrição:
+                                                            Descrição do reporte:
                                                         </h3>
                                                         <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
-                                                            {selectedCampaign.description}
+                                                            {selectedUserReport.description}
                                                         </p>
+                                                    </div>
+                                                    <div className="mt-4 flex gap-4 items-center">
+                                                        <span className="font-semibold text-neutral-800">Data:</span>
+                                                        <span className="text-neutral-800">{selectedUserReport.date}</span>
+                                                    </div>
+                                                    <div className="mt-2 flex gap-4 items-center">
+                                                        <span className="font-semibold text-neutral-800">Categoria:</span>
+                                                        <span className="text-neutral-800">{selectedUserReport.category}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -889,19 +1293,293 @@ export default function ModerationPage() {
                                         <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
                                             <div className="flex flex-wrap gap-2 justify-between items-center w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
                                                 <button
-                                                    onClick={() => setIsRejectModalOpen(true)}
+                                                    onClick={handleDissolveReport}
                                                     className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
                                                 >
                                                     <span className="self-stretch my-auto text-neutral-800">
-                                                        Rejeitar
+                                                        Tolerar
                                                     </span>
                                                 </button>
                                                 <button
-                                                    onClick={() => setIsApproveModalOpen(true)}
+                                                    onClick={handleResolveReport}
                                                     className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
                                                 >
                                                     <span className="self-stretch my-auto text-zinc-100">
-                                                        Aprovar
+                                                        Suspender
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        </section>
+                                    </article>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Report Details - Publicações */}
+                        {activeTab === "Reportes" && reportesActiveTab === "publicacoes" && selectedPostReport && (
+                            <div className="max-w-full">
+                                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                                    <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
+                                        <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                                            <div className="w-full max-md:max-w-full">
+                                                <div className="flex justify-between items-start w-full max-md:max-w-full">
+                                                    <div className="flex items-center min-w-60">
+                                                        <img
+                                                            src={selectedPostReport.reportedPost.author.profile_picture || "/no-profile-pic.png"}
+                                                            alt={`${selectedPostReport.reportedPost.author.name} profile picture`}
+                                                            className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                                                        />
+                                                        <div className="self-stretch my-auto min-w-60 w-[342px]">
+                                                            <div className="flex gap-2 items-center w-full h-[23px]">
+                                                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                                                    <span className="self-stretch my-auto text-sm text-neutral-800">
+                                                                        {selectedPostReport.reportedPost.author.name}
+                                                                    </span>
+                                                                    <CheckmarkFilled
+                                                                        className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedPostReport.reportedPost.author.role)}`}
+                                                                        aria-label="Verificado"
+                                                                    />
+                                                                    <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedPostReport.reportedPost.author.role)}`}>
+                                                                        {translateUserRole(selectedPostReport.reportedPost.author.role || "member")}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        {getSeverityBadge(selectedPostReport.severity)}
+                                                        <span className="text-xs text-[#525252]">
+                                                            {selectedPostReport.confirmations} reportes
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                                                    <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                                            Título da publicação:
+                                                        </span>
+                                                        <span className="self-stretch my-auto text-neutral-800">
+                                                            {selectedPostReport.reportedPost.title}
+                                                        </span>
+                                                    </div>
+                                                    <div className="mt-4 w-full max-md:max-w-full">
+                                                        <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                                                            Conteúdo da publicação:
+                                                        </h3>
+                                                        <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                                                            {selectedPostReport.reportedPost.content}
+                                                        </p>
+                                                        {selectedPostReport.reportedPost.image && (
+                                                            <img
+                                                                src={selectedPostReport.reportedPost.image}
+                                                                alt="Imagem da publicação"
+                                                                className="mt-4 max-w-full h-auto rounded"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div className="mt-4 flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                                            Motivo do reporte:
+                                                        </span>
+                                                        <span className="self-stretch my-auto text-neutral-800">
+                                                            {selectedPostReport.reason}
+                                                        </span>
+                                                    </div>
+                                                    <div className="mt-4 flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                                            Reportado por:
+                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <img
+                                                                src={selectedPostReport.reporter.profile_picture || "/no-profile-pic.png"}
+                                                                alt={selectedPostReport.reporter.name}
+                                                                className="w-6 h-6 rounded-full object-cover"
+                                                            />
+                                                            <span className="self-stretch my-auto text-neutral-800">
+                                                                {selectedPostReport.reporter.name}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-4 w-full max-md:max-w-full">
+                                                        <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                                                            Descrição do reporte:
+                                                        </h3>
+                                                        <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                                                            {selectedPostReport.description}
+                                                        </p>
+                                                    </div>
+                                                    <div className="mt-4 flex gap-4 items-center">
+                                                        <span className="font-semibold text-neutral-800">Data do post:</span>
+                                                        <span className="text-neutral-800">{selectedPostReport.reportedPost.date}</span>
+                                                    </div>
+                                                    <div className="mt-2 flex gap-4 items-center">
+                                                        <span className="font-semibold text-neutral-800">Data do reporte:</span>
+                                                        <span className="text-neutral-800">{selectedPostReport.date}</span>
+                                                    </div>
+                                                    <div className="mt-2 flex gap-4 items-center">
+                                                        <span className="font-semibold text-neutral-800">Categoria:</span>
+                                                        <span className="text-neutral-800">{selectedPostReport.category}</span>
+                                                    </div>
+                                                    <div className="mt-4 flex gap-6 items-center">
+                                                        <div className="flex items-center gap-1">
+                                                            <Heart className="h-4 w-4 text-[#525252]" />
+                                                            <span className="text-sm text-[#525252]">{selectedPostReport.reportedPost.likes}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <MessageSquare className="h-4 w-4 text-[#525252]" />
+                                                            <span className="text-sm text-[#525252]">{selectedPostReport.reportedPost.comments}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </header>
+                                        <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
+                                            <div className="flex flex-wrap gap-2 justify-between items-center w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                                                <button
+                                                    onClick={handleDissolveReport}
+                                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                                                >
+                                                    <span className="self-stretch my-auto text-neutral-800">
+                                                        Tolerar
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    onClick={handleResolveReport}
+                                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                                                >
+                                                    <span className="self-stretch my-auto text-zinc-100">
+                                                        Remover Publicação
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        </section>
+                                    </article>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Report Details - Comentários */}
+                        {activeTab === "Reportes" && reportesActiveTab === "comentarios" && selectedCommentReport && (
+                            <div className="max-w-full">
+                                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                                    <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
+                                        <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                                            <div className="w-full max-md:max-w-full">
+                                                <div className="flex justify-between items-start w-full max-md:max-w-full">
+                                                    <div className="flex items-center min-w-60">
+                                                        <img
+                                                            src={selectedCommentReport.reportedComment.author.profile_picture || "/no-profile-pic.png"}
+                                                            alt={`${selectedCommentReport.reportedComment.author.name} profile picture`}
+                                                            className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                                                        />
+                                                        <div className="self-stretch my-auto min-w-60 w-[342px]">
+                                                            <div className="flex gap-2 items-center w-full h-[23px]">
+                                                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                                                    <span className="self-stretch my-auto text-sm text-neutral-800">
+                                                                        {selectedCommentReport.reportedComment.author.name}
+                                                                    </span>
+                                                                    <CheckmarkFilled
+                                                                        className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedCommentReport.reportedComment.author.role)}`}
+                                                                        aria-label="Verificado"
+                                                                    />
+                                                                    <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedCommentReport.reportedComment.author.role)}`}>
+                                                                        {translateUserRole(selectedCommentReport.reportedComment.author.role || "member")}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        {getSeverityBadge(selectedCommentReport.severity)}
+                                                        <span className="text-xs text-[#525252]">
+                                                            {selectedCommentReport.confirmations} reportes
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                                                    <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                                            Publicação relacionada:
+                                                        </span>
+                                                        <span className="self-stretch my-auto text-neutral-800">
+                                                            {selectedCommentReport.reportedComment.postTitle}
+                                                        </span>
+                                                    </div>
+                                                    <div className="mt-4 w-full max-md:max-w-full">
+                                                        <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                                                            Comentário reportado:
+                                                        </h3>
+                                                        <div className="mt-2 p-4 bg-gray-50 rounded border-l-4 border-gray-300">
+                                                            <p className="leading-5 text-neutral-800 max-md:max-w-full">
+                                                                "{selectedCommentReport.reportedComment.content}"
+                                                            </p>
+                                                            <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                                                                <span>Data: {selectedCommentReport.reportedComment.date}</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <Heart className="h-3 w-3" />
+                                                                    <span>{selectedCommentReport.reportedComment.likes}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-4 flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                                            Motivo do reporte:
+                                                        </span>
+                                                        <span className="self-stretch my-auto text-neutral-800">
+                                                            {selectedCommentReport.reason}
+                                                        </span>
+                                                    </div>
+                                                    <div className="mt-4 flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                                            Reportado por:
+                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <img
+                                                                src={selectedCommentReport.reporter.profile_picture || "/no-profile-pic.png"}
+                                                                alt={selectedCommentReport.reporter.name}
+                                                                className="w-6 h-6 rounded-full object-cover"
+                                                            />
+                                                            <span className="self-stretch my-auto text-neutral-800">
+                                                                {selectedCommentReport.reporter.name}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-4 w-full max-md:max-w-full">
+                                                        <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                                                            Descrição do reporte:
+                                                        </h3>
+                                                        <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                                                            {selectedCommentReport.description}
+                                                        </p>
+                                                    </div>
+                                                    <div className="mt-4 flex gap-4 items-center">
+                                                        <span className="font-semibold text-neutral-800">Data do reporte:</span>
+                                                        <span className="text-neutral-800">{selectedCommentReport.date}</span>
+                                                    </div>
+                                                    <div className="mt-2 flex gap-4 items-center">
+                                                        <span className="font-semibold text-neutral-800">Categoria:</span>
+                                                        <span className="text-neutral-800">{selectedCommentReport.category}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </header>
+                                        <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
+                                            <div className="flex flex-wrap gap-2 justify-between items-center w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                                                <button
+                                                    onClick={handleDissolveReport}
+                                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                                                >
+                                                    <span className="self-stretch my-auto text-neutral-800">
+                                                        Tolerar
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    onClick={handleResolveReport}
+                                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                                                >
+                                                    <span className="self-stretch my-auto text-zinc-100">
+                                                        Remover Comentário
                                                     </span>
                                                 </button>
                                             </div>
@@ -1166,26 +1844,6 @@ export default function ModerationPage() {
             </div>
 
             {/* Modals */}
-            {isApproveModalOpen && selectedCampaign && (
-                <ApproveCampaignModal
-                    isOpen={isApproveModalOpen}
-                    onClose={() => setIsApproveModalOpen(false)}
-                    onApprove={handleApproveCampaign}
-                    campaignTitle={selectedCampaign.title}
-                    loading={adminActionLoading}
-                />
-            )}
-
-            {isRejectModalOpen && selectedCampaign && (
-                <RejectCampaignModal
-                    isOpen={isRejectModalOpen}
-                    onClose={() => setIsRejectModalOpen(false)}
-                    onReject={handleRejectCampaign}
-                    campaignTitle={selectedCampaign.title}
-                    loading={adminActionLoading}
-                />
-            )}
-
             {isAnnouncementModalOpen && (
                 <ModalAnnouncement
                     onClose={() => setIsAnnouncementModalOpen(false)}
@@ -1204,29 +1862,36 @@ export default function ModerationPage() {
                 />
             )}
 
-            {isDissolveModalOpen && selectedReport && (
+            {isDissolveModalOpen && (
                 <RejectComplaintModal
                     isOpen={isDissolveModalOpen}
                     onClose={() => setIsDissolveModalOpen(false)}
-                    onReject={(subject, reason) => {
-                        toast.success("Denúncia dissolvida com sucesso!");
-                        setIsDissolveModalOpen(false);
-                    }}
-                    complaintTitle={selectedReport.title}
+                    onReject={handleActuallyTolerate}
+                    complaintTitle={
+                        selectedUserReport?.reportedUser.name ||
+                        selectedPostReport?.reportedPost.title ||
+                        selectedCommentReport?.reportedComment.author.name ||
+                        selectedReport?.title ||
+                        "Item"
+                    }
                 />
             )}
 
-            {isResolveModalOpen && selectedReport && (
+            {isResolveModalOpen && (
                 <ApproveComplaintModal
                     isOpen={isResolveModalOpen}
                     onClose={() => setIsResolveModalOpen(false)}
-                    onApprove={(subject, message) => {
-                        toast.success("Denúncia resolvida com sucesso!");
-                        setIsResolveModalOpen(false);
-                    }}
-                    complaintTitle={selectedReport.title}
+                    onApprove={handleActuallyResolve}
+                    complaintTitle={
+                        selectedUserReport?.reportedUser.name ||
+                        selectedPostReport?.reportedPost.title ||
+                        selectedCommentReport?.reportedComment.author.name ||
+                        selectedReport?.title ||
+                        "Item"
+                    }
                 />
             )}
+
         </div>
     );
 }

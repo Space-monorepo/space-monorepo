@@ -495,6 +495,7 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            params: { status: ['reported'] },
           }
         );
         onSuccess?.(response.data);
