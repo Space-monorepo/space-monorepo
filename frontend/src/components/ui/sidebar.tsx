@@ -70,7 +70,7 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
       </div>
 
       {/* Navegação principal */}
-      <div className="mt-8 px-6 flex-1">
+      <div className="mt-8 px-6 flex-1 flex flex-col overflow-y-auto">
         <div
           className={cn(
             "text-xs font-medium text-zinc-500 mb-4 transition-opacity duration-200",
@@ -82,43 +82,45 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
           GENERAL
         </div>
 
-        <nav className="space-y-4">
-          <SidebarItem
-            icon={<Events size={20} />}
-            label="Comunidades"
-            href="/communities"
-            active={isActive("/communities")}
-            isOpen={isOpen}
-          />
-          <SidebarItem
-            icon={<Notification size={20} />}
-            label="Notificações"
-            href="/notifications"
-            active={isActive("/notifications")}
-            isOpen={isOpen}
-          />
-          <SidebarItem
-            icon={<ChatLaunch size={20} />}
-            label="Mensagens"
-            href="/messages"
-            active={isActive("/messages")}
-            isOpen={isOpen}
-          />
-          <SidebarItem
-            icon={<Security size={20} />}
-            label="Moderação"
-            href="/moderation"
-            active={isActive("/moderation")}
-            isOpen={isOpen}
-          />
-          <SidebarItem
-            icon={<User size={20} />}
-            label="Administrador"
-            href="/administration"
-            active={isActive("/administration")}
-            isOpen={isOpen}
-          />
-          <div className="mt-110">
+        <nav className="space-y-4 flex-1 flex flex-col">
+          <div className="space-y-4">
+            <SidebarItem
+              icon={<Events size={20} />}
+              label="Comunidades"
+              href="/communities"
+              active={isActive("/communities")}
+              isOpen={isOpen}
+            />
+            <SidebarItem
+              icon={<Notification size={20} />}
+              label="Notificações"
+              href="/notifications"
+              active={isActive("/notifications")}
+              isOpen={isOpen}
+            />
+            <SidebarItem
+              icon={<ChatLaunch size={20} />}
+              label="Mensagens"
+              href="/messages"
+              active={isActive("/messages")}
+              isOpen={isOpen}
+            />
+            <SidebarItem
+              icon={<Security size={20} />}
+              label="Moderação"
+              href="/moderation"
+              active={isActive("/moderation")}
+              isOpen={isOpen}
+            />
+            <SidebarItem
+              icon={<User size={20} />}
+              label="Administrador"
+              href="/administration"
+              active={isActive("/administration")}
+              isOpen={isOpen}
+            />
+          </div>
+          <div className="mt-auto">
             <SidebarItem
               icon={<Settings size={20} />}
               label="Configurações"
