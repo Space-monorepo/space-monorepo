@@ -866,7 +866,7 @@ export default function ModerationPage() {
                                             {userCommunities.map((c) => (
                                                 <li key={c.id}>
                                                     <button
-                                                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${selectedCommunity?.id === c.id ? 'font-semibold bg-gray-50' : ''}`}
+                                                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 text-gray-800"
                                                         onClick={() => handleSelectCommunity(c)}
                                                         role="option"
                                                         aria-selected={selectedCommunity?.id === c.id}
@@ -912,8 +912,7 @@ export default function ModerationPage() {
                             </button>
                             {activeTab === "Anúncios" && (
                                 <button
-                                    className="ml-auto cursor-pointer px-3 min-w-[138px] min-h-[56px] py-1.5 bg-[#161616]
-                     text-white text-sm hover:bg-[#262626] flex items-center gap-10"
+                                    className="ml-auto cursor-pointer px-3 min-w-[138px] min-h-[56px] py-1.5 bg-[#161616] text-white text-sm hover:bg-[#262626] flex items-center gap-10"
                                     onClick={() => setIsAnnouncementModalOpen(true)}
                                 >
                                     Anunciar
@@ -924,171 +923,154 @@ export default function ModerationPage() {
 
                         {/* Content List */}
                         <div className="h-full overflow-y-auto pb-20 no-scrollbar">
-                            {/* Reports Tab with List Options */}
+
+                            {/* Quando estiver em Reportes, mostrar apenas as abas internas (Usuários, Publicações, Comentários) */}
                             {activeTab === "Reportes" && (
-                                <>
-                                    {/* Lista vertical de opções de reportes */}
-                                    <div className="space-y-0 mt-10">
-                                        <button
-                                            className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "usuarios"
-                                                ? "bg-[#f4f4f4] text-[#161616] font-medium"
-                                                : "text-[#525252]"
-                                                }`}
-                                            onClick={() => handleReportesTabChange("usuarios")}
-                                        >
-                                            Usuários
-                                        </button>
-                                        <button
-                                            className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "publicacoes"
-                                                ? "bg-[#f4f4f4] text-[#161616] font-medium"
-                                                : "text-[#525252]"
-                                                }`}
-                                            onClick={() => handleReportesTabChange("publicacoes")}
-                                        >
-                                            Publicações
-                                        </button>
-                                        <button
-                                            className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "comentarios"
-                                                ? "bg-[#f4f4f4] text-[#161616] font-medium"
-                                                : "text-[#525252]"
-                                                }`}
-                                            onClick={() => handleReportesTabChange("comentarios")}
-                                        >
-                                            Comentários
-                                        </button>
-                                    </div>
-
-                                    {/* Lista de reportes de usuários */}
-                                    {reportesActiveTab === "usuarios" &&
-                                        userReports.map((userReport) => (
-                                            <div
-                                                key={userReport.id}
-                                                className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedUserReport?.id === userReport.id
-                                                    ? "bg-[#f4f4f4]"
-                                                    : ""
-                                                    }`}
-                                                onClick={() => setSelectedUserReport(userReport)}
-                                            >
-                                                <div className="flex items-start gap-3 mb-2">
-                                                    <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0">
-                                                        {userReport.reportedUser.profile_picture && (
-                                                            <img
-                                                                src={userReport.reportedUser.profile_picture}
-                                                                alt={userReport.reportedUser.name}
-                                                                className="w-full h-full rounded-full object-cover"
-                                                            />
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <h3 className="font-medium text-sm mb-1">
-                                                            {userReport.reportedUser.name}
-                                                        </h3>
-                                                        <p className="text-xs text-[#525252] mb-1">
-                                                            Motivo: {userReport.reason}
-                                                        </p>
-                                                        <p className="text-xs text-[#525252] mb-1">
-                                                            {userReport.confirmations} reportes
-                                                        </p>
-                                                        <p className="text-xs text-[#525252] mb-2">
-                                                            {userReport.date}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    {getSeverityBadge(userReport.severity)}
-                                                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600">
-                                                        {userReport.reportedUser.role}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-
-                                    {/* Lista de reportes de publicações */}
-                                    {reportesActiveTab === "publicacoes" &&
-                                        postReports.map((postReport) => (
-                                            <div
-                                                key={postReport.id}
-                                                className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedPostReport?.id === postReport.id
-                                                    ? "bg-[#f4f4f4]"
-                                                    : ""
-                                                    }`}
-                                                onClick={() => setSelectedPostReport(postReport)}
-                                            >
-                                                <div className="mb-2">
-                                                    <h3 className="font-medium text-sm mb-1">
-                                                        {postReport.reportedPost.title}
-                                                    </h3>
-                                                    <p className="text-xs text-[#525252] mb-1">
-                                                        Autor: {postReport.reportedPost.author.name}
-                                                    </p>
-                                                    <p className="text-xs text-[#525252] mb-1">
-                                                        Motivo: {postReport.reason}
-                                                    </p>
-                                                    <p className="text-xs text-[#525252] mb-1">
-                                                        {postReport.confirmations} reportes
-                                                    </p>
-                                                    <p className="text-xs text-[#525252] mb-2">
-                                                        {postReport.date}
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    {getSeverityBadge(postReport.severity)}
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="text-xs text-[#525252]">{postReport.reportedPost.likes}</span>
-                                                            <Heart className="h-3 w-3 text-[#525252]" />
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="text-xs text-[#525252]">{postReport.reportedPost.comments}</span>
-                                                            <MessageSquare className="h-3 w-3 text-[#525252]" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-
-                                    {/* Lista de reportes de comentários */}
-                                    {reportesActiveTab === "comentarios" &&
-                                        commentReports.map((commentReport) => (
-                                            <div
-                                                key={commentReport.id}
-                                                className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedCommentReport?.id === commentReport.id
-                                                    ? "bg-[#f4f4f4]"
-                                                    : ""
-                                                    }`}
-                                                onClick={() => setSelectedCommentReport(commentReport)}
-                                            >
-                                                <div className="mb-2">
-                                                    <h3 className="font-medium text-sm mb-1">
-                                                        Comentário de {commentReport.reportedComment.author.name}
-                                                    </h3>
-                                                    <p className="text-xs text-[#525252] mb-1">
-                                                        Post: {commentReport.reportedComment.postTitle}
-                                                    </p>
-                                                    <p className="text-xs text-[#525252] mb-1">
-                                                        Motivo: {commentReport.reason}
-                                                    </p>
-                                                    <p className="text-xs text-[#525252] mb-1">
-                                                        {commentReport.confirmations} reportes
-                                                    </p>
-                                                    <p className="text-xs text-[#525252] mb-2">
-                                                        {commentReport.date}
-                                                    </p>
-                                                    <p className="text-xs text-[#525252] mb-2 italic truncate">
-                                                        "{commentReport.reportedComment.content}"
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    {getSeverityBadge(commentReport.severity)}
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-xs text-[#525252]">{commentReport.reportedComment.likes}</span>
-                                                        <Heart className="h-3 w-3 text-[#525252]" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                </>
+                                <div className="space-y-0 mt-10">
+                                    <button
+                                        className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "usuarios"
+                                            ? "bg-[#f4f4f4] text-[#161616] font-medium"
+                                            : "text-[#525252]"
+                                            }`}
+                                        onClick={() => handleReportesTabChange("usuarios")}
+                                    >
+                                        Usuários
+                                    </button>
+                                    <button
+                                        className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "publicacoes"
+                                            ? "bg-[#f4f4f4] text-[#161616] font-medium"
+                                            : "text-[#525252]"
+                                            }`}
+                                        onClick={() => handleReportesTabChange("publicacoes")}
+                                    >
+                                        Publicações
+                                    </button>
+                                    <button
+                                        className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "comentarios"
+                                            ? "bg-[#f4f4f4] text-[#161616] font-medium"
+                                            : "text-[#525252]"
+                                            }`}
+                                        onClick={() => handleReportesTabChange("comentarios")}
+                                    >
+                                        Comentários
+                                    </button>
+                                </div>
                             )}
+
+                            {/* Exibir listas apenas nas abas Denúncias, Enquetes e Anúncios */}
+                            {activeTab === "Denúncias" &&
+                                reports.map((report) => (
+                                    <div
+                                        key={report.id}
+                                        className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
+                                            }`}
+                                        onClick={() => setSelectedReport(report)}
+                                    >
+                                        <div className="mb-2">
+                                            <h3 className="font-medium text-sm mb-1">
+                                                {report.title}
+                                            </h3>
+                                            <p className="text-xs text-[#525252] mb-1">
+                                                Denunciante: {report.reporter}
+                                            </p>
+                                            <p className="text-xs text-[#525252] mb-2">
+                                                {report.confirmations} confirmações
+                                            </p>
+                                            <p className="text-xs text-[#525252] mb-2">
+                                                {report.date}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            {getSeverityBadge(report.severity)}
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-xs text-[#525252]">{report.accesses || 0}</span>
+                                                <Eye className="h-3 w-3 text-[#525252]" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+
+                            {/* Polls List */}
+                            {activeTab === "Enquetes" &&
+                                polls.map((poll) => (
+                                    <div
+                                        key={poll.id}
+                                        className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedPoll?.id === poll.id
+                                            ? "bg-[#f4f4f4]"
+                                            : ""
+                                            }`}
+                                        onClick={() => setSelectedPoll(poll)}
+                                    >
+                                        <div className="mb-2">
+                                            <h3 className="font-medium text-sm mb-1">
+                                                {poll.title}
+                                            </h3>
+                                            <p className="text-xs text-[#525252] mb-1">
+                                                Autor: {poll.author}
+                                            </p>
+                                            <p className="text-xs text-[#525252] mb-2">
+                                                {poll.votes} votos
+                                            </p>
+                                            <p className="text-xs text-[#525252] mb-2">
+                                                {poll.date}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className={`px-2 py-1 rounded text-xs ${poll.status === "Ativa"
+                                                ? "bg-green-100 text-green-800"
+                                                : poll.status === "Encerrada"
+                                                    ? "bg-gray-100 text-gray-800"
+                                                    : "bg-yellow-100 text-yellow-800"
+                                                }`}>
+                                                {poll.status}
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-xs text-[#525252]">{poll.votes || 0}</span>
+                                                <Eye className="h-3 w-3 text-[#525252]" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+
+                            {/* Announcements List */}
+                            {activeTab === "Anúncios" &&
+                                announcements.map((announcement) => (
+                                    <div
+                                        key={announcement.id}
+                                        className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedAnnouncement?.id === announcement.id
+                                            ? "bg-[#f4f4f4]"
+                                            : ""
+                                            }`}
+                                        onClick={() => setSelectedAnnouncement(announcement)}
+                                    >
+                                        <div className="mb-2">
+                                            <h3 className="font-medium text-sm mb-1">
+                                                {announcement.title}
+                                            </h3>
+                                            <p className="text-xs text-[#525252] mb-1">
+                                                Autor: {announcement.author}
+                                            </p>
+                                            <p className="text-xs text-[#525252] mb-2">
+                                                {announcement.views} visualizações
+                                            </p>
+                                            <p className="text-xs text-[#525252] mb-2">
+                                                {announcement.date}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className={`px-2 py-1 rounded text-xs ${announcement.status === "Publicado"
+                                                ? "bg-green-100 text-green-800"
+                                                : "bg-gray-100 text-gray-800"
+                                                }`}>
+                                                {announcement.status}
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-xs text-[#525252]">{announcement.views || 0}</span>
+                                                <Eye className="h-3 w-3 text-[#525252]" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
 
                             {/* Reports List */}
                             {activeTab === "Denúncias" &&
@@ -1209,6 +1191,169 @@ export default function ModerationPage() {
 
                     {/* Right Section - Details Panel */}
                     <div className="ml-80">
+                        {/* Lista de Denúncias */}
+                        {activeTab === "Denúncias" && !selectedReport && (
+                            <div className="max-w-full">
+                                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                                    <div className="space-y-4">
+                                        {reports.map((report) => (
+                                            <article key={report.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                                <div className="p-6">
+                                                    <div className="flex items-start gap-4 mb-4">
+                                                        <div className="w-12 h-12 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden">
+                                                            {report.user.profile_picture && (
+                                                                <img
+                                                                    src={report.user.profile_picture}
+                                                                    alt={report.user.name}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <h3 className="font-semibold text-lg text-gray-900">
+                                                                    {report.title}
+                                                                </h3>
+                                                                {getSeverityBadge(report.severity)}
+                                                            </div>
+                                                            <p className="text-sm text-gray-600 mb-2">
+                                                                Denunciante: {report.reporter}
+                                                            </p>
+                                                            <p className="text-sm text-gray-500">
+                                                                {report.confirmations} confirmações • {report.date}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-gray-700 mb-4">
+                                                        {report.description}
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => setSelectedReport(report)}
+                                                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                                                        >
+                                                            Ver detalhes
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Lista de Enquetes */}
+                        {activeTab === "Enquetes" && !selectedPoll && (
+                            <div className="max-w-full">
+                                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                                    <div className="space-y-4">
+                                        {polls.map((poll) => (
+                                            <article key={poll.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                                <div className="p-6">
+                                                    <div className="flex items-start gap-4 mb-4">
+                                                        <div className="w-12 h-12 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden">
+                                                            {poll.user.profile_picture && (
+                                                                <img
+                                                                    src={poll.user.profile_picture}
+                                                                    alt={poll.user.name}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <h3 className="font-semibold text-lg text-gray-900">
+                                                                    {poll.title}
+                                                                </h3>
+                                                                <span className={`text-xs px-2 py-1 rounded ${poll.status === "Ativa"
+                                                                    ? "bg-green-100 text-green-600"
+                                                                    : "bg-gray-100 text-gray-600"}`}>
+                                                                    {poll.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600 mb-2">
+                                                                Autor: {poll.author}
+                                                            </p>
+                                                            <p className="text-sm text-gray-500">
+                                                                {poll.votes} votos • {poll.date}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-gray-700 mb-4">
+                                                        {poll.description}
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => setSelectedPoll(poll)}
+                                                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                                                        >
+                                                            Ver detalhes
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Lista de Anúncios */}
+                        {activeTab === "Anúncios" && !selectedAnnouncement && (
+                            <div className="max-w-full">
+                                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                                    <div className="space-y-4">
+                                        {announcements.map((announcement) => (
+                                            <article key={announcement.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                                <div className="p-6">
+                                                    <div className="flex items-start gap-4 mb-4">
+                                                        <div className="w-12 h-12 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden">
+                                                            {announcement.user.profile_picture && (
+                                                                <img
+                                                                    src={announcement.user.profile_picture}
+                                                                    alt={announcement.user.name}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <h3 className="font-semibold text-lg text-gray-900">
+                                                                    {announcement.title}
+                                                                </h3>
+                                                                <span className={`text-xs px-2 py-1 rounded ${announcement.status === "Publicado"
+                                                                    ? "bg-green-100 text-green-600"
+                                                                    : "bg-gray-100 text-gray-600"}`}>
+                                                                    {announcement.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-sm text-gray-600 mb-2">
+                                                                Autor: {announcement.author}
+                                                            </p>
+                                                            <p className="text-sm text-gray-500">
+                                                                {announcement.views} visualizações • {announcement.date}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-gray-700 mb-4">
+                                                        {announcement.description}
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => setSelectedAnnouncement(announcement)}
+                                                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                                                        >
+                                                            Ver detalhes
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         {/* Report Details - Usuários */}
                         {activeTab === "Reportes" && reportesActiveTab === "usuarios" && selectedUserReport && (
                             <div className="max-w-full">
