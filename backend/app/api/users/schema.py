@@ -133,7 +133,8 @@ class UserConnectionResponse(BaseModel):
         ..., description='The date and time the connection was last updated'
     )
     rejected_at: datetime | None = Field(
-        None, description='The date and time the connection was rejected (for cooldown control)'
+        None,
+        description='The date and time the connection was rejected (for cooldown control)',
     )
 
     model_config = ConfigDict(
@@ -151,9 +152,6 @@ class UserConnectionResponse(BaseModel):
             }
         },
     )
-
-
-
 
 
 class LoginSchema(BaseModel):

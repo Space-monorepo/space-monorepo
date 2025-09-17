@@ -1,6 +1,15 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, Integer, String, func, CheckConstraint, UniqueConstraint, ForeignKey
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -35,32 +44,32 @@ class User(Base):
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
 
-    posts = relationship(
-        'Post', back_populates='user', foreign_keys='Post.user_id'
-    )
+    posts = relationship('Post', back_populates='user', foreign_keys='Post.user_id')
 
-    communities = relationship(
-        'Community', secondary='community_members', viewonly=True
-    )
+    communities = relationship('Community', secondary='community_members', viewonly=True)
 
     community_memberships = relationship(
         'CommunityMember', back_populates='user', cascade='all, delete-orphan'
     )
 
-    ratings = relationship(
-        'Rating', back_populates='user', cascade='all, delete-orphan'
-    )
+    ratings = relationship('Rating', back_populates='user', cascade='all, delete-orphan')
 
     comments = relationship(
         'Comment', back_populates='user', cascade='all, delete-orphan'
     )
 
     sent_connections = relationship(
-        'UserConnection', foreign_keys='UserConnection.requester_id', back_populates='requester', cascade='all, delete-orphan'
+        'UserConnection',
+        foreign_keys='UserConnection.requester_id',
+        back_populates='requester',
+        cascade='all, delete-orphan',
     )
 
     received_connections = relationship(
-        'UserConnection', foreign_keys='UserConnection.addressee_id', back_populates='addressee', cascade='all, delete-orphan'
+        'UserConnection',
+        foreign_keys='UserConnection.addressee_id',
+        back_populates='addressee',
+        cascade='all, delete-orphan',
     )
 
 
@@ -87,5 +96,7 @@ class UserConnection(Base):
 
     __table_args__ = (
         CheckConstraint('requester_id != addressee_id', name='no_self_connection'),
-        UniqueConstraint('requester_id', 'addressee_id', name='unique_connection_request'),
+        UniqueConstraint(
+            'requester_id', 'addressee_id', name='unique_connection_request'
+        ),
     )

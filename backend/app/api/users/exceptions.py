@@ -20,8 +20,6 @@ class UserNotAuthenticatedError(Exception):
     pass
 
 
-
-
 class UserNotFoundError(Exception):
     """
     Exception raised when a user is not found.
@@ -102,8 +100,6 @@ def add_user_exception_handler(app: FastAPI):
                 message=str(exc), error_type='user_not_authenticated', details={}
             ).model_dump(mode='json'),
         )
-
-
 
     @app.exception_handler(UserNotFoundError)
     async def user_not_found_exception_handler(request: Request, exc: UserNotFoundError):

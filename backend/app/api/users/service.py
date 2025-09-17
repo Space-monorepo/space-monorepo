@@ -12,7 +12,7 @@ from app.api.users.exceptions import (
     UserNotFoundError,
 )
 from app.api.users.model import User, UserConnection
-from app.api.users.schema import UserCreate, UserUpdate, UserConnectionResponse
+from app.api.users.schema import UserCreate, UserUpdate
 from app.auth.security import AuthService
 from app.core.transaction import TransactionManager
 from app.utils.schema import PaginationResponse, PaginationSearchParams
@@ -87,10 +87,12 @@ class UserService:
             current_limit=params.limit or 10,
         )
 
-    def request_connection(self, requester_id: UUID, addressee_id: UUID) -> UserConnection:
+    def request_connection(
+        self, requester_id: UUID, addressee_id: UUID
+    ) -> UserConnection:
         """Send a connection request to another user"""
-        requester = self.get_user(requester_id)
-        addressee = self.get_user(addressee_id)
+        _ = self.get_user(requester_id)  # Validate user exists
+        _ = self.get_user(addressee_id)  # Validate user exists
 
         if requester_id == addressee_id:
             raise SelfConnectionError('Cannot send connection request to yourself')
@@ -99,7 +101,9 @@ class UserService:
             requester_id, addressee_id
         )
         if existing_connection:
-            raise ConnectionAlreadyExistsError('Connection already exists between these users')
+            raise ConnectionAlreadyExistsError(
+                'Connection already exists between these users'
+            )
 
         if self.connection_repo.check_rejection_cooldown(requester_id, addressee_id):
             raise ConnectionCooldownError(
@@ -107,9 +111,13 @@ class UserService:
             )
 
         try:
-            return self.connection_repo.create_connection_request(requester_id, addressee_id)
+            return self.connection_repo.create_connection_request(
+                requester_id, addressee_id
+            )
         except Exception as e:
-            raise UnexpectedConnectionError('Unexpected error creating connection request') from e
+            raise UnexpectedConnectionError(
+                'Unexpected error creating connection request'
+            ) from e
 
     def accept_connection(self, connection_id: UUID, user_id: UUID) -> UserConnection:
         """Accept a connection request"""
@@ -123,7 +131,9 @@ class UserService:
         except ConnectionNotFoundError:
             raise
         except Exception as e:
-            raise UnexpectedConnectionError('Unexpected error accepting connection') from e
+            raise UnexpectedConnectionError(
+                'Unexpected error accepting connection'
+            ) from e
 
     def reject_connection(self, connection_id: UUID, user_id: UUID) -> UserConnection:
         """Reject a connection request"""
@@ -137,7 +147,9 @@ class UserService:
         except ConnectionNotFoundError:
             raise
         except Exception as e:
-            raise UnexpectedConnectionError('Unexpected error rejecting connection') from e
+            raise UnexpectedConnectionError(
+                'Unexpected error rejecting connection'
+            ) from e
 
     def delete_connection(self, connection_id: UUID, user_id: UUID) -> bool:
         """Delete an existing connection"""
@@ -151,7 +163,9 @@ class UserService:
         except ConnectionNotFoundError:
             raise
         except Exception as e:
-            raise UnexpectedConnectionError('Unexpected error deleting connection') from e
+            raise UnexpectedConnectionError(
+                'Unexpected error deleting connection'
+            ) from e
 
     def get_connection(self, connection_id: UUID) -> UserConnection:
         """Get connection by ID"""
@@ -160,10 +174,14 @@ class UserService:
             raise ConnectionNotFoundError('Connection not found')
         return connection
 
-    def get_connection_status(self, user1_id: UUID, user2_id: UUID) -> UserConnection | None:
+    def get_connection_status(
+        self, user1_id: UUID, user2_id: UUID
+    ) -> UserConnection | None:
         """Get connection status between two users"""
         return self.connection_repo.check_existing_connection(user1_id, user2_id)
 
-    def validate_connection_participation(self, connection_id: UUID, user_id: UUID) -> bool:
+    def validate_connection_participation(
+        self, connection_id: UUID, user_id: UUID
+    ) -> bool:
         """Validate if user participates in the connection"""
         return self.connection_repo.validate_user_participation(connection_id, user_id)
