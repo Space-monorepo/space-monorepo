@@ -113,25 +113,37 @@ def client_mongo(mongo_db):
 
 
 @pytest.fixture
-def authenticate_client(client_sql, user_on_db):
-    response = client_sql.post(
-        '/users/login',
-        data={'username': user_on_db.email, 'password': 'hashed_password'},
-    )
-    token = response.json().get('access_token')
-    client_sql.headers.update({'Authorization': f'Bearer {token}'})
-    return client_sql
+def authenticate_client(session_sql, user_on_db):
+    def get_db_override():
+        return session_sql
+
+    with TestClient(app) as client:
+        app.dependency_overrides[get_db] = get_db_override
+        response = client.post(
+            '/users/login',
+            data={'username': user_on_db.email, 'password': 'hashed_password'},
+        )
+        token = response.json().get('access_token')
+        client.headers.update({'Authorization': f'Bearer {token}'})
+        yield client
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def authenticate_member_client(client_sql, secondary_user_on_db):
-    response = client_sql.post(
-        '/users/login',
-        data={'username': secondary_user_on_db.email, 'password': 'hashed_password'},
-    )
-    token = response.json().get('access_token')
-    client_sql.headers.update({'Authorization': f'Bearer {token}'})
-    return client_sql
+def authenticate_member_client(session_sql, secondary_user_on_db):
+    def get_db_override():
+        return session_sql
+
+    with TestClient(app) as client:
+        app.dependency_overrides[get_db] = get_db_override
+        response = client.post(
+            '/users/login',
+            data={'username': secondary_user_on_db.email, 'password': 'hashed_password'},
+        )
+        token = response.json().get('access_token')
+        client.headers.update({'Authorization': f'Bearer {token}'})
+        yield client
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture

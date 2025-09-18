@@ -15,7 +15,7 @@ from app.api.post.repository import (
     PostLikesRepository,
 )
 from app.api.rating.repository import RatingRepository
-from app.api.users.repository import UserRepository
+from app.api.users.repository import UserRepository, UserConnectionRepository
 from app.api.badges.repository import BadgeRepository, MemberBadgeRepository
 
 logger = logging.getLogger(__name__)
@@ -98,3 +98,6 @@ class TransactionManager:
 
     def get_comment_likes_repository(self):
         return CommentLikesRepository(self._session)
+
+    def get_user_connection_repository(self):
+        return UserConnectionRepository(self._session)

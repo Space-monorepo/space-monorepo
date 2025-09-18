@@ -13,6 +13,13 @@ class UserStatusEnum(str, Enum):
     inactive = 'inactive'
 
 
+class ConnectionStatusEnum(str, Enum):
+    pending = 'pending'
+    accepted = 'accepted'
+    rejected = 'rejected'
+    blocked = 'blocked'
+
+
 class UserCreate(BaseModel):
     email: EmailStr = Field(
         ..., min_length=1, max_length=255, description='The email address of the user'
@@ -91,6 +98,57 @@ class UserResponse(UserCreate):
                 'status': 'active',
                 'created_at': '2021-01-01T00:00:00Z',
                 'updated_at': '2021-01-01T00:00:00Z',
+            }
+        },
+    )
+
+
+class UserConnectionCreate(BaseModel):
+    addressee_id: uuid.UUID = Field(
+        ..., description='The ID of the user who will receive the connection request'
+    )
+
+
+class UserConnectionUpdate(BaseModel):
+    status: ConnectionStatusEnum = Field(
+        ..., description='The new status of the connection'
+    )
+
+
+class UserConnectionResponse(BaseModel):
+    id: uuid.UUID = Field(..., description='The connection ID')
+    requester_id: uuid.UUID = Field(
+        ..., description='The ID of the user who sent the connection request'
+    )
+    addressee_id: uuid.UUID = Field(
+        ..., description='The ID of the user who received the connection request'
+    )
+    status: ConnectionStatusEnum = Field(
+        ..., description='The current status of the connection'
+    )
+    created_at: datetime = Field(
+        ..., description='The date and time the connection request was created'
+    )
+    updated_at: datetime = Field(
+        ..., description='The date and time the connection was last updated'
+    )
+    rejected_at: datetime | None = Field(
+        None,
+        description='The date and time the connection was rejected (for cooldown control)',
+    )
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        use_enum_values=True,
+        json_schema_extra={
+            'example': {
+                'id': '123e4567-e89b-12d3-a456-426614174000',
+                'requester_id': '123e4567-e89b-12d3-a456-426614174001',
+                'addressee_id': '123e4567-e89b-12d3-a456-426614174002',
+                'status': 'pending',
+                'created_at': '2021-01-01T00:00:00Z',
+                'updated_at': '2021-01-01T00:00:00Z',
+                'rejected_at': None,
             }
         },
     )
