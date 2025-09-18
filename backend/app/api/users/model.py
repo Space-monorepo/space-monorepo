@@ -1,6 +1,15 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, Integer, String, func
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -47,4 +56,47 @@ class User(Base):
 
     comments = relationship(
         'Comment', back_populates='user', cascade='all, delete-orphan'
+    )
+
+    sent_connections = relationship(
+        'UserConnection',
+        foreign_keys='UserConnection.requester_id',
+        back_populates='requester',
+        cascade='all, delete-orphan',
+    )
+
+    received_connections = relationship(
+        'UserConnection',
+        foreign_keys='UserConnection.addressee_id',
+        back_populates='addressee',
+        cascade='all, delete-orphan',
+    )
+
+
+class UserConnection(Base):
+    __tablename__ = 'user_connections'
+
+    id = Column(UUIDColumn, primary_key=True, default=uuid_default, index=True)
+    requester_id = Column(UUIDColumn, ForeignKey('users.id'), nullable=False, index=True)
+    addressee_id = Column(UUIDColumn, ForeignKey('users.id'), nullable=False, index=True)
+    status = Column(String, nullable=False, default='pending')
+    created_at = Column(DateTime, nullable=False, default=func.now())
+    updated_at = Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
+    rejected_at = Column(DateTime, nullable=True)
+
+    requester = relationship(
+        'User', foreign_keys=[requester_id], back_populates='sent_connections'
+    )
+
+    addressee = relationship(
+        'User', foreign_keys=[addressee_id], back_populates='received_connections'
+    )
+
+    __table_args__ = (
+        CheckConstraint('requester_id != addressee_id', name='no_self_connection'),
+        UniqueConstraint(
+            'requester_id', 'addressee_id', name='unique_connection_request'
+        ),
     )
