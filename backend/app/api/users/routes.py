@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
+from app.api.users.model import User
 from app.api.users.schema import (
     LoginSchema,
     UserConnectionCreate,
@@ -86,7 +87,7 @@ def delete_user(
 def request_connection(
     connection_data: UserConnectionCreate,
     session: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> UserConnectionResponse:
     """Send a connection request to another user"""
     with TransactionManager(session) as tm:

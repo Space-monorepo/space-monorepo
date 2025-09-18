@@ -35,17 +35,21 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
         self, requester_id: UUID, addressee_id: UUID
     ) -> UserConnection | None:
         """Check if connection exists between two users (bidirectional)"""
+        # Convert to string to handle type differences
+        requester_str = str(requester_id)
+        addressee_str = str(addressee_id)
+
         return (
             self.db.query(UserConnection)
             .filter(
                 or_(
                     and_(
-                        UserConnection.requester_id == requester_id,
-                        UserConnection.addressee_id == addressee_id,
+                        UserConnection.requester_id == requester_str,
+                        UserConnection.addressee_id == addressee_str,
                     ),
                     and_(
-                        UserConnection.requester_id == addressee_id,
-                        UserConnection.addressee_id == requester_id,
+                        UserConnection.requester_id == addressee_str,
+                        UserConnection.addressee_id == requester_str,
                     ),
                 )
             )
@@ -60,8 +64,8 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
             self.db.query(UserConnection)
             .filter(
                 and_(
-                    UserConnection.requester_id == requester_id,
-                    UserConnection.addressee_id == addressee_id,
+                    UserConnection.requester_id == str(requester_id),
+                    UserConnection.addressee_id == str(addressee_id),
                     UserConnection.status == 'rejected',
                     UserConnection.rejected_at > one_hour_ago,
                 )
@@ -76,7 +80,9 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
     ) -> UserConnection:
         """Create a new connection request"""
         connection = UserConnection(
-            requester_id=requester_id, addressee_id=addressee_id, status='pending'
+            requester_id=str(requester_id),
+            addressee_id=str(addressee_id),
+            status='pending',
         )
 
         self.db.add(connection)
@@ -92,8 +98,8 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
             self.db.query(UserConnection)
             .filter(
                 and_(
-                    UserConnection.id == connection_id,
-                    UserConnection.addressee_id == user_id,
+                    UserConnection.id == str(connection_id),
+                    UserConnection.addressee_id == str(user_id),
                     UserConnection.status == 'pending',
                 )
             )
@@ -116,8 +122,8 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
             self.db.query(UserConnection)
             .filter(
                 and_(
-                    UserConnection.id == connection_id,
-                    UserConnection.addressee_id == user_id,
+                    UserConnection.id == str(connection_id),
+                    UserConnection.addressee_id == str(user_id),
                     UserConnection.status == 'pending',
                 )
             )
@@ -139,10 +145,10 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
             self.db.query(UserConnection)
             .filter(
                 and_(
-                    UserConnection.id == connection_id,
+                    UserConnection.id == str(connection_id),
                     or_(
-                        UserConnection.requester_id == user_id,
-                        UserConnection.addressee_id == user_id,
+                        UserConnection.requester_id == str(user_id),
+                        UserConnection.addressee_id == str(user_id),
                     ),
                 )
             )
@@ -162,8 +168,8 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
         """Get all connections for a user, optionally filtered by status"""
         query = self.db.query(UserConnection).filter(
             or_(
-                UserConnection.requester_id == user_id,
-                UserConnection.addressee_id == user_id,
+                UserConnection.requester_id == str(user_id),
+                UserConnection.addressee_id == str(user_id),
             )
         )
 
@@ -178,10 +184,10 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
             self.db.query(UserConnection)
             .filter(
                 and_(
-                    UserConnection.id == connection_id,
+                    UserConnection.id == str(connection_id),
                     or_(
-                        UserConnection.requester_id == user_id,
-                        UserConnection.addressee_id == user_id,
+                        UserConnection.requester_id == str(user_id),
+                        UserConnection.addressee_id == str(user_id),
                     ),
                 )
             )

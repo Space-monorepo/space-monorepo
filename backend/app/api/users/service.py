@@ -94,7 +94,7 @@ class UserService:
         _ = self.get_user(requester_id)  # Validate user exists
         _ = self.get_user(addressee_id)  # Validate user exists
 
-        if requester_id == addressee_id:
+        if str(requester_id) == str(addressee_id):
             raise SelfConnectionError('Cannot send connection request to yourself')
 
         existing_connection = self.connection_repo.check_existing_connection(
