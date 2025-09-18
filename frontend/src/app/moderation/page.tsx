@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Filter, Eye, Heart, MessageSquare } from "lucide-react";
@@ -343,28 +342,32 @@ export default function ModerationPage() {
     });
 
     // Converter dados da API de moderação para os tipos do componente
-    const convertApiUserToUserReport = (apiUser: any): UserReport => ({
-        id: apiUser.id,
-        reportedUser: {
+    const convertApiUserToUserReport = (apiUser: any): UserReport => {
+        // Tenta pegar o usuário reportado de diferentes formas, priorizando reportedUser, depois user, depois o próprio objeto
+        const reported = apiUser.reportedUser || apiUser.user || apiUser;
+        return {
             id: apiUser.id,
-            name: apiUser.name,
-            profile_picture: apiUser.profile_picture,
-            role: apiUser.role || "member",
-        },
-        reporter: {
-            id: "system",
-            name: "Sistema",
-            profile_picture: "/system-avatar.png",
-            role: "admin",
-        },
-        reason: apiUser.suspension_reason || "Violação das diretrizes da comunidade",
-        description: `Usuário reportado por comportamento inadequado. Status atual: ${apiUser.status}`,
-        date: new Date(apiUser.created_at).toLocaleDateString("pt-BR"),
-        status: apiUser.status === "suspended" ? "Resolvido" : "Em análise",
-        severity: apiUser.report_count > 10 ? "Crítica" : apiUser.report_count > 5 ? "Moderada" : "Leve",
-        confirmations: apiUser.report_count || 0,
-        category: "Comportamento",
-    });
+            reportedUser: {
+                id: reported.id,
+                name: reported.name || reported.username || "Usuário desconhecido",
+                profile_picture: reported.profile_picture || "/no-profile-pic.png",
+                role: reported.role || "member",
+            },
+            reporter: {
+                id: (apiUser.reporter && apiUser.reporter.id) || "system",
+                name: (apiUser.reporter && (apiUser.reporter.name || apiUser.reporter.username)) || "Sistema",
+                profile_picture: (apiUser.reporter && apiUser.reporter.profile_picture) || "/system-avatar.png",
+                role: (apiUser.reporter && apiUser.reporter.role) || "admin",
+            },
+            reason: apiUser.suspension_reason || apiUser.reason || "Violação das diretrizes da comunidade",
+            description: apiUser.description || `Usuário reportado por comportamento inadequado. Status atual: ${apiUser.status}`,
+            date: new Date(apiUser.created_at || apiUser.date).toLocaleDateString("pt-BR"),
+            status: apiUser.status === "suspended" ? "Resolvido" : "Em análise",
+            severity: apiUser.report_count > 10 ? "Crítica" : apiUser.report_count > 5 ? "Moderada" : "Leve",
+            confirmations: apiUser.report_count || 0,
+            category: apiUser.category || "Comportamento",
+        };
+    };
 
     const convertApiPostToPostReport = (apiPost: any): PostReport => ({
         id: apiPost.id,
@@ -373,10 +376,10 @@ export default function ModerationPage() {
             title: apiPost.title,
             content: apiPost.content,
             author: {
-                id: apiPost.user.id,
-                name: apiPost.user.name,
-                profile_picture: apiPost.user.profile_picture,
-                role: apiPost.user.role || "member",
+                id: apiPost.user?.id || 'unknown',
+                name: apiPost.user?.name || apiPost.user?.username || 'Usuário desconhecido',
+                profile_picture: apiPost.user?.profile_picture,
+                role: apiPost.user?.role || "member",
             },
             image: apiPost.image_url,
             likes: apiPost.likes_count || 0,
@@ -404,10 +407,10 @@ export default function ModerationPage() {
             id: apiComment.id,
             content: apiComment.content,
             author: {
-                id: apiComment.user.id,
-                name: apiComment.user.name,
-                profile_picture: apiComment.user.profile_picture,
-                role: apiComment.user.role || "member",
+                id: apiComment.user?.id || 'unknown',
+                name: apiComment.user?.name || apiComment.user?.username || 'Usuário desconhecido',
+                profile_picture: apiComment.user?.profile_picture,
+                role: apiComment.user?.role || "member",
             },
             date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
             postTitle: apiComment.post?.title || "Post não encontrado",
@@ -514,11 +517,9 @@ export default function ModerationPage() {
         clearDetails();
 
         if (tab === "Reportes") {
-            // Reset para primeira tab de reportes e selecionar primeiro item
+            // Reset para primeira tab de reportes
             setReportesActiveTab("usuarios");
-            if (userReports.length > 0) {
-                setSelectedUserReport(userReports[0]);
-            }
+            // A seleção automática será feita pelo useEffect abaixo
         } else if (tab === "Denúncias" && reports.length > 0) {
             setSelectedReport(reports[0]);
         } else if (tab === "Enquetes" && polls.length > 0) {
@@ -527,6 +528,18 @@ export default function ModerationPage() {
             setSelectedAnnouncement(announcements[0]);
         }
     };
+
+    // Seleciona automaticamente o primeiro UserReport ao entrar na aba Reportes
+    useEffect(() => {
+        if (
+            activeTab === "Reportes" &&
+            reportesActiveTab === "usuarios" &&
+            userReports.length > 0 &&
+            !selectedUserReport
+        ) {
+            setSelectedUserReport(userReports[0]);
+        }
+    }, [activeTab, reportesActiveTab, userReports, selectedUserReport]);
 
     // Função para mudar tabs dentro dos reportes
     const handleReportesTabChange = (reportTab: string) => {
@@ -1354,7 +1367,7 @@ export default function ModerationPage() {
                                 </div>
                             </div>
                         )}
-                        {/* Report Details - Usuários */}
+                        {/* Report Details - Usuários com layout do Figma */}
                         {activeTab === "Reportes" && reportesActiveTab === "usuarios" && selectedUserReport && (
                             <div className="max-w-full">
                                 <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
@@ -1365,15 +1378,15 @@ export default function ModerationPage() {
                                                     <div className="flex items-center min-w-60">
                                                         <img
                                                             src={selectedUserReport.reportedUser.profile_picture || "/no-profile-pic.png"}
-                                                            alt={`${selectedUserReport.reportedUser.name} profile picture`}
+                                                            alt={`${selectedUserReport.reportedUser.name} avatar`}
                                                             className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
                                                         />
                                                         <div className="self-stretch my-auto min-w-60 w-[342px]">
                                                             <div className="flex gap-2 items-center w-full h-[23px]">
                                                                 <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
-                                                                    <span className="self-stretch my-auto text-sm text-neutral-800">
+                                                                    <h2 className="self-stretch my-auto text-sm text-neutral-800">
                                                                         {selectedUserReport.reportedUser.name}
-                                                                    </span>
+                                                                    </h2>
                                                                     <CheckmarkFilled
                                                                         className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedUserReport.reportedUser.role)}`}
                                                                         aria-label="Verificado"
@@ -1385,61 +1398,67 @@ export default function ModerationPage() {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex flex-col items-end gap-2">
-                                                        {getSeverityBadge(selectedUserReport.severity)}
-                                                        <span className="text-xs text-[#525252]">
-                                                            {selectedUserReport.confirmations} reportes
-                                                        </span>
-                                                    </div>
                                                 </div>
-                                                <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
-                                                    <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                                                <div className="mt-6 w-full text-sm leading-6 max-md:max-w-full">
+                                                    <div className="flex flex-wrap gap-4 items-center w-full text-neutral-800 max-md:max-w-full">
                                                         <span className="self-stretch my-auto font-semibold text-neutral-800">
-                                                            Motivo do reporte:
+                                                            Motivo:
                                                         </span>
                                                         <span className="self-stretch my-auto text-neutral-800">
                                                             {selectedUserReport.reason}
                                                         </span>
                                                     </div>
-                                                    <div className="mt-4 flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
-                                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
-                                                            Reportado por:
-                                                        </span>
-                                                        <div className="flex items-center gap-2">
-                                                            <img
-                                                                src={selectedUserReport.reporter.profile_picture || "/no-profile-pic.png"}
-                                                                alt={selectedUserReport.reporter.name}
-                                                                className="w-6 h-6 rounded-full object-cover"
-                                                            />
-                                                            <span className="self-stretch my-auto text-neutral-800">
-                                                                {selectedUserReport.reporter.name}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-4 w-full max-md:max-w-full">
-                                                        <h3 className="font-semibold leading-6 text-justify text-neutral-800">
-                                                            Descrição do reporte:
-                                                        </h3>
-                                                        <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
-                                                            {selectedUserReport.description}
-                                                        </p>
-                                                    </div>
-                                                    <div className="mt-4 flex gap-4 items-center">
-                                                        <span className="font-semibold text-neutral-800">Data:</span>
-                                                        <span className="text-neutral-800">{selectedUserReport.date}</span>
-                                                    </div>
-                                                    <div className="mt-2 flex gap-4 items-center">
-                                                        <span className="font-semibold text-neutral-800">Categoria:</span>
-                                                        <span className="text-neutral-800">{selectedUserReport.category}</span>
+                                                    <div className="mt-2 w-full font-medium text-yellow-600 max-md:max-w-full">
+                                                        <p>Investigar usuário</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         </header>
-                                        <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
-                                            <div className="flex flex-wrap gap-2 justify-between items-center w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                                        <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
+                                            <div className="w-full leading-none max-md:max-w-full">
+                                                <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                                                    <div className="flex flex-col">
+                                                        <div className="flex gap-2 items-center">
+                                                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                                Número de reportes:
+                                                            </span>
+                                                            <span className="self-stretch my-auto text-neutral-500">
+                                                                {selectedUserReport.confirmations} reportes
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex gap-2 items-center self-start mt-4">
+                                                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                                Data de entrada:
+                                                            </span>
+                                                            <time className="self-stretch my-auto text-neutral-500">
+                                                                {selectedUserReport.date}
+                                                            </time>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col grow shrink w-[182px]">
+                                                        <div className="flex gap-2 items-center self-start">
+                                                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                                Reputação:
+                                                            </span>
+                                                            <span className="self-stretch my-auto text-neutral-500">
+                                                                {selectedUserReport.status === "Resolvido" ? "Suspenso" : "Sob Observação"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex gap-2 items-center mt-4 w-full">
+                                                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                                Popularidade:
+                                                            </span>
+                                                            <span className="self-stretch my-auto text-neutral-500">
+                                                                {Math.floor(Math.random() * 5000)} visualizações
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
                                                 <button
                                                     onClick={handleDissolveReport}
-                                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                                                    className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
                                                 >
                                                     <span className="self-stretch my-auto text-neutral-800">
                                                         Tolerar
@@ -1447,7 +1466,7 @@ export default function ModerationPage() {
                                                 </button>
                                                 <button
                                                     onClick={handleResolveReport}
-                                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                                                    className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
                                                 >
                                                     <span className="self-stretch my-auto text-zinc-100">
                                                         Suspender
@@ -1478,7 +1497,7 @@ export default function ModerationPage() {
                                                             <div className="flex gap-2 items-center w-full h-[23px]">
                                                                 <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                                                                     <span className="self-stretch my-auto text-sm text-neutral-800">
-                                                                        {selectedPostReport.reportedPost.author.name}
+                                                                        {selectedPostReport.reportedPost.author.name || 'Nome não encontrado'}
                                                                     </span>
                                                                     <CheckmarkFilled
                                                                         className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedPostReport.reportedPost.author.role)}`}
@@ -1621,7 +1640,7 @@ export default function ModerationPage() {
                                                             <div className="flex gap-2 items-center w-full h-[23px]">
                                                                 <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                                                                     <span className="self-stretch my-auto text-sm text-neutral-800">
-                                                                        {selectedCommentReport.reportedComment.author.name}
+                                                                        {selectedCommentReport.reportedComment.author.name || 'Nome não encontrado'}
                                                                     </span>
                                                                     <CheckmarkFilled
                                                                         className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedCommentReport.reportedComment.author.role)}`}
@@ -2037,6 +2056,172 @@ export default function ModerationPage() {
                 />
             )}
 
+        </div>
+    );
+}
+
+// Componente para buscar e exibir detalhes reais do reporte de usuário da API
+function UserReportDetails({ reportId, onTolerate, onSuspend }: {
+    reportId: string;
+    onTolerate: () => void;
+    onSuspend: () => void;
+}) {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [report, setReport] = useState<any>(null);
+
+    useEffect(() => {
+        async function fetchReport() {
+            try {
+                setLoading(true);
+                setError(null);
+                const response = await fetch(`/api/reports/users/${reportId}`);
+                if (!response.ok) {
+                    throw new Error("Erro ao buscar reporte");
+                }
+                const data = await response.json();
+                setReport(data);
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchReport();
+    }, [reportId]);
+
+    if (loading) {
+        return (
+            <div className="max-w-full">
+                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                    <div className="p-8 text-center">Carregando...</div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="max-w-full">
+                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                    <div className="p-8 text-center text-red-500">Erro: {error}</div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!report) return null;
+
+    return (
+        <div className="w-full">
+            <div className="pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                <article className="bg-white w-full">
+                    <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                        <div className="w-full max-md:max-w-full">
+                            <div className="flex justify-between items-start w-full max-md:max-w-full">
+                                <div className="flex items-center min-w-60">
+                                    <img
+                                        src={report.reportedUser?.profile_picture || "/no-profile-pic.png"}
+                                        alt={`${report.reportedUser?.name} avatar`}
+                                        className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                                    />
+                                    <div className="self-stretch my-auto min-w-60 w-[342px]">
+                                        <div className="flex gap-2 items-center w-full h-[23px]">
+                                            <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                                <h2 className="self-stretch my-auto text-sm text-neutral-800">
+                                                    {report.reportedUser?.name}
+                                                </h2>
+                                                <img
+                                                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/0915c1f8d702c90f4deafed21adc581f37a91002?placeholderIfAbsent=true"
+                                                    alt="Role indicator"
+                                                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
+                                                />
+                                                <span className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-zinc-100">
+                                                    {translateUserRole(report.reportedUser?.role || "member")}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-6 w-full text-sm leading-6 max-md:max-w-full">
+                                <div className="flex flex-wrap gap-4 items-center w-full text-neutral-800 max-md:max-w-full">
+                                    <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                        Motivo:
+                                    </span>
+                                    <span className="self-stretch my-auto text-neutral-800">
+                                        {report.reason}
+                                    </span>
+                                </div>
+                                <div className="mt-2 w-full font-medium text-yellow-600 max-md:max-w-full">
+                                    <p>Investigar usuário</p>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+                    <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
+                        <div className="w-full leading-none max-md:max-w-full">
+                            <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                                <div className="flex flex-col">
+                                    <div className="flex gap-2 items-center">
+                                        <span className="self-stretch my-auto font-medium text-neutral-800">
+                                            Número de reportes:
+                                        </span>
+                                        <span className="self-stretch my-auto text-neutral-500">
+                                            {report.confirmations} reportes
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-2 items-center self-start mt-4">
+                                        <span className="self-stretch my-auto font-medium text-neutral-800">
+                                            Data de entrada:
+                                        </span>
+                                        <time className="self-stretch my-auto text-neutral-500">
+                                            {report.date}
+                                        </time>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col grow shrink w-[182px]">
+                                    <div className="flex gap-2 items-center self-start">
+                                        <span className="self-stretch my-auto font-medium text-neutral-800">
+                                            Reputação:
+                                        </span>
+                                        <span className="self-stretch my-auto text-neutral-500">
+                                            {report.status === "Resolvido" ? "Suspenso" : "Sob Observação"}
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-2 items-center mt-4 w-full">
+                                        <span className="self-stretch my-auto font-medium text-neutral-800">
+                                            Popularidade:
+                                        </span>
+                                        <span className="self-stretch my-auto text-neutral-500">
+                                            {report.popularity || Math.floor(Math.random() * 5000)} visualizações
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                            <button
+                                onClick={onTolerate}
+                                className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                            >
+                                <span className="self-stretch my-auto text-neutral-800">
+                                    Tolerar
+                                </span>
+                            </button>
+                            <button
+                                onClick={onSuspend}
+                                className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                            >
+                                <span className="self-stretch my-auto text-zinc-100">
+                                    Suspender
+                                </span>
+                            </button>
+                        </div>
+                    </section>
+                </article>
+            </div>
         </div>
     );
 }
