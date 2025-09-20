@@ -52,7 +52,7 @@ const ModalResponsibility: React.FC<{ onClose?: () => void }> = ({ onClose }) =>
 
   return (
     <>
-      <div className="fixed inset-0 flex items-center justify-center bg-[#858585]/80 backdrop-blur-xd z-50">
+      <div className="fixed inset-0 flex items-center justify-center bg-[#858585]/80 backdrop-blur-sm z-50">
         <article className="flex flex-col gap-12 items-center pt-8 shadow-sm bg-neutral-800 w-[640px] max-md:w-[90%] max-sm:w-[95%]">
           <div className="flex flex-col gap-5 items-start w-[577px] max-md:w-[90%] max-sm:w-[95%]">
             <header className="flex flex-col gap-4 items-start w-full">

@@ -40,7 +40,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
 
     const modalContent = (
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/10 backdrop-blur-xs"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/10 backdrop-blur-sm"
             onClick={handleBackdropClick}
         >
             <div className="bg-white shadow-lg max-w-[680px] w-full p-8 relative">

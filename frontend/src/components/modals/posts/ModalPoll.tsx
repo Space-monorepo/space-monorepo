@@ -411,7 +411,7 @@ export function ModalPoll({ onClose, communityId }: ModalPollProps) {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#858585]/80 backdrop-blur-xd z-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#858585]/80 backdrop-blur-sm z-50">
       <article className={`flex relative flex-col items-start mx-auto my-0 shadow-sm bg-zinc-100 border-stone-300
         ${currentStep === 1 ? 'min-w-[640px] min-h-[372px]' : ''}
         ${currentStep === 2 ? 'min-w-[926px] min-h-[673px]' : ''}
