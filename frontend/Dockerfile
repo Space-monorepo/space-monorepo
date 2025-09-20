@@ -1,31 +1,20 @@
-# Etapa de build
-FROM node:18-alpine AS builder
+# Dockerfile para desenvolvimento
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Copia apenas os arquivos necessários para o build
+# Copia os arquivos de dependências
 COPY package.json package-lock.json ./
 
-RUN npm install
+RUN npm install --force
 
+# Copia todo o código para dentro do container (após instalar dependências)
 COPY . .
 
-# Gera o build de produção
+# Build de produção (agora com todos os arquivos presentes)
 RUN npm run build
-
-# Etapa de runtime
-FROM node:18-alpine AS runner
-
-WORKDIR /app
-
-ENV NODE_ENV production
-
-# Copia só o necessário do builder
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 
+# Comando para rodar em modo produção
 CMD ["npm", "start"]
