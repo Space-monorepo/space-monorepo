@@ -58,9 +58,21 @@ export const fetchCommunityReports = async (token: string, communityId: string):
   return fetchPostsByType(token, communityId, 'complaint');
 };
 
+// Busca campanhas reais do endpoint específico de campanhas
 export const fetchCommunityCampaigns = async (token: string, communityId: string): Promise<PostsListFeed> => {
-  console.log('Calling fetchPostsByType with campaign type');
-  return fetchPostsByType(token, communityId, 'campaign');
+  const url = `${API_URL}/posts/${communityId}/community/list-posts?type_post=campaign`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Erro ao carregar campanhas da comunidade' }));
+    throw new Error(errorData.message || 'Erro ao carregar campanhas da comunidade');
+  }
+  return response.json();
 };
 
 export const fetchCommunityAnnouncements = async (token: string, communityId: string): Promise<PostsListFeed> => {

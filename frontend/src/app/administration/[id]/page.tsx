@@ -815,9 +815,9 @@ export default function CommunityAdminPage({
                 {activeTab === "Anúncios" &&
                   !postsLoading &&
                   announcements.length > 0 &&
-                  announcements.map((announcement) => (
+                  announcements.map((announcement, index) => (
                     <div
-                      key={announcement.id}
+                      key={`${announcement.id}-${index}`}
                       className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedAnnouncement?.id === announcement.id
                         ? "bg-[#f4f4f4]"
                         : ""
