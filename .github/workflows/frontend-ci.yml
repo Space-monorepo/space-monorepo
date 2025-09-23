@@ -33,7 +33,22 @@ jobs:
       #     cd frontend
       #     npm run test
 
-      - name: Build
+
+      - name: Criar service_account.json a partir do secret
+        run: echo "$GDRIVE_SERVICE_ACCOUNT_JSON" > frontend/service_account.json
+        env:
+          GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Build Docker image
         run: |
           cd frontend
-          npm run build || true
+          docker build -t thelipesousa/frontend:latest .
+
+      - name: Login no Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Docker image
+        run: docker push thelipesousa/frontend:latest

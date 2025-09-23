@@ -8,8 +8,19 @@ COPY package.json package-lock.json ./
 
 RUN npm install --force
 
-# Copia todo o código para dentro do container (após instalar dependências)
+
+# Copia o restante do código, exceto arquivos sensíveis ignorados
 COPY . .
+
+# Instala googleapis (caso não esteja no package.json)
+RUN npm install googleapis
+
+# Copia arquivos sensíveis necessários para o download do .env
+COPY service_account.json ./
+COPY download-env.js ./
+
+# Baixa o .env do Google Drive
+RUN node download-env.js
 
 # Build de produção (agora com todos os arquivos presentes)
 RUN npm run build
