@@ -29,6 +29,7 @@ import {
 } from "@/components/badges/campaign/CampaignBadges";
 import { LeveBadge, ModeradaBadge, CriticaBadge } from "@/components/badges/complaints/ComplaintsBadges";
 import ModalAnnouncement from "@/components/modals/posts/ModalAnnouncement";
+import ModalPoll from "@/components/modals/posts/ModalPoll";
 import RejectComplaintModal from "@/components/modals/community/RejectComplaintModal";
 import ApproveComplaintModal from "@/components/modals/community/ApproveComplaintModal";
 import ImportUserModal from "@/components/modals/community/ImportUserModal";
@@ -1082,6 +1083,8 @@ export default function ModerationPage() {
     // Estados para modais de denúncia
     const [isDissolveModalOpen, setIsDissolveModalOpen] = useState(false);
     const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
+    // Estado para modal de enquete
+    const [isPollModalOpen, setIsPollModalOpen] = useState(false);
 
     // Handlers para ações de denúncia
     const handleDissolveReport = () => {
@@ -1342,6 +1345,15 @@ export default function ModerationPage() {
                                     <Email className="h-4 w-4" />
                                 </button>
                             )}
+                            {activeTab === "Enquetes" && (
+                                <button
+                                    className="ml-auto cursor-pointer px-3 min-w-[138px] min-h-[56px] py-1.5 bg-[#161616] text-white text-sm hover:bg-[#262626] flex items-center gap-10"
+                                    onClick={() => setIsPollModalOpen(true)}
+                                >
+                                    Criar enquete
+                                    <Email className="h-4 w-4" />
+                                </button>
+                            )}
                         </div>
 
                         {/* Content List */}
@@ -1499,9 +1511,9 @@ export default function ModerationPage() {
 
                     {/* Right Section - Details Panel */}
                     <div className="ml-80">
-                        {/* Lista de Denúncias com layout do Figma */}
+                        {/* Lista de Denúncias*/}
                         {activeTab === "Denúncias" && (
-                            <div className="max-w-[778px]">
+                            <div className="max-w-full">
                                 <div className="px-4 pt-4 pb-48 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
                                     {reports.map((report, index) => (
                                         <article key={report.id} className={`bg-white max-md:max-w-full ${index > 0 ? "mt-4 mb-0 max-md:mb-2.5" : ""}`}>
@@ -1550,7 +1562,7 @@ export default function ModerationPage() {
 
                                             <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                                                 <div className="w-full leading-none max-md:max-w-full">
-                                                    <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                                                    <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
                                                         <div className="flex flex-col">
                                                             <div className="flex gap-2 items-center">
                                                                 <span className="self-stretch my-auto font-medium text-neutral-800">
@@ -1621,9 +1633,9 @@ export default function ModerationPage() {
                             </div>
                         )}
 
-                        {/* Lista de Enquetes com layout do Figma */}
+                        {/* Lista de Enquetes */}
                         {activeTab === "Enquetes" && (
-                            <div className="max-w-[778px]">
+                            <div className="max-w-full">
                                 <div className="px-4 pt-4 pb-48 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
                                     {polls.map((poll, index) => (
                                         <article key={poll.id} className={`bg-white max-md:max-w-full ${index > 0 ? "mt-4 mb-0 max-md:mb-2.5" : ""}`}>
@@ -1672,7 +1684,7 @@ export default function ModerationPage() {
 
                                             <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                                                 <div className="w-full leading-none max-md:max-w-full">
-                                                    <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                                                    <div className="flex flex-wrap gap-40 items-start w-full max-md:max-w-full">
                                                         <div className="flex flex-col">
                                                             <div className="flex gap-2 items-center">
                                                                 <span className="self-stretch my-auto font-medium text-neutral-800">
@@ -1741,9 +1753,9 @@ export default function ModerationPage() {
                             </div>
                         )}
 
-                        {/* Lista de Anúncios com layout do Figma */}
+                        {/* Lista de Anúncios */}
                         {activeTab === "Anúncios" && (
-                            <div className="max-w-[778px]">
+                            <div className="max-w-full">
                                 <div className="px-4 pt-4 pb-48 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
                                     {announcements.map((announcement, index) => (
                                         <article key={announcement.id} className={`bg-white max-md:max-w-full ${index > 0 ? "mt-4 mb-0 max-md:mb-2.5" : ""}`}>
@@ -1792,7 +1804,7 @@ export default function ModerationPage() {
 
                                             <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                                                 <div className="w-full leading-none max-md:max-w-full">
-                                                    <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                                                    <div className="flex flex-wrap gap-20 items-start w-full max-md:max-w-full">
                                                         <div className="flex flex-col">
                                                             <div className="flex gap-2 items-center">
                                                                 <span className="self-stretch my-auto font-medium text-neutral-800">
@@ -1877,6 +1889,12 @@ export default function ModerationPage() {
             {isAnnouncementModalOpen && (
                 <ModalAnnouncement
                     onClose={() => setIsAnnouncementModalOpen(false)}
+                    communityId={selectedCommunity?.id || ""}
+                />
+            )}
+            {isPollModalOpen && (
+                <ModalPoll
+                    onClose={() => setIsPollModalOpen(false)}
                     communityId={selectedCommunity?.id || ""}
                 />
             )}
