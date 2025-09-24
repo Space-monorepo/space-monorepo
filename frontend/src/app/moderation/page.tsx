@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Filter, Eye, Heart, MessageSquare } from "lucide-react";
+import { ArrowLeft, Filter, Heart, MessageSquare } from "lucide-react";
+import { View } from "@carbon/icons-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
@@ -1428,53 +1429,36 @@ export default function ModerationPage() {
                                             {getSeverityBadge(report.severity)}
                                             <div className="flex items-center gap-1">
                                                 <span className="text-xs text-[#525252]">{report.accesses || 0}</span>
-                                                <Eye className="h-3 w-3 text-[#525252]" />
+                                                <View className="h-4 w-4 text-[#161616]" />
                                             </div>
                                         </div>
                                     </div>
                                 ))}
 
                             {/* Polls List */}
-                            {activeTab === "Enquetes" &&
-                                polls.map((poll) => (
-                                    <div
-                                        key={poll.id}
-                                        className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedPoll?.id === poll.id
-                                            ? "bg-[#f4f4f4]"
-                                            : ""
-                                            }`}
-                                        onClick={() => setSelectedPoll(poll)}
-                                    >
-                                        <div className="mb-2">
-                                            <h3 className="font-medium text-sm mb-1">
-                                                {poll.title}
-                                            </h3>
-                                            <p className="text-xs text-[#525252] mb-1">
-                                                Autor: {poll.author}
-                                            </p>
-                                            <p className="text-xs text-[#525252] mb-2">
-                                                {poll.votes} votos
-                                            </p>
-                                            <p className="text-xs text-[#525252] mb-2">
-                                                {poll.date}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <span className={`px-2 py-1 rounded text-xs ${poll.status === "Ativa"
-                                                ? "bg-green-100 text-green-800"
-                                                : poll.status === "Encerrada"
-                                                    ? "bg-gray-100 text-gray-800"
-                                                    : "bg-yellow-100 text-yellow-800"
-                                                }`}>
-                                                {poll.status}
-                                            </span>
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-xs text-[#525252]">{poll.votes || 0}</span>
-                                                <Eye className="h-3 w-3 text-[#525252]" />
+                            {activeTab === "Enquetes" && (
+                                <div className="flex flex-col mt-4">
+                                    {polls.map((poll) => (
+                                        <div
+                                            key={poll.id}
+                                            className={`w-full p-4 cursor-pointer transition-colors rounded-md border border-transparent ${selectedPoll?.id === poll.id ? 'bg-zinc-100' : 'bg-white hover:bg-zinc-50'}`}
+                                            onClick={() => setSelectedPoll(poll)}
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[12px] font-normal text-neutral-500">{poll.date}</span>
+                                                <span className="flex items-center gap-1 text-[12px] font-normal text-neutral-500">
+                                                    {poll.votes ? `${poll.votes.toLocaleString('pt-BR')} mil` : '0'}
+                                                    <View className="h-4 w-4 text-[#161616]" />
+                                                </span>
+                                            </div>
+                                            <div className="mt-1 text-[16px] font-normal text-black">{poll.title}</div>
+                                            <div className="mt-1 text-[12px] font-normal text-neutral-500">
+                                                Moderador: {poll.author}
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            )}
 
                             {/* Announcements List */}
                             {activeTab === "Anúncios" &&
@@ -1510,7 +1494,7 @@ export default function ModerationPage() {
                                             </span>
                                             <div className="flex items-center gap-1">
                                                 <span className="text-xs text-[#525252]">{announcement.views || 0}</span>
-                                                <Eye className="h-3 w-3 text-[#525252]" />
+                                                <View className="h-4 w-4 text-[#161616]" />
                                             </div>
                                         </div>
                                     </div>
