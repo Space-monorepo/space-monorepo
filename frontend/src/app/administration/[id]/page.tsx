@@ -623,7 +623,7 @@ export default function CommunityAdminPage({
         {/* Left Navigation - Fixed */}
         <div className="fixed left-64 top-1 w-64 bg-white border-r border-[#e0e0e0] h-screen z-20 overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 p-6 border-b border-[#e0e0e0] bg-white">
+          <div className="sticky top-0 p-6 border-[#e0e0e0] bg-white">
             <div className="flex items-center gap-3 mb-4">
               <Link href="/administration" className="p-1 hover:bg-[#e5e5e5]">
                 <ArrowLeft className="h-5 w-5 text-[#525252]" />

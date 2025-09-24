@@ -130,7 +130,7 @@ export default function NotificacoesPage() {
         {/* Left Navigation - Fixo igual CommunityAdminPage */}
         <div className="fixed left-64 top-0 w-64 bg-white border-r border-[#e0e0e0] h-screen z-20 overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 p-6 border-b border-[#e0e0e0] bg-white flex items-center gap-3">
+          <div className="sticky top-0 p-6 border-[#e0e0e0] bg-white flex items-center gap-3">
             <ArrowLeft className="h-5 w-5 text-[#525252]" />
             <h1 className="text-lg font-medium">Notificações</h1>
           </div>
