@@ -1,4 +1,7 @@
+
 "use client"
+
+import { Close } from "@carbon/icons-react";
 
 import { useState, useEffect } from "react"
 import { ArrowLeft, Filter, SortDesc, Eye, X, ArrowUp, MessageSquare } from "lucide-react"
@@ -430,11 +433,7 @@ export default function NotificacoesPage() {
                                   className="flex gap-8 items-center px-4 py-3 w-12 bg-neutral-200 hover:bg-neutral-300 transition-colors"
                                   aria-label="Rejeitar conexão"
                                 >
-                                  <img
-                                    src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/4ce6a2455078d411faf868ea1736e62dc887f0db?placeholderIfAbsent=true"
-                                    className="object-contain self-stretch my-auto w-4 aspect-square"
-                                    alt=""
-                                  />
+                                  <Close className="object-contain self-stretch my-auto w-4 aspect-square" aria-label="Fechar" />
                                 </button>
                               </>
                             )}
