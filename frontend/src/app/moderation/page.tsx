@@ -191,6 +191,9 @@ export default function ModerationPage() {
                                                         className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedUser.role)}`}
                                                         aria-label="Verificado"
                                                     />
+                                                    <div className="self-stretch my-auto text-[10px] text-black">
+                                                        •
+                                                    </div>
                                                     <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedUser.role)}`}>
                                                         {translateUserRole(report.reportedUser.role || "member")}
                                                     </span>
@@ -321,6 +324,9 @@ export default function ModerationPage() {
                                                         className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedPost.author.role)}`}
                                                         aria-label="Verificado"
                                                     />
+                                                    <div className="self-stretch my-auto text-[10px] text-black">
+                                                        •
+                                                    </div>
                                                     <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedPost.author.role)}`}>
                                                         {translateUserRole(report.reportedPost.author.role || "member")}
                                                     </span>
@@ -459,6 +465,9 @@ export default function ModerationPage() {
                                                         className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedComment.author.role)}`}
                                                         aria-label="Verificado"
                                                     />
+                                                    <div className="self-stretch my-auto text-[10px] text-black">
+                                                        •
+                                                    </div>
                                                     <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedComment.author.role)}`}>
                                                         {translateUserRole(report.reportedComment.author.role || "member")}
                                                     </span>
@@ -1536,6 +1545,9 @@ export default function ModerationPage() {
                                                                             className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.user.role)}`}
                                                                             aria-label="Verificado"
                                                                         />
+                                                                        <div className="self-stretch my-auto text-[10px] text-black">
+                                                                            •
+                                                                        </div>
                                                                         <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.user.role)}`}>
                                                                             {translateUserRole(report.user.role || "member")}
                                                                         </span>
@@ -1658,6 +1670,9 @@ export default function ModerationPage() {
                                                                             className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(poll.user.role)}`}
                                                                             aria-label="Verificado"
                                                                         />
+                                                                        <div className="self-stretch my-auto text-[10px] text-black">
+                                                                            •
+                                                                        </div>
                                                                         <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(poll.user.role)}`}>
                                                                             {translateUserRole(poll.user.role || "member")}
                                                                         </span>
@@ -1778,6 +1793,9 @@ export default function ModerationPage() {
                                                                             className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(announcement.user.role)}`}
                                                                             aria-label="Verificado"
                                                                         />
+                                                                        <div className="self-stretch my-auto text-[10px] text-black">
+                                                                            •
+                                                                        </div>
                                                                         <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(announcement.user.role)}`}>
                                                                             {translateUserRole(announcement.user.role || "member")}
                                                                         </span>
