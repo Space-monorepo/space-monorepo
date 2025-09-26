@@ -28,11 +28,17 @@ class ConversationParticipant(BaseModel):
 
 # Message Attachment schemas
 class MessageAttachmentCreate(BaseModel):
-    file_name: str = Field(..., min_length=1, max_length=255, description='The file name')
+    file_name: str = Field(
+        ..., min_length=1, max_length=255, description='The file name'
+    )
     file_size: int = Field(..., gt=0, description='The file size in bytes')
-    file_type: str = Field(..., min_length=1, max_length=100, description='The MIME type')
+    file_type: str = Field(
+        ..., min_length=1, max_length=100, description='The MIME type'
+    )
     file_url: str = Field(..., min_length=1, max_length=500, description='The file URL')
-    thumbnail_url: str | None = Field(None, max_length=500, description='The thumbnail URL')
+    thumbnail_url: str | None = Field(
+        None, max_length=500, description='The thumbnail URL'
+    )
 
 
 class MessageAttachmentResponse(MessageAttachmentCreate):
@@ -134,10 +140,10 @@ class MessageResponse(BaseModel):
                 'sender': {
                     'id': '123e4567-e89b-12d3-a456-426614174002',
                     'name': 'John Doe',
-                    'profile_image_url': 'https://example.com/profile.jpg'
+                    'profile_image_url': 'https://example.com/profile.jpg',
                 },
                 'reply_to_message': None,
-                'attachments': []
+                'attachments': [],
             }
         },
     )
@@ -155,7 +161,9 @@ class ConversationResponse(BaseModel):
     user1_id: uuid.UUID = Field(..., description='The first user ID')
     user2_id: uuid.UUID = Field(..., description='The second user ID')
     created_at: datetime = Field(..., description='The conversation creation timestamp')
-    updated_at: datetime = Field(..., description='The conversation last update timestamp')
+    updated_at: datetime = Field(
+        ..., description='The conversation last update timestamp'
+    )
     last_message_id: uuid.UUID | None = Field(
         None, description='The ID of the last message'
     )
@@ -168,7 +176,9 @@ class ConversationResponse(BaseModel):
     )
 
     # Computed fields
-    unread_count: int = Field(0, description='Number of unread messages for the current user')
+    unread_count: int = Field(
+        0, description='Number of unread messages for the current user'
+    )
     other_participant: ConversationParticipant = Field(
         ..., description='The other participant (not the current user)'
     )
@@ -186,12 +196,12 @@ class ConversationResponse(BaseModel):
                 'user1': {
                     'id': '123e4567-e89b-12d3-a456-426614174001',
                     'name': 'John Doe',
-                    'profile_image_url': 'https://example.com/john.jpg'
+                    'profile_image_url': 'https://example.com/john.jpg',
                 },
                 'user2': {
                     'id': '123e4567-e89b-12d3-a456-426614174002',
                     'name': 'Jane Smith',
-                    'profile_image_url': 'https://example.com/jane.jpg'
+                    'profile_image_url': 'https://example.com/jane.jpg',
                 },
                 'last_message': {
                     'id': '123e4567-e89b-12d3-a456-426614174003',
@@ -203,8 +213,8 @@ class ConversationResponse(BaseModel):
                 'other_participant': {
                     'id': '123e4567-e89b-12d3-a456-426614174002',
                     'name': 'Jane Smith',
-                    'profile_image_url': 'https://example.com/jane.jpg'
-                }
+                    'profile_image_url': 'https://example.com/jane.jpg',
+                },
             }
         },
     )
@@ -232,7 +242,9 @@ class TypingEvent(BaseModel):
 
 class MessageReadEvent(BaseModel):
     message_id: uuid.UUID = Field(..., description='The message ID that was read')
-    read_by_user_id: uuid.UUID = Field(..., description='The user ID who read the message')
+    read_by_user_id: uuid.UUID = Field(
+        ..., description='The user ID who read the message'
+    )
 
 
 class JoinConversationEvent(BaseModel):
@@ -258,11 +270,11 @@ class ImageFileValidation(BaseModel):
     max_size_mb: int = Field(10, description='Maximum size in MB for images')
     allowed_extensions: List[str] = Field(
         default=['jpg', 'jpeg', 'png', 'gif', 'webp'],
-        description='Allowed image extensions'
+        description='Allowed image extensions',
     )
     allowed_mime_types: List[str] = Field(
         default=['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-        description='Allowed MIME types for images'
+        description='Allowed MIME types for images',
     )
 
 
@@ -270,7 +282,7 @@ class DocumentFileValidation(BaseModel):
     max_size_mb: int = Field(25, description='Maximum size in MB for documents')
     allowed_extensions: List[str] = Field(
         default=['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx'],
-        description='Allowed document extensions'
+        description='Allowed document extensions',
     )
     allowed_mime_types: List[str] = Field(
         default=[
@@ -281,9 +293,9 @@ class DocumentFileValidation(BaseModel):
             'application/vnd.ms-excel',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'application/vnd.ms-powerpoint',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         ],
-        description='Allowed MIME types for documents'
+        description='Allowed MIME types for documents',
     )
 
 
@@ -291,12 +303,11 @@ class VideoFileValidation(BaseModel):
     max_size_mb: int = Field(50, description='Maximum size in MB for videos')
     max_duration_minutes: int = Field(2, description='Maximum duration in minutes')
     allowed_extensions: List[str] = Field(
-        default=['mp4', 'webm', 'mov'],
-        description='Allowed video extensions'
+        default=['mp4', 'webm', 'mov'], description='Allowed video extensions'
     )
     allowed_mime_types: List[str] = Field(
         default=['video/mp4', 'video/webm', 'video/quicktime'],
-        description='Allowed MIME types for videos'
+        description='Allowed MIME types for videos',
     )
 
 
@@ -304,18 +315,19 @@ class AudioFileValidation(BaseModel):
     max_size_mb: int = Field(10, description='Maximum size in MB for audio')
     max_duration_minutes: int = Field(5, description='Maximum duration in minutes')
     allowed_extensions: List[str] = Field(
-        default=['mp3', 'wav', 'ogg', 'm4a'],
-        description='Allowed audio extensions'
+        default=['mp3', 'wav', 'ogg', 'm4a'], description='Allowed audio extensions'
     )
     allowed_mime_types: List[str] = Field(
         default=['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4'],
-        description='Allowed MIME types for audio'
+        description='Allowed MIME types for audio',
     )
 
 
 class FileValidationResult(BaseModel):
     is_valid: bool = Field(..., description='Whether the file is valid')
-    error_message: str | None = Field(None, description='Error message if validation failed')
+    error_message: str | None = Field(
+        None, description='Error message if validation failed'
+    )
     file_info: dict | None = Field(None, description='File information if valid')
     virus_scan_passed: bool = Field(True, description='Whether virus scan passed')
 
@@ -325,18 +337,17 @@ class ConversationSearchParams(BaseModel):
     """
     Search params for conversations with chat-specific functionality.
     """
-    name: str | None = Field(None, max_length=100, description='Search term for participant names')
-    offset: int | None = Field(0, description="The offset to apply to the search")
-    limit: int | None = Field(20, ge=1, le=100, description="The limit to apply to the search")
+
+    name: str | None = Field(
+        None, max_length=100, description='Search term for participant names'
+    )
+    offset: int | None = Field(0, description='The offset to apply to the search')
+    limit: int | None = Field(
+        20, ge=1, le=100, description='The limit to apply to the search'
+    )
 
     model_config = ConfigDict(
-        json_schema_extra={
-            'example': {
-                'name': 'john',
-                'offset': 0,
-                'limit': 20
-            }
-        }
+        json_schema_extra={'example': {'name': 'john', 'offset': 0, 'limit': 20}}
     )
 
 
@@ -345,19 +356,18 @@ class MessageSearchParams(BaseModel):
     Message search params with reverse pagination support.
     Uses offset/limit but also supports before_message_id for chat-specific needs.
     """
-    offset: int | None = Field(0, description="The offset to apply to the search")
-    limit: int | None = Field(50, ge=1, le=100, description="The limit to apply to the search")
+
+    offset: int | None = Field(0, description='The offset to apply to the search')
+    limit: int | None = Field(
+        50, ge=1, le=100, description='The limit to apply to the search'
+    )
     before_message_id: uuid.UUID | None = Field(
         None, description='Get messages before this message ID (for reverse pagination)'
     )
 
     model_config = ConfigDict(
         json_schema_extra={
-            'example': {
-                'offset': 0,
-                'limit': 50,
-                'before_message_id': None
-            }
+            'example': {'offset': 0, 'limit': 50, 'before_message_id': None}
         }
     )
 
@@ -373,7 +383,9 @@ class ConnectionStatusCheck(BaseModel):
 
 # Rate limiting schemas
 class RateLimitInfo(BaseModel):
-    messages_sent: int = Field(..., description='Number of messages sent in current window')
+    messages_sent: int = Field(
+        ..., description='Number of messages sent in current window'
+    )
     limit: int = Field(..., description='Maximum messages allowed per window')
     window_minutes: int = Field(..., description='Time window in minutes')
     reset_at: datetime = Field(..., description='When the limit resets')
@@ -392,7 +404,7 @@ class ChatErrorResponse(BaseModel):
             'example': {
                 'error_code': 'CONVERSATION_NOT_FOUND',
                 'message': 'Conversation not found or you do not have access to it',
-                'details': None
+                'details': None,
             }
         }
     )
@@ -401,7 +413,10 @@ class ChatErrorResponse(BaseModel):
 # Bulk operations schemas
 class BulkMarkAsReadRequest(BaseModel):
     message_ids: List[uuid.UUID] = Field(
-        ..., min_length=1, max_length=100, description='List of message IDs to mark as read'
+        ...,
+        min_length=1,
+        max_length=100,
+        description='List of message IDs to mark as read',
     )
 
 
@@ -417,22 +432,16 @@ class BulkMarkAsReadResponse(BaseModel):
 # Chat configuration and constants schemas
 class ChatValidationConstants(BaseModel):
     max_message_length: int = Field(2000, description='Maximum message content length')
-    rate_limit_messages_per_minute: int = Field(60, description='Rate limit for messages per minute')
+    rate_limit_messages_per_minute: int = Field(
+        60, description='Rate limit for messages per minute'
+    )
     max_file_size_mb: dict = Field(
-        default={
-            'image': 10,
-            'document': 25,
-            'video': 50,
-            'audio': 10
-        },
-        description='Maximum file sizes by type in MB'
+        default={'image': 10, 'document': 25, 'video': 50, 'audio': 10},
+        description='Maximum file sizes by type in MB',
     )
     max_media_duration_minutes: dict = Field(
-        default={
-            'video': 2,
-            'audio': 5
-        },
-        description='Maximum media duration by type in minutes'
+        default={'video': 2, 'audio': 5},
+        description='Maximum media duration by type in minutes',
     )
 
     model_config = ConfigDict(
@@ -444,12 +453,9 @@ class ChatValidationConstants(BaseModel):
                     'image': 10,
                     'document': 25,
                     'video': 50,
-                    'audio': 10
+                    'audio': 10,
                 },
-                'max_media_duration_minutes': {
-                    'video': 2,
-                    'audio': 5
-                }
+                'max_media_duration_minutes': {'video': 2, 'audio': 5},
             }
         }
     )
@@ -457,6 +463,7 @@ class ChatValidationConstants(BaseModel):
 
 class ConversationParticipantInfo(BaseModel):
     """Extended participant info for conversation details"""
+
     id: uuid.UUID = Field(..., description='The user ID')
     name: str = Field(..., description='The user name')
     profile_image_url: str | None = Field(None, description='The user profile image URL')
@@ -464,6 +471,15 @@ class ConversationParticipantInfo(BaseModel):
     is_online: bool = Field(False, description='Whether user is currently online')
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# Count response schemas
+class UnreadCountResponse(BaseModel):
+    """Response for unread message count"""
+
+    unread_count: int = Field(..., ge=0, description='Number of unread messages')
+
+    model_config = ConfigDict(json_schema_extra={'example': {'unread_count': 5}})
 
 
 # Update MessageResponse to resolve forward reference

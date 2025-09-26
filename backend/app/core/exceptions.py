@@ -6,6 +6,7 @@ from app.api.communities.exceptions import add_community_exception_handler
 from app.api.comment.exceptions import add_comment_exception_handler
 from app.api.badges.exceptions import add_badge_exception_handler
 from app.api.rating.exceptions import add_rating_exception_handler
+from app.api.chat.exceptions import add_chat_exception_handler
 
 def add_exception_handlers(app: FastAPI):
     add_user_exception_handler(app)
@@ -14,3 +15,4 @@ def add_exception_handlers(app: FastAPI):
     add_community_exception_handler(app)
     add_comment_exception_handler(app)
     add_rating_exception_handler(app)
+    add_chat_exception_handler(app)
