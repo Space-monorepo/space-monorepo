@@ -270,7 +270,7 @@ export default function NotificacoesPage() {
 
         {/* Right Section - Detailed View for Campanhas and Avisos oficiais */}
         {selectedNotification && (activeTab === "Campanhas" || activeTab === "Avisos oficiais") && (
-          <div className="flex-1 bg-gray-100 px-6 py-8 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
+          <div className="flex-1 bg-gray-100 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             <div className="max-w-full">
               <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
                 <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
@@ -345,7 +345,7 @@ export default function NotificacoesPage() {
                               Data publicada:
                             </span>
                             <span className="self-stretch my-auto text-neutral-500">
-                              {selectedNotification.date}
+                              {selectedNotification.stats?.published || selectedNotification.date}
                             </span>
                           </div>
                           <div className="flex gap-2 items-center self-stretch mt-4">
@@ -353,7 +353,7 @@ export default function NotificacoesPage() {
                               Número de acessos:
                             </span>
                             <span className="self-stretch my-auto text-neutral-500">
-                              {selectedNotification.stats?.accesses || 0} acessos
+                              {selectedNotification.stats?.accesses ?? 0} acessos
                             </span>
                           </div>
                           <div className="flex gap-2 items-center mt-4">
@@ -361,7 +361,7 @@ export default function NotificacoesPage() {
                               Participantes:
                             </span>
                             <span className="self-stretch my-auto text-neutral-500">
-                              {selectedNotification.stats?.participants || 0} pessoas
+                              {selectedNotification.stats?.participants ?? 0} pessoas
                             </span>
                           </div>
                         </div>
@@ -371,7 +371,7 @@ export default function NotificacoesPage() {
                               Curtidas:
                             </span>
                             <span className="self-stretch my-auto text-neutral-500">
-                              {selectedNotification.stats?.likes || 0} curtidas
+                              {selectedNotification.stats?.likes ?? 0} curtidas
                             </span>
                           </div>
                           <div className="flex gap-2 items-center mt-4 w-full">
@@ -379,7 +379,7 @@ export default function NotificacoesPage() {
                               Comentários:
                             </span>
                             <span className="self-stretch my-auto text-neutral-500">
-                              {selectedNotification.stats?.comments || 0} comentários
+                              {selectedNotification.stats?.comments ?? 0} comentários
                             </span>
                           </div>
                         </div>

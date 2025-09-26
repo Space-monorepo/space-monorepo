@@ -35,13 +35,13 @@ export const fetchCampaigns = async (token: string): Promise<CampaignNotificatio
         date: new Date(post.created_at).toLocaleDateString('pt-BR'),
         created_at: post.created_at,
         updated_at: post.updated_at,
-        time: `${post.likes_count + post.comments_count}`, // Simulado
+        time: `${post.likes_count + post.comments_count}`,
         description: post.content,
         status: post.status === 'active' ? 'Ativa' : post.status === 'reported' ? 'Em análise' : 'Suspensa',
         stats: {
             published: new Date(post.created_at).toLocaleDateString('pt-BR'),
-            accesses: Math.floor(Math.random() * 10000), // Simulado até ter dados reais
-            participants: Math.floor(Math.random() * 500),
+            accesses: (post as any).accesses ?? 0, // Usar campo real se existir
+            participants: (post as any).participants ?? 0, // Usar campo real se existir
             likes: post.likes_count,
             comments: post.comments_count
         },
@@ -82,13 +82,13 @@ export const fetchAnnouncements = async (token: string): Promise<AnnouncementNot
         date: new Date(post.created_at).toLocaleDateString('pt-BR'),
         created_at: post.created_at,
         updated_at: post.updated_at,
-        time: `${post.likes_count + post.comments_count}`, // Simulado
+        time: `${post.likes_count + post.comments_count}`,
         description: post.content,
         image_url: post.image_url || undefined,
         stats: {
             published: new Date(post.created_at).toLocaleDateString('pt-BR'),
-            accesses: Math.floor(Math.random() * 10000), // Simulado até ter dados reais
-            participants: 0,
+            accesses: (post as any).accesses ?? 0,
+            participants: (post as any).participants ?? 0,
             likes: post.likes_count,
             comments: post.comments_count
         },
