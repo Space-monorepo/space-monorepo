@@ -1,17 +1,76 @@
 
 "use client"
 
-import { Close } from "@carbon/icons-react";
+import { Close, CheckmarkFilled } from "@carbon/icons-react";
 
 import { useState, useEffect } from "react"
 import { ArrowLeft, Filter, SortDesc, Eye, X, ArrowUp, MessageSquare } from "lucide-react"
 import Sidebar from "@/components/ui/sidebar"
 import { useNotifications } from "@/app/api/src/hooks/notifications/useNotifications"
 import { Notification } from "@/app/api/src/types/notifications/Notification"
+import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
+import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
+import { translateUserRole } from "@/lib/roleTranslations";
+import {
+  PendenteBadge,
+  EmAnaliseBadge,
+  AprovadaBadge,
+  RejeitadaBadge,
+  EmProgressoBadge,
+  CanceladaBadge,
+  FinalizadaBadge
+} from "@/components/badges/campaign/CampaignBadges";
 
 type NotificationType = "Campanhas" | "Avisos oficiais" | "Conexões" | "Interações"
 
 export default function NotificacoesPage() {
+  // Função para mapear status da API para status do frontend
+  const mapApiStatusToFrontendStatus = (apiStatus: string): "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada" => {
+    switch (apiStatus.toLowerCase()) {
+      case 'active':
+        return "Em análise";
+      case 'approved':
+        return "Aprovado";
+      case 'rejected':
+        return "Rejeitado";
+      case 'pending':
+        return "Pendente";
+      case 'in_progress':
+        return "Em progresso";
+      case 'cancelled':
+        return "Cancelada";
+      case 'completed':
+      case 'finished':
+        return "Finalizada";
+      default:
+        return "Em análise";
+    }
+  };
+
+  // Função para mapear status da campanha para o componente de badge correto
+  const getCampaignStatusBadge = (status: string) => {
+    // Primeiro mapear o status da API para o formato do frontend
+    const mappedStatus = mapApiStatusToFrontendStatus(status);
+
+    switch (mappedStatus) {
+      case "Em análise":
+        return <EmAnaliseBadge />;
+      case "Aprovado":
+        return <AprovadaBadge />;
+      case "Rejeitado":
+        return <RejeitadaBadge />;
+      case "Pendente":
+        return <PendenteBadge />;
+      case "Em progresso":
+        return <EmProgressoBadge />;
+      case "Cancelada":
+        return <CanceladaBadge />;
+      case "Finalizada":
+        return <FinalizadaBadge />;
+      default:
+        return <PendenteBadge />;
+    }
+  };
   const [activeTab, setActiveTab] = useState<NotificationType>("Campanhas")
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
   const { notifications, loading, error } = useNotifications()
@@ -198,9 +257,9 @@ export default function NotificacoesPage() {
                     </p>
                     <p className="text-xs text-[#525252] mb-2">Comunidade: {notification.community.name}</p>
                     {notification.status && (
-                      <span className="text-xs px-2 py-0.5 bg-[#fff8e1] text-[#b28600] rounded-full">
-                        {notification.status}
-                      </span>
+                      <div className="flex items-center">
+                        {getCampaignStatusBadge(notification.status)}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -220,8 +279,8 @@ export default function NotificacoesPage() {
                       <div className="flex justify-between items-start w-full max-md:max-w-full">
                         <div className="flex items-center min-w-60">
                           <img
-                            src="/ProfilePic1.svg"
-                            alt="User"
+                            src={selectedNotification.author.profile_picture || "/no-profile-pic.png"}
+                            alt={`${selectedNotification.author.name} profile picture`}
                             className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
                           />
                           <div className="self-stretch my-auto min-w-60 w-[342px]">
@@ -230,14 +289,20 @@ export default function NotificacoesPage() {
                                 <span className="self-stretch my-auto text-sm text-neutral-800">
                                   {selectedNotification.author.name}
                                 </span>
-                                <span className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-white">
+                                <CheckmarkFilled
+                                  className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass("leader")}`}
+                                  aria-label="Verificado"
+                                />
+                                <div className="self-stretch my-auto text-[10px] text-black">
+                                  •
+                                </div>
+                                <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses("leader")}`}>
                                   {activeTab === "Avisos oficiais" ? "Administrador" : "Líder"}
                                 </span>
                               </div>
                             </div>
                           </div>
                         </div>
-                        <span className="text-xs text-neutral-500">{selectedNotification.community.name}</span>
                       </div>
                       <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
                         <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
@@ -272,70 +337,62 @@ export default function NotificacoesPage() {
                   )}
 
                   <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
-                    {selectedNotification.stats && (
-                      <div className="w-full text-sm leading-none max-md:max-w-full">
-                        <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                          <div className="flex flex-col items-start">
-                            <div className="flex gap-2 items-center">
-                              <span className="self-stretch my-auto font-medium text-neutral-800">
-                                Data publicada:
-                              </span>
-                              <span className="self-stretch my-auto text-neutral-500">
-                                {selectedNotification.stats.published}
-                              </span>
-                            </div>
-                            <div className="flex gap-2 items-center self-stretch mt-4">
-                              <span className="self-stretch my-auto font-medium text-neutral-800">
-                                Número de acessos:
-                              </span>
-                              <span className="self-stretch my-auto text-neutral-500">
-                                {selectedNotification.stats.accesses.toLocaleString()} acessos
-                              </span>
-                            </div>
-                            {selectedNotification.stats.participants > 0 && (
-                              <div className="flex gap-2 items-center mt-4">
-                                <span className="self-stretch my-auto font-medium text-neutral-800">
-                                  Participantes:
-                                </span>
-                                <span className="self-stretch my-auto text-neutral-500">
-                                  {selectedNotification.stats.participants} pessoas
-                                </span>
-                              </div>
-                            )}
+                    <div className="w-full text-sm leading-none max-md:max-w-full">
+                      <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
+                        <div className="flex flex-col items-start">
+                          <div className="flex gap-2 items-center">
+                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                              Data publicada:
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-500">
+                              {selectedNotification.date}
+                            </span>
                           </div>
-                          <div className="flex flex-col w-[198px]">
-                            <div className="flex gap-2 items-center self-start">
-                              <span className="self-stretch my-auto font-medium text-neutral-800">
-                                Curtidas:
-                              </span>
-                              <span className="self-stretch my-auto text-neutral-500">
-                                {selectedNotification.stats.likes} curtidas
-                              </span>
-                            </div>
-                            <div className="flex gap-2 items-center mt-4 w-full">
-                              <span className="self-stretch my-auto font-medium text-neutral-800">
-                                Comentários:
-                              </span>
-                              <span className="self-stretch my-auto text-neutral-500">
-                                {selectedNotification.stats.comments} comentários
-                              </span>
-                            </div>
+                          <div className="flex gap-2 items-center self-stretch mt-4">
+                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                              Número de acessos:
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-500">
+                              {selectedNotification.stats?.accesses || 0} acessos
+                            </span>
+                          </div>
+                          <div className="flex gap-2 items-center mt-4">
+                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                              Participantes:
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-500">
+                              {selectedNotification.stats?.participants || 0} pessoas
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col w-[198px]">
+                          <div className="flex gap-2 items-center self-start">
+                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                              Curtidas:
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-500">
+                              {selectedNotification.stats?.likes || 0} curtidas
+                            </span>
+                          </div>
+                          <div className="flex gap-2 items-center mt-4 w-full">
+                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                              Comentários:
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-500">
+                              {selectedNotification.stats?.comments || 0} comentários
+                            </span>
                           </div>
                         </div>
                       </div>
-                    )}
+                    </div>
 
                     {/* Status Section */}
-                    {selectedNotification.status && (
-                      <div className="flex gap-2 items-center self-start mt-10">
-                        <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
-                          Status:
-                        </span>
-                        <div className="inline-block px-2 py-0.5 bg-[#fff8e1] text-[#b28600] rounded-full text-sm">
-                          {selectedNotification.status}
-                        </div>
-                      </div>
-                    )}
+                    <div className="flex gap-2 items-center self-start mt-10">
+                      <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
+                        Status:
+                      </span>
+                      {getCampaignStatusBadge(selectedNotification.status || "pending")}
+                    </div>
 
                     {/* Actions Section */}
                     {selectedNotification.actions && (
