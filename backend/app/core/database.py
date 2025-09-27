@@ -14,6 +14,7 @@ def get_db():
     finally:
         db.close()
 
+
 def get_mongo_db():
-    #TODO: Implementar 
+    # TODO: Implementar
     pass

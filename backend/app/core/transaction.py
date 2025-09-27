@@ -12,12 +12,16 @@ from app.api.post.repository import (
     PostRepository,
     PollPostsRepository,
     PollOptionsRepository,
-    PostLikesRepository
+    PostLikesRepository,
 )
 from app.api.rating.repository import RatingRepository
 from app.api.users.repository import UserRepository, UserConnectionRepository
 from app.api.badges.repository import BadgeRepository, MemberBadgeRepository
-from app.api.chat.repository import ConversationRepository, MessageRepository, MessageAttachmentRepository
+from app.api.chat.repository import (
+    ConversationRepository,
+    MessageRepository,
+    MessageAttachmentRepository,
+)
 
 logger = logging.getLogger(__name__)
 

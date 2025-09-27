@@ -9,7 +9,7 @@ from app.api.post.model import (
     PollOptions,
     PostFeedback,
     PostLikes,
-    CampaignParticipants
+    CampaignParticipants,
 )
 from app.api.communities.model import CommunityMember, Community
 from app.api.badges.model import Badge, MemberBadge

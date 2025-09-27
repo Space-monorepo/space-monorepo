@@ -66,11 +66,11 @@ def test_authenticate_login_service_success():
     - Then it should return the authenticated user
     """
     # Arrange
-    fake_email = "johndoe@example.com"
-    fake_password = "plaintext_password"
+    fake_email = 'johndoe@example.com'
+    fake_password = 'plaintext_password'
     fake_user_id = uuid4()
-    fake_name = "John Doe"
-    fake_hashed_password = "hashed_password_hash"
+    fake_name = 'John Doe'
+    fake_hashed_password = 'hashed_password_hash'
 
     fake_user = Mock(spec=User)
     fake_user.id = fake_user_id
@@ -83,10 +83,13 @@ def test_authenticate_login_service_success():
     mock_user_service.get_by_email.return_value = fake_user
 
     import app.api.users.service as user_service_module
+
     user_service_module.UserService = Mock(return_value=mock_user_service)
 
     service = AuthService(mock_tm)
-    service.verify_password = Mock(return_value=True)  # Mock para simular verificação bem-sucedida
+    service.verify_password = Mock(
+        return_value=True
+    )  # Mock para simular verificação bem-sucedida
 
     # Act
     result = service.authenticate_login(fake_email, fake_password)
@@ -112,8 +115,8 @@ def test_authenticate_login_service_user_not_found():
     - Then it should raise UserNotAuthenticatedError
     """
     # Arrange
-    fake_email = "nonexistent@example.com"
-    fake_password = "hashed_password"
+    fake_email = 'nonexistent@example.com'
+    fake_password = 'hashed_password'
 
     mock_tm = Mock()
     mock_user_service = Mock()
@@ -138,9 +141,9 @@ def test_create_token_service_success(mock_jwt):
     - Then it should return a TokenSchema with valid expiration
     """
     # Arrange
-    fake_email = "johndoe@example.com"
-    fake_payload = {"sub": fake_email}
-    fake_access_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huZG9lQGV4YW1wbGUuY29tIiwiZXhwIjoxNzM1NjgwMDAwfQ.example_signature"
+    fake_email = 'johndoe@example.com'
+    fake_payload = {'sub': fake_email}
+    fake_access_token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huZG9lQGV4YW1wbGUuY29tIiwiZXhwIjoxNzM1NjgwMDAwfQ.example_signature'
     fake_exp = datetime.now(timezone.utc) + timedelta(minutes=30)
 
     mock_tm = Mock()
@@ -169,10 +172,10 @@ def test_create_token_service_with_custom_expiration(mock_jwt):
     - Then it should return a TokenSchema with the specified expiration
     """
     # Arrange
-    fake_email = "johndoe@example.com"
-    fake_payload = {"sub": fake_email}
+    fake_email = 'johndoe@example.com'
+    fake_payload = {'sub': fake_email}
     fake_exp = datetime.now(timezone.utc) + timedelta(hours=2)
-    fake_access_token = "custom_expiration_token"
+    fake_access_token = 'custom_expiration_token'
 
     mock_tm = Mock()
     mock_jwt.encode.return_value = fake_access_token
@@ -200,9 +203,9 @@ def test_hash_password_service_success(mock_bcrypt):
     - Then it should return a hashed version of the password
     """
     # Arrange
-    fake_plain_password = "plaintext_password"
-    fake_salt = b"fake_salt_bytes"
-    fake_hashed_password = "hashed_password_string"
+    fake_plain_password = 'plaintext_password'
+    fake_salt = b'fake_salt_bytes'
+    fake_hashed_password = 'hashed_password_string'
 
     mock_tm = Mock()
     mock_bcrypt.gensalt.return_value = fake_salt
@@ -219,7 +222,9 @@ def test_hash_password_service_success(mock_bcrypt):
 
     # Assert
     mock_bcrypt.gensalt.assert_called_once()
-    mock_bcrypt.hashpw.assert_called_once_with(fake_plain_password.encode('utf-8'), fake_salt)
+    mock_bcrypt.hashpw.assert_called_once_with(
+        fake_plain_password.encode('utf-8'), fake_salt
+    )
     mock_hashed_bytes.decode.assert_called_once_with('utf-8')
     assert result == fake_hashed_password
 
@@ -235,8 +240,8 @@ def test_verify_password_service_success(mock_bcrypt):
     - Then it should return True if passwords match
     """
     # Arrange
-    fake_plain_password = "plaintext_password"
-    fake_hashed_password = "hashed_password_hash"
+    fake_plain_password = 'plaintext_password'
+    fake_hashed_password = 'hashed_password_hash'
 
     mock_tm = Mock()
     mock_bcrypt.checkpw.return_value = True
@@ -248,8 +253,7 @@ def test_verify_password_service_success(mock_bcrypt):
 
     # Assert
     mock_bcrypt.checkpw.assert_called_once_with(
-        fake_plain_password.encode('utf-8'),
-        fake_hashed_password.encode('utf-8')
+        fake_plain_password.encode('utf-8'), fake_hashed_password.encode('utf-8')
     )
     assert result is True
 
@@ -265,8 +269,8 @@ def test_verify_password_service_failure(mock_bcrypt):
     - Then it should return False indicating password mismatch
     """
     # Arrange
-    fake_plain_password = "plaintext_password"
-    fake_hashed_password = "incorrect_hashed_password"
+    fake_plain_password = 'plaintext_password'
+    fake_hashed_password = 'incorrect_hashed_password'
 
     mock_tm = Mock()
     mock_bcrypt.checkpw.return_value = False
@@ -278,8 +282,7 @@ def test_verify_password_service_failure(mock_bcrypt):
 
     # Assert
     mock_bcrypt.checkpw.assert_called_once_with(
-        fake_plain_password.encode('utf-8'),
-        fake_hashed_password.encode('utf-8')
+        fake_plain_password.encode('utf-8'), fake_hashed_password.encode('utf-8')
     )
     assert result is False
 
@@ -295,12 +298,12 @@ def test_login_service_success(mock_jwt):
     - Then it should return a TokenSchema with access token
     """
     # Arrange
-    fake_email = "johndoe@example.com"
-    fake_password = "plaintext_password"
+    fake_email = 'johndoe@example.com'
+    fake_password = 'plaintext_password'
     fake_user_id = uuid4()
-    fake_name = "John Doe"
-    fake_hashed_password = "hashed_password_hash"
-    fake_access_token = "login_access_token"
+    fake_name = 'John Doe'
+    fake_hashed_password = 'hashed_password_hash'
+    fake_access_token = 'login_access_token'
 
     fake_user = Mock(spec=User)
     fake_user.id = fake_user_id
@@ -315,7 +318,9 @@ def test_login_service_success(mock_jwt):
 
     service = AuthService(mock_tm)
     service.authenticate_login = Mock(return_value=fake_user)
-    service.create_token = Mock(return_value=Mock(spec=TokenSchema, access_token=fake_access_token))
+    service.create_token = Mock(
+        return_value=Mock(spec=TokenSchema, access_token=fake_access_token)
+    )
 
     # Act
     result = service.login(fake_login_schema)

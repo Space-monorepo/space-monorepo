@@ -35,7 +35,9 @@ def test_create_rating_route(authenticate_client, community_member_on_db):
 
 
 @pytest.mark.integration
-def test_create_rating_without_description_route(authenticate_client, community_member_on_db):
+def test_create_rating_without_description_route(
+    authenticate_client, community_member_on_db
+):
     rating_create = RatingCreate(
         user_id=community_member_on_db.user_id,
         community_id=community_member_on_db.community_id,
@@ -123,7 +125,9 @@ def test_create_rating_duplicate_returns_conflict(authenticate_client, rating_on
 
 
 @pytest.mark.integration
-def test_create_rating_invalid_rating_returns_validation_error(authenticate_client, community_member_on_db):
+def test_create_rating_invalid_rating_returns_validation_error(
+    authenticate_client, community_member_on_db
+):
     rating_create_data = {
         'user_id': str(community_member_on_db.user_id),
         'community_id': str(community_member_on_db.community_id),
@@ -141,7 +145,9 @@ def test_create_rating_invalid_rating_returns_validation_error(authenticate_clie
 
 
 @pytest.mark.integration
-def test_create_rating_empty_title_returns_validation_error(authenticate_client, community_member_on_db):
+def test_create_rating_empty_title_returns_validation_error(
+    authenticate_client, community_member_on_db
+):
     rating_create_data = {
         'user_id': str(community_member_on_db.user_id),
         'community_id': str(community_member_on_db.community_id),
@@ -209,7 +215,9 @@ def test_list_ratings_by_community_route(authenticate_client, rating_on_db):
 
 
 @pytest.mark.integration
-def test_list_ratings_by_community_with_pagination_route(authenticate_client, rating_on_db):
+def test_list_ratings_by_community_with_pagination_route(
+    authenticate_client, rating_on_db
+):
     response = authenticate_client.get(
         f'/ratings/{rating_on_db.community_id}/list-ratings?offset=0&limit=1'
     )
@@ -225,7 +233,9 @@ def test_list_ratings_by_community_with_pagination_route(authenticate_client, ra
 
 
 @pytest.mark.integration
-def test_list_ratings_by_community_empty_route(authenticate_client, community_member_on_db):
+def test_list_ratings_by_community_empty_route(
+    authenticate_client, community_member_on_db
+):
     response = authenticate_client.get(
         f'/ratings/{community_member_on_db.community_id}/list-ratings'
     )
@@ -241,9 +251,7 @@ def test_list_ratings_by_community_empty_route(authenticate_client, community_me
 @pytest.mark.integration
 def test_update_rating_route(authenticate_client, rating_on_db):
     rating_update = RatingUpdate(
-        rating=4,
-        title='Updated Title',
-        description='Updated description'
+        rating=4, title='Updated Title', description='Updated description'
     )
 
     response = authenticate_client.patch(
@@ -277,7 +285,9 @@ def test_update_rating_partial_route(authenticate_client, rating_on_db):
     response_data = response.json()
     assert response_data['rating'] == 2
     assert response_data['title'] == original_title  # Should remain unchanged
-    assert response_data['description'] == original_description  # Should remain unchanged
+    assert (
+        response_data['description'] == original_description
+    )  # Should remain unchanged
 
 
 @pytest.mark.integration
@@ -295,7 +305,9 @@ def test_update_rating_not_found_route(authenticate_client, community_member_on_
 
 
 @pytest.mark.integration
-def test_update_rating_invalid_rating_returns_validation_error(authenticate_client, rating_on_db):
+def test_update_rating_invalid_rating_returns_validation_error(
+    authenticate_client, rating_on_db
+):
     rating_update_data = {
         'rating': 0,  # Invalid rating (< 1)
         'title': 'Updated Title',
@@ -369,9 +381,7 @@ def test_get_rating_unauthorized_returns_401(client_sql, rating_on_db):
 
 @pytest.mark.integration
 def test_list_ratings_unauthorized_returns_401(client_sql, community_on_db):
-    response = client_sql.get(
-        f'/ratings/{community_on_db.id}/list-ratings'
-    )
+    response = client_sql.get(f'/ratings/{community_on_db.id}/list-ratings')
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
