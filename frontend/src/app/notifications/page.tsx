@@ -215,7 +215,7 @@ export default function NotificacoesPage() {
           <div className="w-80 fixed top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
             {/* Header */}
             <div className="p-4 my-2 text-gray-600 text-[14px] flex items-center justify-between">
-              <h2 className="font-medium">{activeTab}</h2>
+              <h2 className="font-regular">{activeTab}</h2>
               <div className="flex gap-2">
                 <button className="p-1 hover:bg-[#f4f4f4]">
                   <Filter className="h-4 w-4 text-[#525252]" />
