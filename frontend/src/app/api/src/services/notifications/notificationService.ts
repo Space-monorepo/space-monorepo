@@ -26,7 +26,8 @@ export const fetchCampaigns = async (token: string): Promise<CampaignNotificatio
             id: post.user.id,
             name: post.user.name,
             username: post.user.username || '',
-            profile_picture: post.user.profile_picture
+            profile_picture: post.user.profile_picture,
+            role: post.user.role // Adiciona a role do backend
         },
         community: {
             id: post.community.id,
@@ -73,7 +74,8 @@ export const fetchAnnouncements = async (token: string): Promise<AnnouncementNot
             id: post.user.id,
             name: post.user.name,
             username: post.user.username || '',
-            profile_picture: post.user.profile_picture
+            profile_picture: post.user.profile_picture,
+            role: post.user.role // Adiciona a role do backend
         },
         community: {
             id: post.community.id,

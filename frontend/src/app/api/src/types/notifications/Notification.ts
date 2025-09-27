@@ -5,6 +5,7 @@ export interface NotificationAuthor {
     name: string
     username: string
     profile_picture?: string | null
+    role?: string
 }
 
 export interface NotificationCommunity {

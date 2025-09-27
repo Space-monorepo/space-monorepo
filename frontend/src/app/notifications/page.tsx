@@ -1,10 +1,10 @@
 
 "use client"
 
-import { Close, CheckmarkFilled } from "@carbon/icons-react";
+import { Close, CheckmarkFilled, Forum, ArrowUp } from "@carbon/icons-react";
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Filter, SortDesc, Eye, X, ArrowUp, MessageSquare } from "lucide-react"
+import { ArrowLeft, Filter, SortDesc, Eye } from "lucide-react"
 import Sidebar from "@/components/ui/sidebar"
 import { useNotifications } from "@/app/api/src/hooks/notifications/useNotifications"
 import { Notification } from "@/app/api/src/types/notifications/Notification"
@@ -214,7 +214,7 @@ export default function NotificacoesPage() {
         {activeTab !== "Conexões" && (
           <div className="w-80 fixed top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
             {/* Header */}
-            <div className="p-4 border-b border-[#e0e0e0] flex items-center justify-between">
+            <div className="p-4 my-2 text-gray-600 text-[14px] flex items-center justify-between">
               <h2 className="font-medium">{activeTab}</h2>
               <div className="flex gap-2">
                 <button className="p-1 hover:bg-[#f4f4f4]">
@@ -268,8 +268,8 @@ export default function NotificacoesPage() {
           </div>
         )}
 
-        {/* Right Section - Detailed View for Campanhas and Avisos oficiais */}
-        {selectedNotification && (activeTab === "Campanhas" || activeTab === "Avisos oficiais") && (
+        {/* Right Section - Detailed View for Campanhas */}
+        {selectedNotification && activeTab === "Campanhas" && (
           <div className="flex-1 bg-gray-100 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             <div className="max-w-full">
               <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
@@ -290,14 +290,14 @@ export default function NotificacoesPage() {
                                   {selectedNotification.author.name}
                                 </span>
                                 <CheckmarkFilled
-                                  className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass("leader")}`}
+                                  className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedNotification.author.role)}`}
                                   aria-label="Verificado"
                                 />
                                 <div className="self-stretch my-auto text-[10px] text-black">
                                   •
                                 </div>
-                                <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses("leader")}`}>
-                                  {activeTab === "Avisos oficiais" ? "Administrador" : "Líder"}
+                                <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedNotification.author.role)}`}>
+                                  {translateUserRole(selectedNotification.author.role || "member")}
                                 </span>
                               </div>
                             </div>
@@ -403,7 +403,7 @@ export default function NotificacoesPage() {
                             className="flex items-center gap-2 px-4 py-2 border border-[#e0e0e0] hover:bg-[#f8f8f8] rounded"
                           >
                             {action === "Promover" && <ArrowUp className="h-4 w-4" />}
-                            {action === "Comentar" && <MessageSquare className="h-4 w-4" />}
+                            {action === "Comentar" && <Forum className="h-4 w-4" />}
                             {action}
                           </button>
                         ))}
@@ -411,6 +411,142 @@ export default function NotificacoesPage() {
                     )}
                   </section>
                 </article>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Right Section - Detailed View for Avisos oficiais (layout de enquete) */}
+        {selectedNotification && activeTab === "Avisos oficiais" && (
+          <div className="flex-1 bg-gray-100 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
+            <div className="max-w-full">
+              <div className="px-4 pt-4 pb-48 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                <main className="bg-white max-w-full">
+                  <article className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                    <div className="w-full max-md:max-w-full">
+                      <div className="flex justify-between items-start w-full max-md:max-w-full">
+                        <header className="flex items-center min-w-60">
+                          <img
+                            src={selectedNotification.author.profile_picture || "/no-profile-pic.png"}
+                            alt={`${selectedNotification.author.name} profile picture`}
+                            className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]"
+                          />
+                          <div className="self-stretch my-auto min-w-60 w-[342px]">
+                            <div className="flex gap-2 items-center w-full h-[23px]">
+                              <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                <h2 className="self-stretch my-auto text-sm text-neutral-800">
+                                  {selectedNotification.author.name}
+                                </h2>
+                                <CheckmarkFilled
+                                  className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedNotification.author.role)}`}
+                                  aria-label="Verificado"
+                                />
+                                <div className="self-stretch my-auto text-[10px] text-black">
+                                  •
+                                </div>
+                                <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedNotification.author.role)}`}>
+                                  <span className="self-stretch my-auto">
+                                    {translateUserRole(selectedNotification.author.role || "member")}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </header>
+                      </div>
+                      <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                        <div className="flex flex-wrap gap-4 items-center w-full max-md:max-w-full">
+                          <h1 className="self-stretch my-auto font-semibold leading-6 text-neutral-800">
+                            Título:
+                          </h1>
+                          <p className="self-stretch my-auto leading-8 text-neutral-800">
+                            {selectedNotification.title}
+                          </p>
+                        </div>
+                        <div className="mt-2 w-full max-md:max-w-full">
+                          <h2 className="font-semibold leading-6 text-justify text-neutral-800">
+                            Descrição:
+                          </h2>
+                          <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full whitespace-pre-line">
+                            {selectedNotification.description}
+                          </p>
+                        </div>
+                      </div>
+                      {selectedNotification.image_url && (
+                        <img
+                          src={selectedNotification.image_url}
+                          alt="Aviso oficial illustration"
+                          className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
+                        />
+                      )}
+                    </div>
+                  </article>
+
+                  <section className="flex flex-col justify-center py-8 pr-4 pl-8 w-full text-sm leading-none max-md:pl-5 max-md:max-w-full">
+                    <div className="w-full max-w-[698px] max-md:max-w-full">
+                      <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                        <div className="flex flex-col items-start">
+                          <div className="flex gap-2 items-center">
+                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                              Data publicada:
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-500">
+                              {selectedNotification.stats?.published || selectedNotification.date}
+                            </span>
+                          </div>
+                          <div className="flex gap-2 items-center self-stretch mt-4">
+                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                              Número de acessos:
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-500">
+                              {selectedNotification.stats?.accesses ?? 0} acessos
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col w-[198px]">
+                          <div className="flex gap-2 items-center self-start">
+                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                              Curtidas:
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-500">
+                              {selectedNotification.stats?.likes ?? 0} curtidas
+                            </span>
+                          </div>
+                          <div className="flex gap-2 items-center mt-4 w-full">
+                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                              Comentários:
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-500">
+                              {selectedNotification.stats?.comments ?? 0} comentários
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botões de ação - Promover e Comentar */}
+                    <div className="flex items-center gap-4 mt-10 max-w-[698px] max-md:max-w-full">
+                      <button
+                        onClick={() => {
+                          // Ação de promover
+                        }}
+                        className="flex items-center gap-2 px-6 py-3 text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer rounded"
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                        <span>Promover</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Ação de comentar
+                        }}
+                        className="flex items-center gap-2 px-6 py-3 text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer rounded"
+                      >
+                        <Forum className="h-4 w-4" />
+                        <span>Comentar</span>
+                      </button>
+                    </div>
+                  </section>
+                </main>
               </div>
             </div>
           </div>
