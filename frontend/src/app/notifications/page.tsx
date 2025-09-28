@@ -1,4 +1,3 @@
-
 "use client"
 
 import { Close, CheckmarkFilled, Forum, ArrowUp } from "@carbon/icons-react";
@@ -113,6 +112,56 @@ export default function NotificacoesPage() {
 
   const pendingCount = connections.filter(conn => conn.isPending).length
 
+  // State for interactions functionality
+  const [interactions, setInteractions] = useState([
+    {
+      id: "1",
+      avatarSrc: "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/abb76ed01d1015e5f7bd7130432933cf775f2fa6?placeholderIfAbsent=true",
+      avatarClassName: "object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]",
+      mainText: "Felipe Sousa comentou no seu post: Parabéns pela campanha!!",
+      username: "@felipesousa",
+      community: "Comunidade: PUC-Campinas",
+      timestamp: "3 horas atrás",
+      showLikeButton: true,
+      backgroundColor: "bg-zinc-100"
+    },
+    {
+      id: "2",
+      avatarSrc: "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/fbe60d6b2490ab1a01f25824346c2ff51b6b9e27?placeholderIfAbsent=true",
+      avatarClassName: "object-contain shrink-0 self-stretch my-auto w-11 aspect-square",
+      mainText: "Rafael Lanza curtiu seu comentário: Esse debate é importante!",
+      username: "@rafaelanza",
+      community: "Comunidade: Condomíno",
+      timestamp: "3 horas atrás",
+      showLikeButton: false,
+      backgroundColor: ""
+    },
+    {
+      id: "3",
+      avatarSrc: "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/bd66bd6fc5ebb43ebe4b1ccbeaa383b1c811285d?placeholderIfAbsent=true",
+      avatarClassName: "object-contain shrink-0 self-stretch my-auto aspect-square w-[37px]",
+      mainText: "Gabriel Padreca comentou no seu post: Tem toda razão, estou...",
+      username: "@gabrielpadreca",
+      community: "Comunidade: PUC-Campinas",
+      timestamp: "10 horas atrás",
+      showLikeButton: true,
+      backgroundColor: ""
+    },
+    {
+      id: "4",
+      avatarSrc: "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/0266ce938656cadbe8c52578018c2a1a6aa007f1?placeholderIfAbsent=true",
+      avatarClassName: "object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]",
+      mainText: "Briann Gomes está participando da sua campanha",
+      username: "@brianngomes",
+      community: "Comunidade: PUC-Campinas",
+      timestamp: "14 horas atrás",
+      showLikeButton: false,
+      backgroundColor: ""
+    }
+  ])
+
+  const interactionsCount = interactions.length
+
   const handleConnect = (id: string) => {
     setConnections(prev =>
       prev.map(conn =>
@@ -125,6 +174,11 @@ export default function NotificacoesPage() {
 
   const handleReject = (id: string) => {
     setConnections(prev => prev.filter(conn => conn.id !== id));
+  };
+
+  const handleLikeInteraction = (id: string) => {
+    // Handle like functionality for interactions
+    console.log(`Liked interaction ${id}`);
   };
 
   // Mapear os dados da API para o formato usado no componente
@@ -210,61 +264,130 @@ export default function NotificacoesPage() {
           </nav>
         </div>
 
-        {/* Middle Section - Notifications List (removido para Conexões) */}
-        {activeTab !== "Conexões" && (
-          <div className="w-80 fixed top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
-            {/* Header */}
-            <div className="p-4 my-2 text-gray-600 text-[14px] flex items-center justify-between">
-              <h2 className="font-regular">{activeTab}</h2>
-              <div className="flex gap-2">
-                <button className="p-1 hover:bg-[#f4f4f4]">
-                  <Filter className="h-4 w-4 text-[#525252]" />
-                </button>
-                <button className="p-1 hover:bg-[#f4f4f4]">
-                  <SortDesc className="h-4 w-4 text-[#525252]" />
-                </button>
-              </div>
-            </div>
-
-            {/* Special header for Interações */}
-            {activeTab === "Interações" && (
-              <div className="p-4 border-b border-[#e0e0e0] flex gap-4">
-                <button className="text-sm">
-                  Interações
-                </button>
-              </div>
-            )}
-
-            {/* Notifications List */}
-            <div className="overflow-auto">
-              {currentNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedNotification?.id === notification.id ? "bg-[#f4f4f4]" : ""}`}
-                  onClick={() => setSelectedNotification(notification)}
+        {/* Middle Section - Campanhas with Figma layout */}
+        {activeTab === "Campanhas" && (
+          <div className="w-80 fixed my-4 top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
+            <section className="flex flex-col max-w-[352px]">
+              <header className="flex gap-2 items-center py-2.5 pr-2 pl-4 text-sm leading-none text-neutral-600">
+                <h2 className="self-stretch text-neutral-600 w-[272px]">
+                  Campanhas
+                </h2>
+                <button
+                  className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
+                  aria-label="Action button 1"
                 >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-[#525252]">{notification.date}</span>
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-4 w-4 text-[#525252]" />
-                        <span className="text-xs text-[#525252]">{notification.time || notification.stats?.accesses || '0'}</span>
+                  <Filter className="w-full h-full text-[#525252]" />
+                </button>
+                <button
+                  className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
+                  aria-label="Action button 2"
+                >
+                  <SortDesc className="w-full h-full text-[#525252]" />
+                </button>
+              </header>
+
+              <div className="self-center mt-6 w-full max-w-xs">
+                {currentNotifications.map((notification, index) => (
+                  <article
+                    key={notification.id}
+                    className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${selectedNotification?.id === notification.id ? 'bg-zinc-200' : 'bg-white'
+                      }`}
+                    onClick={() => setSelectedNotification(notification)}
+                  >
+                    <div className="w-full">
+                      <time className="text-xs leading-loose text-neutral-600">
+                        {notification.date}
+                      </time>
+                      <div className="mt-2 w-full">
+                        <div className="flex gap-10 justify-between items-start w-full">
+                          <h3 className="text-base text-black">
+                            {notification.title}
+                          </h3>
+                          <div className="flex gap-2 justify-center items-center text-xs leading-loose text-neutral-600">
+                            <span className="self-stretch my-auto text-neutral-600">
+                              {notification.stats?.accesses || '0'}
+                            </span>
+                            <Eye className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square text-neutral-600" />
+                          </div>
+                        </div>
+                        <p className="mt-1 text-xs leading-loose text-neutral-600">
+                          Líder: {notification.author.name}
+                        </p>
+                        <p className="mt-1 text-xs leading-loose text-neutral-600">
+                          Comunidade: {notification.community.name}
+                        </p>
+                        {notification.status && (
+                          <div className="flex items-center mt-2">
+                            {getCampaignStatusBadge(notification.status)}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <h3 className="font-medium mb-1">{notification.title}</h3>
-                    <p className="text-xs text-[#525252] mb-1">
-                      {activeTab === "Avisos oficiais" ? "Administrador" : "Líder"}: {notification.author.name}
-                    </p>
-                    <p className="text-xs text-[#525252] mb-2">Comunidade: {notification.community.name}</p>
-                    {notification.status && (
-                      <div className="flex items-center">
-                        {getCampaignStatusBadge(notification.status)}
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* Middle Section - Avisos oficiais with Figma layout */}
+        {activeTab === "Avisos oficiais" && (
+          <div className="w-80 fixed my-4 top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
+            <section className="flex flex-col max-w-[352px]">
+              <header className="flex gap-2 items-center py-2.5 pr-2 pl-4 text-sm leading-none text-neutral-600">
+                <h2 className="self-stretch text-neutral-600 w-[272px]">
+                  Avisos oficiais
+                </h2>
+                <button
+                  className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
+                  aria-label="Action button 1"
+                >
+                  <Filter className="w-full h-full text-[#525252]" />
+                </button>
+                <button
+                  className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
+                  aria-label="Action button 2"
+                >
+                  <SortDesc className="w-full h-full text-[#525252]" />
+                </button>
+              </header>
+
+              <div className="self-center mt-6 w-full max-w-xs">
+                {currentNotifications.map((notification, index) => (
+                  <article
+                    key={notification.id}
+                    className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${selectedNotification?.id === notification.id ? 'bg-zinc-200' : 'bg-white'
+                      }`}
+                    onClick={() => setSelectedNotification(notification)}
+                  >
+                    <div className="w-full">
+                      <time className="text-xs leading-loose text-neutral-600">
+                        {notification.date}
+                      </time>
+                      <div className="mt-2 w-full">
+                        <div className="flex gap-10 justify-between items-start w-full">
+                          <h3 className="text-base text-black">
+                            {notification.title}
+                          </h3>
+                          <div className="flex gap-2 justify-center items-center text-xs leading-loose text-neutral-600">
+                            <span className="self-stretch my-auto text-neutral-600">
+                              {notification.stats?.accesses || '5 mil'}
+                            </span>
+                            <Eye className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square text-neutral-600" />
+                          </div>
+                        </div>
+                        <p className="mt-1 text-xs leading-loose text-neutral-600">
+                          Administrador: {notification.author.name}
+                        </p>
+                        <p className="mt-1 text-xs leading-loose text-neutral-600">
+                          Comunidade: {notification.community.name}
+                        </p>
                       </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
           </div>
         )}
 
@@ -644,6 +767,87 @@ export default function NotificacoesPage() {
                 })}
               </section>
             </div>
+          </div>
+        )}
+
+        {/* Right Section - Interactions Layout */}
+        {activeTab === "Interações" && (
+          <div className="flex-1 bg-white px-6 py-8 fixed top-6 right-0 bottom-0 left-[calc(300px+320px)] overflow-y-auto no-scrollbar">
+            <section className="max-w-[680px]">
+              {/* Header Section */}
+              <header className="flex flex-wrap gap-10 justify-between items-center py-2.5 pr-6 pl-4 w-full max-md:pr-5 max-md:max-w-full">
+                <div className="flex gap-4 items-center self-stretch my-auto whitespace-nowrap">
+                  <h1 className="self-stretch my-auto text-sm leading-none text-neutral-600">
+                    Interações
+                  </h1>
+                  <div className="flex gap-2.5 justify-center items-center self-stretch px-2 my-auto w-6 h-6 text-xs font-semibold leading-none text-gray-200 rounded-2xl bg-zinc-900">
+                    <span className="self-stretch my-auto">
+                      {interactionsCount}
+                    </span>
+                  </div>
+                </div>
+                <nav className="flex gap-2 items-center self-stretch my-auto">
+                  <button type="button" aria-label="Primeira ação">
+                    <img
+                      src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/074681a549e783096b458262f6c0fe30416fe3b1?placeholderIfAbsent=true"
+                      alt=""
+                      className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
+                    />
+                  </button>
+                  <button type="button" aria-label="Segunda ação">
+                    <img
+                      src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/8fab779e10432bd198f30df3d0e10f8370547d71?placeholderIfAbsent=true"
+                      alt=""
+                      className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
+                    />
+                  </button>
+                </nav>
+              </header>
+
+              {/* Interactions List Section */}
+              <main className="mt-6 w-full max-md:max-w-full">
+                {interactions.map((interaction) => (
+                  <article
+                    key={interaction.id}
+                    className={`flex flex-wrap gap-4 items-center px-6 py-4 w-full max-md:px-5 max-md:max-w-full ${interaction.backgroundColor}`}
+                  >
+                    <img
+                      src={interaction.avatarSrc}
+                      alt={`Avatar de ${interaction.username}`}
+                      className={interaction.avatarClassName}
+                    />
+                    <div className="flex-1 shrink self-stretch my-auto text-xs basis-8 min-w-60 text-neutral-600 max-md:max-w-full">
+                      <div className="w-full max-md:max-w-full">
+                        <div className="flex gap-6 items-start w-full text-base text-black max-md:max-w-full">
+                          <p className="flex-1 shrink basis-0 max-md:max-w-full">
+                            {interaction.mainText}
+                          </p>
+                        </div>
+                        <p className="mt-1 leading-loose text-neutral-600 max-md:max-w-full">
+                          {interaction.username}
+                        </p>
+                        <p className="mt-1 leading-loose text-neutral-600 max-md:max-w-full">
+                          {interaction.community}
+                        </p>
+                      </div>
+                      <time className="mt-2 leading-loose text-neutral-600 max-md:max-w-full">
+                        {interaction.timestamp}
+                      </time>
+                    </div>
+                    {interaction.showLikeButton && (
+                      <button
+                        onClick={() => handleLikeInteraction(interaction.id)}
+                        className="flex gap-8 items-center self-stretch px-4 py-2 my-auto text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100 hover:bg-neutral-700 transition-colors"
+                      >
+                        <span className="self-stretch my-auto text-zinc-100">
+                          Curtir
+                        </span>
+                      </button>
+                    )}
+                  </article>
+                ))}
+              </main>
+            </section>
           </div>
         )}
       </div>
