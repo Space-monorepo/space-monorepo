@@ -1,9 +1,9 @@
 "use client"
 
-import { Close, CheckmarkFilled, Forum, ArrowUp } from "@carbon/icons-react";
+import { Close, CheckmarkFilled, Forum, ArrowUp, Filter, SortDescending } from "@carbon/icons-react";
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Filter, SortDesc, Eye } from "lucide-react"
+import { ArrowLeft, Eye } from "lucide-react"
 import Sidebar from "@/components/ui/sidebar"
 import { useNotifications } from "@/app/api/src/hooks/notifications/useNotifications"
 import { Notification } from "@/app/api/src/types/notifications/Notification"
@@ -282,7 +282,7 @@ export default function NotificacoesPage() {
                   className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
                   aria-label="Action button 2"
                 >
-                  <SortDesc className="w-full h-full text-[#525252]" />
+                  <SortDescending className="w-full h-full text-[#525252]" />
                 </button>
               </header>
 
@@ -348,7 +348,7 @@ export default function NotificacoesPage() {
                   className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
                   aria-label="Action button 2"
                 >
-                  <SortDesc className="w-full h-full text-[#525252]" />
+                  <SortDescending className="w-full h-full text-[#525252]" />
                 </button>
               </header>
 
