@@ -42,7 +42,11 @@ class Conversation(Base):
     updated_at = Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
-    last_message_id = Column(UUIDColumn, nullable=True)
+    last_message_id = Column(
+        UUIDColumn,
+        ForeignKey('messages.id', use_alter=True, name='fk_conversation_last_message'),
+        nullable=True,
+    )
 
     # Relationships
     user1 = relationship('User', foreign_keys=[user1_id])
@@ -53,11 +57,16 @@ class Conversation(Base):
         back_populates='conversation',
         cascade='all, delete-orphan',
         order_by='Message.created_at',
+        foreign_keys='Message.conversation_id',
     )
 
     # Relationship to the last message
     last_message = relationship(
-        'Message', foreign_keys=[last_message_id], post_update=True, uselist=False
+        'Message',
+        foreign_keys=[last_message_id],
+        post_update=True,
+        uselist=False,
+        overlaps='messages',
     )
 
     # Constraints
@@ -86,7 +95,9 @@ class Message(Base):
     reply_to_message_id = Column(UUIDColumn, ForeignKey('messages.id'), nullable=True)
 
     # Relationships
-    conversation = relationship('Conversation', back_populates='messages')
+    conversation = relationship(
+        'Conversation', back_populates='messages', foreign_keys=[conversation_id]
+    )
     sender = relationship('User', foreign_keys=[sender_id])
 
     # Self-referential relationship for replies
