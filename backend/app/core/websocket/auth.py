@@ -29,7 +29,15 @@ from app.api.users.service import UserService
 from app.core.config import settings
 from app.core.transaction import TransactionManager
 
-from .exceptions import AuthenticationError, RateLimitError
+from .exceptions import (
+    AuthenticationError,
+    BroadcastError,
+    EventHandlingError,
+    EventValidationError,
+    NamespaceError,
+    RateLimitError,
+    RoomError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -299,17 +307,12 @@ class WebSocketAuth:
             # Check rate limits
             if not self._check_rate_limit(client_ip):
                 logger.warning(f'Rate limit exceeded for IP: {client_ip}')
-                raise WebSocketException(
-                    code=status.WS_1008_POLICY_VIOLATION, reason='Rate limit exceeded'
-                )
+                raise RateLimitError('Rate limit exceeded')
 
             # Extract token
             token = self._extract_token(websocket)
             if not token:
-                raise WebSocketException(
-                    code=status.WS_1008_POLICY_VIOLATION,
-                    reason='Authentication token required',
-                )
+                raise AuthenticationError('Authentication token required')
 
             # Validate token
             payload = self._validate_jwt_token(token)
@@ -325,16 +328,31 @@ class WebSocketAuth:
 
             return user
 
-        except AuthenticationError as e:
+        except (AuthenticationError, RateLimitError) as e:
             logger.warning(f'WebSocket authentication failed: {e}')
-            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=str(e))
-        except RateLimitError as e:
-            logger.warning(f'WebSocket rate limit: {e}')
-            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=str(e))
+            raise self._convert_to_websocket_exception(e)
         except Exception as e:
             logger.error(f'WebSocket authentication error: {e}', exc_info=True)
-            raise WebSocketException(
-                code=status.WS_1011_INTERNAL_ERROR, reason='Authentication service error'
+            raise self._convert_to_websocket_exception(e)
+
+    @staticmethod
+    def _convert_to_websocket_exception(error: Exception) -> WebSocketException:
+        """
+        Convert custom WebSocket exceptions to FastAPI WebSocketException.
+
+        Args:
+            error: The exception to convert
+
+        Returns:
+            WebSocketException with appropriate code and reason
+        """
+        if isinstance(error, (AuthenticationError, RateLimitError, EventValidationError,
+                            EventHandlingError, RoomError, NamespaceError, BroadcastError)):
+            return WebSocketException(code=error.code, reason=str(error))
+        else:
+            return WebSocketException(
+                code=status.WS_1011_INTERNAL_ERROR,
+                reason=f'Authentication service error: {str(error)}'
             )
 
     @staticmethod
