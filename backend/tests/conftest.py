@@ -1,11 +1,14 @@
 import uuid
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import pytest
+from fastapi import WebSocket
 from fastapi.testclient import TestClient
 from pymongo import MongoClient
 from sqlalchemy import StaticPool, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
+from uuid import uuid4
+
 
 from app.api.badges.model import Badge as BadgeModel
 from app.api.badges.model import MemberBadge as MemberBadgeModel
@@ -28,6 +31,7 @@ from app.api.post.schemas import (
     PostTypeEnum,
 )
 from app.api.rating.model import Rating
+from app.api.users.model import User
 from app.api.users.schema import UserCreate
 from app.api.users.service import UserService
 from app.core.config import settings
@@ -544,3 +548,138 @@ def comment_like_on_db(session_sql, comment_on_db, user_on_db):
     session_sql.flush()
     session_sql.refresh(comment_like)
     return comment_like
+
+
+@pytest.fixture
+def websocket_client(session_sql):
+    """Create a WebSocket test client for unauthenticated connections."""
+    def get_db_override():
+        return session_sql
+
+    app.dependency_overrides[get_db] = get_db_override
+
+    with TestClient(app) as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def authenticated_websocket_client(session_sql, user_on_db):
+    """Create an authenticated WebSocket test client."""
+    def get_db_override():
+        return session_sql
+
+    app.dependency_overrides[get_db] = get_db_override
+
+    with TestClient(app) as client:
+        # Get authentication token
+        response = client.post(
+            '/users/login',
+            data={'username': user_on_db.email, 'password': 'hashed_password'}
+        )
+        token = response.json().get('access_token')
+
+        # Store token for WebSocket connections
+        client.token = token
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def websocket_event_data():
+    """Sample WebSocket event data for testing."""
+    return {
+        "ping": {
+            "type": "ping",
+            "request_id": "ping_123",
+            "timestamp": 1703001600.0
+        },
+        "join_room": {
+            "type": "join_conversation",
+            "conversation_id": "test_room_123",
+            "request_id": "join_123",
+            "timestamp": 1703001600.0
+        },
+        "send_message": {
+            "type": "send_message",
+            "conversation_id": "conv_123",
+            "content": "Hello, World!",
+            "request_id": "msg_123",
+            "timestamp": 1703001600.0
+        },
+        "invalid_event": {
+            "type": "invalid_type",
+            "invalid_field": "invalid_value",
+            "request_id": "invalid_123"
+        }
+    }
+
+
+@pytest.fixture
+def sample_conversation_id():
+    """Sample conversation ID for testing."""
+    return "test_conversation_123"
+
+
+@pytest.fixture
+def sample_room_data():
+    """Sample room data for testing."""
+    return {
+        "room_id": "test_room_123",
+        "conversation_id": "test_conversation_123",
+        "participants": ["user1", "user2"]
+    }
+
+
+@pytest.fixture
+def mock_websocket():
+    """Create a mock WebSocket connection for testing."""
+    websocket = Mock(spec=WebSocket)
+    websocket.client = Mock()
+    websocket.client.host = "127.0.0.1"
+    websocket.headers = {}
+    websocket.query_params = {}
+    return websocket
+
+
+@pytest.fixture
+def mock_authenticated_websocket(mock_websocket):
+    """Create a mock authenticated WebSocket with token."""
+    mock_websocket.query_params = {"token": "valid_jwt_token"}
+    mock_websocket.headers = {
+        "authorization": "Bearer valid_jwt_token",
+        "x-forwarded-for": "192.168.1.1",
+    }
+    return mock_websocket
+
+
+@pytest.fixture
+def mock_user():
+    """Create a mock User object for testing."""
+    user = Mock(spec=User)
+    user.id = uuid4()
+    user.email = "test@example.com"
+    user.name = "Test User"
+    user.status = "active"
+    return user
+
+
+@pytest.fixture
+def mock_session():
+    """Create a mock database session."""
+    session = Mock(spec=Session)
+    return session
+
+
+@pytest.fixture
+def websocket_auth():
+    """Create a WebSocketAuth instance for testing."""
+    from app.core.websocket.auth import WebSocketAuth
+    auth = WebSocketAuth()
+    # Clear any existing state
+    auth._connection_limits.clear()
+    auth._active_sessions.clear()
+    auth._started = False
+    return auth
