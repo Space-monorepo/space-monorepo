@@ -100,59 +100,14 @@ export const fetchAnnouncements = async (token: string): Promise<AnnouncementNot
 
 // Buscar conexões (simulado até ter endpoint real)
 export const fetchConnections = async (token: string): Promise<ConnectionNotification[]> => {
-    // Por enquanto simulado - quando tiver endpoint real, implementar aqui
-    return [
-        {
-            id: '1',
-            type: 'Conexão',
-            title: 'Felipe Sousa deseja conectar-se com você',
-            author: {
-                id: 'user1',
-                name: 'Felipe Sousa',
-                username: 'felipesousa',
-                profile_picture: '/ProfilePic3.svg'
-            },
-            community: {
-                id: 'comm1',
-                name: 'PUC - Campinas'
-            },
-            date: '3 horas atrás',
-            created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-            time: '',
-            connection_status: 'pending',
-            actions: ['Conectar-se', 'X']
-        }
-    ]
+    // Quando a API real estiver pronta, implemente aqui a chamada fetch para o backend
+    return [];
 }
 
 // Buscar interações (simulado até ter endpoint real)
 export const fetchInteractions = async (token: string): Promise<InteractionNotification[]> => {
-    // Por enquanto simulado - quando tiver endpoint real, implementar aqui
-    return [
-        {
-            id: '1',
-            type: 'Comentário',
-            title: 'Felipe Sousa comentou no seu post: Parabéns pela campanha!!',
-            author: {
-                id: 'user1',
-                name: 'Felipe Sousa',
-                username: 'felipesousa',
-                profile_picture: '/ProfilePic3.svg'
-            },
-            community: {
-                id: 'comm1',
-                name: 'PUC - Campinas'
-            },
-            date: '3 horas atrás',
-            created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-            time: '',
-            interaction_type: 'comment',
-            post_id: 'post1',
-            actions: ['Curtir']
-        }
-    ]
+    // Quando a API real estiver pronta, implemente aqui a chamada fetch para o backend
+    return [];
 }
 
 // Buscar todas as notificações

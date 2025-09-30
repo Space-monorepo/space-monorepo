@@ -74,106 +74,31 @@ export default function NotificacoesPage() {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
   const { notifications, loading, error } = useNotifications()
 
-  // State for connections functionality
-  const [connections, setConnections] = useState([
-    {
-      id: "1",
-      timestamp: "3 horas atrás",
-      message: "Felipe Sousa deseja conectar-se com você",
-      username: "@felipesousa",
-      community: "Comunidade: PUC-Campinas",
-      isPending: true
-    },
-    {
-      id: "2",
-      timestamp: "1 semana atrás",
-      message: "Briann Gomes conectou-se com você",
-      username: "@brianngomes",
-      community: "Comunidade: Condomínio",
-      isPending: false
-    },
-    {
-      id: "3",
-      timestamp: "2 semanas atrás",
-      message: "Gabriel Padreca deseja conectar-se com você",
-      username: "@gabrielpadreca",
-      community: "Comunidade: Apple Campinas",
-      isPending: true
-    },
-    {
-      id: "4",
-      timestamp: "2 semanas atrás",
-      message: "Guilherme Sousa conectou-se com você",
-      username: "@guilhermesousa",
-      community: "Comunidade: PUC-Campinas",
-      isPending: false
+  // Usar conexões reais do backend
+  const connections = notifications.connections || [];
+  const pendingCount = connections.filter(conn => conn.connection_status === 'pending').length;
+
+  // Usar interações reais do backend
+  const interactions = notifications.interactions || [];
+  const interactionsCount = interactions.length;
+
+  // Funções para aceitar/rejeitar conexão usando API (exemplo básico)
+  const handleConnect = async (id: string) => {
+    try {
+      await fetch(`/api/users/connections/${id}/accept`, { method: 'PUT' });
+      // Ideal: atualizar lista de conexões após sucesso
+    } catch (e) {
+      console.error('Erro ao aceitar conexão', e);
     }
-  ])
-
-  const pendingCount = connections.filter(conn => conn.isPending).length
-
-  // State for interactions functionality
-  const [interactions, setInteractions] = useState([
-    {
-      id: "1",
-      avatarSrc: "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/abb76ed01d1015e5f7bd7130432933cf775f2fa6?placeholderIfAbsent=true",
-      avatarClassName: "object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]",
-      mainText: "Felipe Sousa comentou no seu post: Parabéns pela campanha!!",
-      username: "@felipesousa",
-      community: "Comunidade: PUC-Campinas",
-      timestamp: "3 horas atrás",
-      showLikeButton: true,
-      backgroundColor: "bg-zinc-100"
-    },
-    {
-      id: "2",
-      avatarSrc: "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/fbe60d6b2490ab1a01f25824346c2ff51b6b9e27?placeholderIfAbsent=true",
-      avatarClassName: "object-contain shrink-0 self-stretch my-auto w-11 aspect-square",
-      mainText: "Rafael Lanza curtiu seu comentário: Esse debate é importante!",
-      username: "@rafaelanza",
-      community: "Comunidade: Condomíno",
-      timestamp: "3 horas atrás",
-      showLikeButton: false,
-      backgroundColor: ""
-    },
-    {
-      id: "3",
-      avatarSrc: "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/bd66bd6fc5ebb43ebe4b1ccbeaa383b1c811285d?placeholderIfAbsent=true",
-      avatarClassName: "object-contain shrink-0 self-stretch my-auto aspect-square w-[37px]",
-      mainText: "Gabriel Padreca comentou no seu post: Tem toda razão, estou...",
-      username: "@gabrielpadreca",
-      community: "Comunidade: PUC-Campinas",
-      timestamp: "10 horas atrás",
-      showLikeButton: true,
-      backgroundColor: ""
-    },
-    {
-      id: "4",
-      avatarSrc: "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/0266ce938656cadbe8c52578018c2a1a6aa007f1?placeholderIfAbsent=true",
-      avatarClassName: "object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]",
-      mainText: "Briann Gomes está participando da sua campanha",
-      username: "@brianngomes",
-      community: "Comunidade: PUC-Campinas",
-      timestamp: "14 horas atrás",
-      showLikeButton: false,
-      backgroundColor: ""
-    }
-  ])
-
-  const interactionsCount = interactions.length
-
-  const handleConnect = (id: string) => {
-    setConnections(prev =>
-      prev.map(conn =>
-        conn.id === id
-          ? { ...conn, isPending: false, message: conn.message.replace("deseja conectar-se com você", "conectou-se com você") }
-          : conn
-      )
-    );
   };
 
-  const handleReject = (id: string) => {
-    setConnections(prev => prev.filter(conn => conn.id !== id));
+  const handleReject = async (id: string) => {
+    try {
+      await fetch(`/api/users/connections/${id}/reject`, { method: 'PUT' });
+      // Ideal: atualizar lista de conexões após sucesso
+    } catch (e) {
+      console.error('Erro ao rejeitar conexão', e);
+    }
   };
 
   const handleLikeInteraction = (id: string) => {
@@ -700,41 +625,37 @@ export default function NotificacoesPage() {
                   </div>
                 </nav>
                 <div className="flex gap-2 items-center self-stretch my-auto">
-                  <button type="button" aria-label="Action 1">
-                    <img
-                      src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/074681a549e783096b458262f6c0fe30416fe3b1?placeholderIfAbsent=true"
-                      className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
-                      alt=""
-                    />
+                  <button type="button" aria-label="Filtrar">
+                    <Filter className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square text-[#525252]" />
                   </button>
-                  <button type="button" aria-label="Action 2">
-                    <img
-                      src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/8fab779e10432bd198f30df3d0e10f8370547d71?placeholderIfAbsent=true"
-                      className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
-                      alt=""
-                    />
+                  <button type="button" aria-label="Ordenar">
+                    <SortDescending className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square text-[#525252]" />
                   </button>
                 </div>
               </header>
 
               {/* Connections List Section */}
               <section className="mt-6 w-full max-md:max-w-full">
-                {connections.map((connection) => {
-                  return (
+                {connections.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
+                    <span className="text-lg">Nenhuma conexão encontrada no momento.</span>
+                  </div>
+                ) : (
+                  connections.map((connection) => (
                     <article
                       key={connection.id}
-                      className={`flex flex-col justify-center px-6 py-4 w-full bg-white max-md:px-5 max-md:max-w-full ${connection.isPending ? 'hover:bg-zinc-100 transition-colors' : ''}`}
+                      className={`flex flex-col justify-center px-6 py-4 w-full bg-white max-md:px-5 max-md:max-w-full ${connection.connection_status === 'pending' ? 'hover:bg-zinc-100 transition-colors' : ''}`}
                     >
                       <div className="w-full max-md:max-w-full">
                         <time className="text-xs leading-loose text-neutral-600 max-md:max-w-full">
-                          {connection.timestamp}
+                          {connection.created_at ? new Date(connection.created_at).toLocaleString('pt-BR') : ''}
                         </time>
                         <div className="mt-2 w-full max-md:max-w-full">
                           <div className="flex flex-wrap gap-6 items-start w-full max-md:max-w-full">
                             <p className="flex-1 shrink text-base text-black basis-8 max-md:max-w-full">
-                              {connection.message}
+                              {connection.title}
                             </p>
-                            {connection.isPending && (
+                            {connection.connection_status === 'pending' && (
                               <>
                                 <button
                                   onClick={() => handleConnect(connection.id)}
@@ -755,16 +676,16 @@ export default function NotificacoesPage() {
                             )}
                           </div>
                           <p className="mt-1 text-xs leading-loose text-neutral-600 max-md:max-w-full">
-                            {connection.username}
+                            @{connection.author?.username}
                           </p>
                           <p className="mt-1 text-xs leading-loose text-neutral-600 max-md:max-w-full">
-                            {connection.community}
+                            Comunidade: {connection.community?.name}
                           </p>
                         </div>
                       </div>
                     </article>
-                  );
-                })}
+                  ))
+                )}
               </section>
             </div>
           </div>
@@ -787,65 +708,63 @@ export default function NotificacoesPage() {
                   </div>
                 </div>
                 <nav className="flex gap-2 items-center self-stretch my-auto">
-                  <button type="button" aria-label="Primeira ação">
-                    <img
-                      src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/074681a549e783096b458262f6c0fe30416fe3b1?placeholderIfAbsent=true"
-                      alt=""
-                      className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
-                    />
+                  <button type="button" aria-label="Filtrar">
+                    <Filter className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square text-[#525252]" />
                   </button>
-                  <button type="button" aria-label="Segunda ação">
-                    <img
-                      src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/8fab779e10432bd198f30df3d0e10f8370547d71?placeholderIfAbsent=true"
-                      alt=""
-                      className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square"
-                    />
+                  <button type="button" aria-label="Ordenar">
+                    <SortDescending className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square text-[#525252]" />
                   </button>
                 </nav>
               </header>
 
               {/* Interactions List Section */}
               <main className="mt-6 w-full max-md:max-w-full">
-                {interactions.map((interaction) => (
-                  <article
-                    key={interaction.id}
-                    className={`flex flex-wrap gap-4 items-center px-6 py-4 w-full max-md:px-5 max-md:max-w-full ${interaction.backgroundColor}`}
-                  >
-                    <img
-                      src={interaction.avatarSrc}
-                      alt={`Avatar de ${interaction.username}`}
-                      className={interaction.avatarClassName}
-                    />
-                    <div className="flex-1 shrink self-stretch my-auto text-xs basis-8 min-w-60 text-neutral-600 max-md:max-w-full">
-                      <div className="w-full max-md:max-w-full">
-                        <div className="flex gap-6 items-start w-full text-base text-black max-md:max-w-full">
-                          <p className="flex-1 shrink basis-0 max-md:max-w-full">
-                            {interaction.mainText}
+                {interactions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
+                    <span className="text-lg">Nenhuma interação encontrada no momento.</span>
+                  </div>
+                ) : (
+                  interactions.map((interaction) => (
+                    <article
+                      key={interaction.id}
+                      className="flex flex-wrap gap-4 items-center px-6 py-4 w-full max-md:px-5 max-md:max-w-full"
+                    >
+                      <img
+                        src={interaction.author.profile_picture || "/no-profile-pic.png"}
+                        alt={`Avatar de ${interaction.author.name}`}
+                        className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]"
+                      />
+                      <div className="flex-1 shrink self-stretch my-auto text-xs basis-8 min-w-60 text-neutral-600 max-md:max-w-full">
+                        <div className="w-full max-md:max-w-full">
+                          <div className="flex gap-6 items-start w-full text-base text-black max-md:max-w-full">
+                            <p className="flex-1 shrink basis-0 max-md:max-w-full">
+                              {interaction.title}
+                            </p>
+                          </div>
+                          <p className="mt-1 leading-loose text-neutral-600 max-md:max-w-full">
+                            @{interaction.author.username}
+                          </p>
+                          <p className="mt-1 leading-loose text-neutral-600 max-md:max-w-full">
+                            Comunidade: {interaction.community.name}
                           </p>
                         </div>
-                        <p className="mt-1 leading-loose text-neutral-600 max-md:max-w-full">
-                          {interaction.username}
-                        </p>
-                        <p className="mt-1 leading-loose text-neutral-600 max-md:max-w-full">
-                          {interaction.community}
-                        </p>
+                        <time className="mt-2 leading-loose text-neutral-600 max-md:max-w-full">
+                          {interaction.created_at ? new Date(interaction.created_at).toLocaleString('pt-BR') : interaction.date}
+                        </time>
                       </div>
-                      <time className="mt-2 leading-loose text-neutral-600 max-md:max-w-full">
-                        {interaction.timestamp}
-                      </time>
-                    </div>
-                    {interaction.showLikeButton && (
-                      <button
-                        onClick={() => handleLikeInteraction(interaction.id)}
-                        className="flex gap-8 items-center self-stretch px-4 py-2 my-auto text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100 hover:bg-neutral-700 transition-colors"
-                      >
-                        <span className="self-stretch my-auto text-zinc-100">
-                          Curtir
-                        </span>
-                      </button>
-                    )}
-                  </article>
-                ))}
+                      {interaction.interaction_type === 'comment' && (
+                        <button
+                          onClick={() => handleLikeInteraction(interaction.id)}
+                          className="flex gap-8 items-center self-stretch px-4 py-2 my-auto text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100 hover:bg-neutral-700 transition-colors"
+                        >
+                          <span className="self-stretch my-auto text-zinc-100">
+                            Curtir
+                          </span>
+                        </button>
+                      )}
+                    </article>
+                  ))
+                )}
               </main>
             </section>
           </div>
