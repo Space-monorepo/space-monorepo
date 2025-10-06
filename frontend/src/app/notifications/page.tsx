@@ -295,8 +295,8 @@ export default function NotificacoesPage() {
                             {notification.title}
                           </h3>
                           <div className="flex gap-2 justify-center items-center text-xs leading-loose text-neutral-600">
-                            <span className="self-stretch my-auto text-neutral-600">
-                              {notification.stats?.accesses || '5 mil'}
+                            <span className="self-stretch my-auto whitespace-nowrap text-neutral-600">
+                              {notification.stats?.accesses || '0'}
                             </span>
                             <Eye className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square text-neutral-600" />
                           </div>
