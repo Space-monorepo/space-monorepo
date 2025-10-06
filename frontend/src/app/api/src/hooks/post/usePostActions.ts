@@ -495,7 +495,7 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-            params: { status: ['reported'] },
+            // Removido o filtro por status 'reported' para buscar todos os comentários ativos
           }
         );
         onSuccess?.(response.data);
