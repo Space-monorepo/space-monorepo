@@ -478,12 +478,64 @@ export default function NotificacoesPage() {
   const [showCommentsModal, setShowCommentsModal] = useState(false)
   const { notifications, loading, error } = useNotifications()
 
-  // Usar conexões reais do backend
-  const connections = notifications.connections || [];
+  // Usar conexões reais do backend ou mock se vazio
+  let connections = notifications.connections || [];
+  if (connections.length === 0) {
+    connections = [
+      {
+        id: 'mock-1',
+        type: 'connections',
+        title: 'Convite para se conectar com João Silva',
+        connection_status: 'pending',
+        date: new Date().toLocaleDateString('pt-BR'),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        author: { id: 'user-1', name: 'João Silva', username: 'joaosilva', profile_picture: '/ProfilePic1.svg', role: 'member' },
+        community: { id: 'comm-1', name: 'Space Devs' }
+      },
+      {
+        id: 'mock-2',
+        type: 'connections',
+        title: 'Conexão aceita com Maria Oliveira',
+        connection_status: 'accepted',
+        date: new Date().toLocaleDateString('pt-BR'),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        author: { id: 'user-2', name: 'Maria Oliveira', username: 'mariaoliveira', profile_picture: '/ProfilePic2.svg', role: 'member' },
+        community: { id: 'comm-2', name: 'Space Writers' }
+      }
+    ];
+  }
   const pendingCount = connections.filter(conn => conn.connection_status === 'pending').length;
 
-  // Usar interações reais do backend
-  const interactions = notifications.interactions || [];
+  // Usar interações reais do backend ou mock se vazio
+  let interactions = notifications.interactions || [];
+  if (interactions.length === 0) {
+    interactions = [
+      {
+        id: 'mock-int-1',
+        type: 'interactions',
+        title: 'Comentário em sua publicação',
+        interaction_type: 'comment',
+        date: new Date().toLocaleDateString('pt-BR'),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        author: { id: 'user-3', name: 'Carlos Souza', username: 'carlossouza', profile_picture: '/ProfilePic1.svg', role: 'member' },
+        community: { id: 'comm-1', name: 'Space Devs' }
+      },
+      {
+        id: 'mock-int-2',
+        type: 'interactions',
+        title: 'Nova curtida recebida',
+        interaction_type: 'like',
+        date: new Date().toLocaleDateString('pt-BR'),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        author: { id: 'user-4', name: 'Ana Paula', username: 'anapaula', profile_picture: '/ProfilePic2.svg', role: 'member' },
+        community: { id: 'comm-2', name: 'Space Writers' }
+      }
+    ];
+  }
   const interactionsCount = interactions.length;
 
   // Funções para aceitar/rejeitar conexão usando API (exemplo básico)
