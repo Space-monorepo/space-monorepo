@@ -13,37 +13,24 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from app.core.config import settings
 from app.core.database import Base
-
-if settings.ENVIRONMENT == 'test':
-    UUIDColumn = String(36)
-
-    def uuid_default():
-        return str(uuid.uuid4())
-
-else:
-    UUIDColumn = UUID(as_uuid=True)
-
-    def uuid_default():
-        return uuid.uuid4()
+from app.core.types import GUID
 
 
 class Conversation(Base):
     __tablename__ = 'conversations'
 
-    id = Column(UUIDColumn, primary_key=True, default=uuid_default, index=True)
-    user1_id = Column(UUIDColumn, ForeignKey('users.id'), nullable=False, index=True)
-    user2_id = Column(UUIDColumn, ForeignKey('users.id'), nullable=False, index=True)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4, index=True)
+    user1_id = Column(GUID, ForeignKey('users.id'), nullable=False, index=True)
+    user2_id = Column(GUID, ForeignKey('users.id'), nullable=False, index=True)
     created_at = Column(DateTime, nullable=False, default=func.now())
     updated_at = Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
     last_message_id = Column(
-        UUIDColumn,
+        GUID,
         ForeignKey('messages.id', use_alter=True, name='fk_conversation_last_message'),
         nullable=True,
     )
@@ -83,16 +70,16 @@ class Conversation(Base):
 class Message(Base):
     __tablename__ = 'messages'
 
-    id = Column(UUIDColumn, primary_key=True, default=uuid_default, index=True)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4, index=True)
     conversation_id = Column(
-        UUIDColumn, ForeignKey('conversations.id'), nullable=False, index=True
+        GUID, ForeignKey('conversations.id'), nullable=False, index=True
     )
-    sender_id = Column(UUIDColumn, ForeignKey('users.id'), nullable=False, index=True)
+    sender_id = Column(GUID, ForeignKey('users.id'), nullable=False, index=True)
     content = Column(Text, nullable=False)
     message_type = Column(String, nullable=False, default='text')
     created_at = Column(DateTime, nullable=False, default=func.now(), index=True)
     is_read = Column(Boolean, nullable=False, default=False)
-    reply_to_message_id = Column(UUIDColumn, ForeignKey('messages.id'), nullable=True)
+    reply_to_message_id = Column(GUID, ForeignKey('messages.id'), nullable=True)
 
     # Relationships
     conversation = relationship(
@@ -128,10 +115,8 @@ class Message(Base):
 class MessageAttachment(Base):
     __tablename__ = 'message_attachments'
 
-    id = Column(UUIDColumn, primary_key=True, default=uuid_default, index=True)
-    message_id = Column(
-        UUIDColumn, ForeignKey('messages.id'), nullable=False, index=True
-    )
+    id = Column(GUID, primary_key=True, default=uuid.uuid4, index=True)
+    message_id = Column(GUID, ForeignKey('messages.id'), nullable=False, index=True)
     filename = Column(String, nullable=False)
     original_filename = Column(String, nullable=False)
     file_path = Column(String, nullable=False)

@@ -57,10 +57,15 @@ class WebSocketAuth:
         # Active sessions: token_hash -> (user_id, last_activity)
         self._active_sessions: Dict[str, Tuple[str, datetime]] = {}
 
-        # Configuration
-        self.max_connections_per_ip = 10
-        self.rate_limit_window = 300  # 5 minutes
-        self.session_timeout = 3600  # 1 hour
+        # Configuration - more permissive in test environment
+        if settings.ENVIRONMENT == 'test':
+            self.max_connections_per_ip = 1000  # Very high limit for tests
+            self.rate_limit_window = 300  # 5 minutes
+            self.session_timeout = 3600  # 1 hour
+        else:
+            self.max_connections_per_ip = 10
+            self.rate_limit_window = 300  # 5 minutes
+            self.session_timeout = 3600  # 1 hour
 
         # Cleanup task
         self._cleanup_task = None

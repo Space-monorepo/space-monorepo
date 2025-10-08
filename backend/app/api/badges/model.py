@@ -8,18 +8,18 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from app.core.types import GUID
 
 
 class Badge(Base):
     __tablename__ = 'badges'
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(GUID, primary_key=True, default=uuid.uuid4, index=True)
     community_id = Column(
-        UUID(as_uuid=True),
+        GUID,
         ForeignKey('communities.id', ondelete='CASCADE'),
         nullable=False,
         index=True,
@@ -45,11 +45,11 @@ class MemberBadge(Base):
     __tablename__ = 'member_badges'
 
     member_id = Column(
-        UUID(as_uuid=True),
+        GUID,
         ForeignKey('community_members.id', ondelete='CASCADE'),
         primary_key=True,
     )
     badge_id = Column(
-        UUID(as_uuid=True), ForeignKey('badges.id', ondelete='CASCADE'), primary_key=True
+        GUID, ForeignKey('badges.id', ondelete='CASCADE'), primary_key=True
     )
     achieved_at = Column(DateTime(timezone=True), default=func.now())
