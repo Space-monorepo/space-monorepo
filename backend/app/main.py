@@ -9,7 +9,7 @@ from app.api.badges.routes import (
     admin_router as badges_admin_router,
 )
 from app.api.chat.routes import router as chat_router
-from app.api.chat.websocket_routes import router as chat_websocket_router
+from app.api.chat.websocket.routes import router as chat_websocket_router
 from app.api.comment.routes import router as comment_router
 from app.api.communities.routes import router as communities_router
 from app.api.moderation.routes import router as moderation_router

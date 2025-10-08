@@ -18,8 +18,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.websocket.manager import websocket_manager
 
-from .websocket.handlers import ChatEventHandler
-from .websocket.rooms import get_chat_room_manager
+from .handlers import ChatEventHandler
+from .rooms import get_chat_room_manager
 
 logger = logging.getLogger(__name__)
 
