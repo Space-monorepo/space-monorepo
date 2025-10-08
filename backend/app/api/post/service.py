@@ -53,7 +53,7 @@ class PostService:
         self.community_service = CommunityService(tm)
 
     def _get_post(self, post_id: UUID) -> Post:
-        post = self.post_repo.get_by_id(str(post_id))
+        post = self.post_repo.get_by_id(post_id)
         if not post:
             raise PostNotFoundError('Post not found')
         return post

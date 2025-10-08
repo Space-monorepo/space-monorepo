@@ -23,7 +23,7 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
         self.db = db
 
     # Connection methods
-    def get_connection_by_id(self, connection_id: UUID) -> UserConnection | None:
+    def get_connection_by_id(self, connection_id: UUID) -> UserConnection:
         """Get connection by ID"""
         return (
             self.db.query(UserConnection)
@@ -35,21 +35,17 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
         self, requester_id: UUID, addressee_id: UUID
     ) -> UserConnection | None:
         """Check if connection exists between two users (bidirectional)"""
-        # Convert to string to handle type differences
-        requester_str = str(requester_id)
-        addressee_str = str(addressee_id)
-
         return (
             self.db.query(UserConnection)
             .filter(
                 or_(
                     and_(
-                        UserConnection.requester_id == requester_str,
-                        UserConnection.addressee_id == addressee_str,
+                        UserConnection.requester_id == requester_id,
+                        UserConnection.addressee_id == addressee_id,
                     ),
                     and_(
-                        UserConnection.requester_id == addressee_str,
-                        UserConnection.addressee_id == requester_str,
+                        UserConnection.requester_id == addressee_id,
+                        UserConnection.addressee_id == requester_id,
                     ),
                 )
             )
@@ -64,8 +60,8 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
             self.db.query(UserConnection)
             .filter(
                 and_(
-                    UserConnection.requester_id == str(requester_id),
-                    UserConnection.addressee_id == str(addressee_id),
+                    UserConnection.requester_id == requester_id,
+                    UserConnection.addressee_id == addressee_id,
                     UserConnection.status == 'rejected',
                     UserConnection.rejected_at > one_hour_ago,
                 )
@@ -80,8 +76,8 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
     ) -> UserConnection:
         """Create a new connection request"""
         connection = UserConnection(
-            requester_id=str(requester_id),
-            addressee_id=str(addressee_id),
+            requester_id=requester_id,
+            addressee_id=addressee_id,
             status='pending',
         )
 
@@ -98,8 +94,8 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
             self.db.query(UserConnection)
             .filter(
                 and_(
-                    UserConnection.id == str(connection_id),
-                    UserConnection.addressee_id == str(user_id),
+                    UserConnection.id == connection_id,
+                    UserConnection.addressee_id == user_id,
                     UserConnection.status == 'pending',
                 )
             )
@@ -122,8 +118,8 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
             self.db.query(UserConnection)
             .filter(
                 and_(
-                    UserConnection.id == str(connection_id),
-                    UserConnection.addressee_id == str(user_id),
+                    UserConnection.id == connection_id,
+                    UserConnection.addressee_id == user_id,
                     UserConnection.status == 'pending',
                 )
             )
@@ -140,15 +136,15 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
         return connection
 
     def delete_connection(self, connection_id: UUID, user_id: UUID) -> bool:
-        """Delete an existing connection - either participant can delete"""
+        """Delete a connection (only if user is part of it)"""
         connection = (
             self.db.query(UserConnection)
             .filter(
                 and_(
-                    UserConnection.id == str(connection_id),
+                    UserConnection.id == connection_id,
                     or_(
-                        UserConnection.requester_id == str(user_id),
-                        UserConnection.addressee_id == str(user_id),
+                        UserConnection.requester_id == user_id,
+                        UserConnection.addressee_id == user_id,
                     ),
                 )
             )
@@ -163,13 +159,13 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
         return True
 
     def get_user_connections(
-        self, user_id: UUID, status: str = None
+        self, user_id: UUID, status: str | None = None
     ) -> list[UserConnection]:
-        """Get all connections for a user, optionally filtered by status"""
+        """Get all connections for a user - either as requester or addressee"""
         query = self.db.query(UserConnection).filter(
             or_(
-                UserConnection.requester_id == str(user_id),
-                UserConnection.addressee_id == str(user_id),
+                UserConnection.requester_id == user_id,
+                UserConnection.addressee_id == user_id,
             )
         )
 
@@ -179,15 +175,15 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
         return query.all()
 
     def validate_user_participation(self, connection_id: UUID, user_id: UUID) -> bool:
-        """Validate if user participates in the connection"""
+        """Check if user is part of the connection"""
         connection = (
             self.db.query(UserConnection)
             .filter(
                 and_(
-                    UserConnection.id == str(connection_id),
+                    UserConnection.id == connection_id,
                     or_(
-                        UserConnection.requester_id == str(user_id),
-                        UserConnection.addressee_id == str(user_id),
+                        UserConnection.requester_id == user_id,
+                        UserConnection.addressee_id == user_id,
                     ),
                 )
             )

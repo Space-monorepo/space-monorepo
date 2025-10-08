@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import List, Tuple
 from uuid import UUID
@@ -9,6 +10,8 @@ from app.api.chat.model import Conversation, Message, MessageAttachment
 from app.api.chat.schema import ConversationSearchParams, MessageSearchParams
 from app.api.users.model import User
 from app.core.repository import BaseRepository
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationRepository(BaseRepository[Conversation]):
@@ -25,7 +28,6 @@ class ConversationRepository(BaseRepository[Conversation]):
             .options(
                 joinedload(Conversation.user1),
                 joinedload(Conversation.user2),
-                joinedload(Conversation.last_message).joinedload(Message.sender),
             )
             .filter(Conversation.id == conversation_id)
             .first()
@@ -35,20 +37,17 @@ class ConversationRepository(BaseRepository[Conversation]):
         self, user1_id: UUID, user2_id: UUID
     ) -> Conversation | None:
         """Find existing conversation between two users (bidirectional) - custom query for complex filter"""
-        user1_str = str(user1_id)
-        user2_str = str(user2_id)
-
         return (
             self.session.query(Conversation)
             .filter(
                 or_(
                     and_(
-                        Conversation.user1_id == user1_str,
-                        Conversation.user2_id == user2_str,
+                        Conversation.user1_id == user1_id,
+                        Conversation.user2_id == user2_id,
                     ),
                     and_(
-                        Conversation.user1_id == user2_str,
-                        Conversation.user2_id == user1_str,
+                        Conversation.user1_id == user2_id,
+                        Conversation.user2_id == user1_id,
                     ),
                 )
             )
@@ -69,8 +68,6 @@ class ConversationRepository(BaseRepository[Conversation]):
         self, user_id: UUID, params: ConversationSearchParams
     ) -> Tuple[List[Conversation], int]:
         """List conversations for a user with search and pagination - custom query for complex joins"""
-        user_id_str = str(user_id)
-
         # Base query for conversations where user participates
         query = (
             self.session.query(Conversation)
@@ -81,8 +78,8 @@ class ConversationRepository(BaseRepository[Conversation]):
             )
             .filter(
                 or_(
-                    Conversation.user1_id == user_id_str,
-                    Conversation.user2_id == user_id_str,
+                    Conversation.user1_id == user_id,
+                    Conversation.user2_id == user_id,
                 )
             )
         )
@@ -94,11 +91,11 @@ class ConversationRepository(BaseRepository[Conversation]):
                 other_user_alias,
                 or_(
                     and_(
-                        Conversation.user1_id != user_id_str,
+                        Conversation.user1_id != user_id,
                         Conversation.user1_id == other_user_alias.c.id,
                     ),
                     and_(
-                        Conversation.user2_id != user_id_str,
+                        Conversation.user2_id != user_id,
                         Conversation.user2_id == other_user_alias.c.id,
                     ),
                 ),
@@ -122,11 +119,7 @@ class ConversationRepository(BaseRepository[Conversation]):
         if not conversation:
             return False
 
-        user_id_str = str(user_id)
-        return (
-            str(conversation.user1_id) == user_id_str
-            or str(conversation.user2_id) == user_id_str
-        )
+        return user_id in {conversation.user1_id, conversation.user2_id}
 
     def update_last_message(self, conversation_id: UUID, message_id: UUID) -> None:
         """Update the last message of a conversation"""
@@ -135,7 +128,7 @@ class ConversationRepository(BaseRepository[Conversation]):
             self.session.query(Conversation).filter(
                 Conversation.id == conversation_id
             ).update({
-                'last_message_id': str(message_id),
+                'last_message_id': message_id,
                 'updated_at': datetime.utcnow(),
             })
             self.session.flush()
@@ -148,11 +141,10 @@ class ConversationRepository(BaseRepository[Conversation]):
         if not conversation:
             return None
 
-        user_id_str = str(user_id)
-        if str(conversation.user1_id) == user_id_str:
-            return UUID(str(conversation.user2_id))
-        elif str(conversation.user2_id) == user_id_str:
-            return UUID(str(conversation.user1_id))
+        if conversation.user1_id == user_id:
+            return conversation.user2_id
+        elif conversation.user2_id == user_id:
+            return conversation.user1_id
         return None
 
     def delete_conversation(self, conversation_id: UUID) -> bool:
@@ -178,13 +170,11 @@ class MessageRepository(BaseRepository[Message]):
     ) -> Message:
         """Create a new message - uses BaseRepository.save()"""
         message = Message(
-            conversation_id=str(conversation_id),
-            sender_id=str(sender_id),
+            conversation_id=conversation_id,
+            sender_id=sender_id,
             content=content,
             message_type=message_type,
-            reply_to_message_id=str(reply_to_message_id)
-            if reply_to_message_id
-            else None,
+            reply_to_message_id=reply_to_message_id,
         )
 
         return self.save(message)
@@ -229,7 +219,6 @@ class MessageRepository(BaseRepository[Message]):
                 joinedload(Message.sender),
                 joinedload(Message.conversation),
                 joinedload(Message.reply_to_message).joinedload(Message.sender),
-                joinedload(Message.attachments),
             )
             .filter(Message.id == message_id)
             .first()
@@ -242,30 +231,29 @@ class MessageRepository(BaseRepository[Message]):
             return False
 
         # Only allow marking as read if user is not the sender
-        if str(message.sender_id) == str(user_id):
+        if message.sender_id == user_id:
             return False
 
+        # Update the message
         self.session.query(Message).filter(Message.id == message_id).update({
             'is_read': True
         })
         self.session.flush()
         return True
 
-    def bulk_mark_as_read(self, message_ids: List[UUID], user_id: UUID) -> int:
+    def bulk_mark_as_read(self, message_ids: list[UUID], user_id: UUID) -> int:
         """Mark multiple messages as read, returns count of successfully marked messages"""
-        user_id_str = str(user_id)
-
         # Update messages where user is not the sender
         updated_count = (
             self.session.query(Message)
             .filter(
                 and_(
-                    Message.id.in_([str(mid) for mid in message_ids]),
-                    Message.sender_id != user_id_str,
+                    Message.id.in_(message_ids),
+                    Message.sender_id != user_id,
                     Message.is_read.is_(False),
                 )
             )
-            .update({Message.is_read: True}, synchronize_session=False)
+            .update({'is_read': True}, synchronize_session=False)
         )
 
         self.session.flush()
@@ -273,14 +261,12 @@ class MessageRepository(BaseRepository[Message]):
 
     def count_unread_messages(self, conversation_id: UUID, user_id: UUID) -> int:
         """Count unread messages in a conversation for a specific user"""
-        user_id_str = str(user_id)
-
         return (
             self.session.query(Message)
             .filter(
                 and_(
                     Message.conversation_id == conversation_id,
-                    Message.sender_id != user_id_str,
+                    Message.sender_id != user_id,
                     Message.is_read.is_(False),
                 )
             )
@@ -324,7 +310,7 @@ class MessageRepository(BaseRepository[Message]):
         message = self.get_by_id(message_id)
         if not message:
             return False
-        return str(message.sender_id) == str(user_id)
+        return message.sender_id == user_id
 
     def delete_message(self, message_id: UUID) -> bool:
         """Delete a message - uses BaseRepository.get_by_id() and BaseRepository.delete()"""
@@ -350,7 +336,7 @@ class MessageAttachmentRepository(BaseRepository[MessageAttachment]):
     ) -> MessageAttachment:
         """Create a new message attachment - uses BaseRepository.save()"""
         attachment = MessageAttachment(
-            message_id=str(message_id),
+            message_id=message_id,
             file_name=file_name,
             file_size=file_size,
             file_type=file_type,
@@ -372,7 +358,7 @@ class MessageAttachmentRepository(BaseRepository[MessageAttachment]):
     def get_attachment_with_message(
         self, attachment_id: UUID
     ) -> MessageAttachment | None:
-        """Get attachment with message details loaded - custom query for eager loading (can't use base get_by_id)"""
+        """Get attachment with message details"""
         return (
             self.session.query(MessageAttachment)
             .options(joinedload(MessageAttachment.message))

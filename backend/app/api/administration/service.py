@@ -47,7 +47,7 @@ class AdministrationService:
         members = []
         for user in users:
             community_member = CommunityMemberCreate(
-                user_id=str(user.id), community_id=str(community_id)
+                user_id=user.id, community_id=community_id
             )
             member = self.community_service.create_member(community_member)
             members.append(self.community_service._map_member_to_response(member))
