@@ -47,11 +47,11 @@ def fake_ids():
     """Fixture que retorna IDs únicos para uso nos testes."""
     return {
         'comment_id': uuid4(),
-        'post_id': str(uuid4()),
-        'user_id': str(uuid4()),
-        'community_id': str(uuid4()),
-        'parent_id': str(uuid4()),
-        'member_id': str(uuid4()),
+        'post_id': uuid4(),
+        'user_id': uuid4(),
+        'community_id': uuid4(),
+        'parent_id': uuid4(),
+        'member_id': uuid4(),
         'reply_id': uuid4(),
     }
 
@@ -193,8 +193,8 @@ def test_create_comment_service_success(
     assert result is not None
     assert isinstance(result, CommentResponse)
     assert str(result.id) == str(fake_ids['comment_id'])
-    assert str(result.post.id) == fake_ids['post_id']
-    assert str(result.user.id) == fake_ids['user_id']
+    assert str(result.post.id) == str(fake_ids['post_id'])
+    assert str(result.user.id) == str(fake_ids['user_id'])
     assert result.content == 'Test comment content'
     assert result.status == CommentStatusEnum.ACTIVE
     assert result.likes_count == DEFAULT_LIKES_COUNT
@@ -261,7 +261,7 @@ def test_create_comment_reply_service_success(
     assert result is not None
     assert isinstance(result, CommentResponse)
     assert str(result.id) == str(fake_ids['comment_id'])
-    assert str(result.parent_id) == fake_ids['parent_id']
+    assert str(result.parent_id) == str(fake_ids['parent_id'])
     assert result.content == 'Test reply content'
 
 
@@ -295,8 +295,8 @@ def test_get_comment_by_id_service_success(
     assert isinstance(result, CommentResponse)
     assert str(result.id) == str(fake_ids['comment_id'])
     assert result.content == fake_comment.content
-    assert str(result.user.id) == fake_ids['user_id']
-    assert str(result.post.id) == fake_ids['post_id']
+    assert str(result.user.id) == str(fake_ids['user_id'])
+    assert str(result.post.id) == str(fake_ids['post_id'])
     assert result.status == CommentStatusEnum.ACTIVE
     assert result.likes_count == 3
     assert result.report_count == DEFAULT_REPORT_COUNT
@@ -344,7 +344,7 @@ def test_list_comments_by_post_service_success(
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
-    assert str(result.items[0].post.id) == fake_ids['post_id']
+    assert str(result.items[0].post.id) == str(fake_ids['post_id'])
     assert str(result.items[0].id) == str(fake_ids['comment_id'])
     assert result.total == 1
     assert result.has_more == False
@@ -387,7 +387,7 @@ def test_list_comments_by_user_service_success(
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
-    assert str(result.items[0].user.id) == fake_ids['user_id']
+    assert str(result.items[0].user.id) == str(fake_ids['user_id'])
     assert str(result.items[0].id) == str(fake_ids['comment_id'])
     assert result.total == 1
     assert result.has_more == False
@@ -449,7 +449,7 @@ def test_list_replies_by_parent_service_success(
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
-    assert str(result.items[0].parent_id) == fake_ids['parent_id']
+    assert str(result.items[0].parent_id) == str(fake_ids['parent_id'])
     assert str(result.items[0].id) == str(fake_ids['reply_id'])
     assert result.total == 1
 

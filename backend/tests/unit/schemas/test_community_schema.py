@@ -120,8 +120,8 @@ def test_community_response_schema():
 
 @pytest.mark.unit
 def test_community_member_create_schema():
-    user_id = str(uuid.uuid4())
-    community_id = str(uuid.uuid4())
+    user_id = uuid.uuid4()
+    community_id = uuid.uuid4()
 
     member = CommunityMemberCreate(
         user_id=user_id,

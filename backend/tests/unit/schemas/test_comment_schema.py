@@ -17,8 +17,8 @@ from app.api.communities.schema import CommunityMemberRoleEnum
 
 
 def test_comment_create_schema():
-    post_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
+    post_id = uuid.uuid4()
+    user_id = uuid.uuid4()
 
     comment = CommentCreate(
         post_id=post_id,
@@ -38,9 +38,9 @@ def test_comment_create_schema():
 
 
 def test_comment_create_with_parent_schema():
-    post_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-    parent_id = str(uuid.uuid4())
+    post_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    parent_id = uuid.uuid4()
 
     comment = CommentCreate(
         post_id=post_id,
@@ -368,8 +368,8 @@ def test_comment_like_response_schema():
 def test_comment_create_invalid_schema():
     with pytest.raises(ValidationError):
         CommentCreate(
-            post_id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
+            post_id=uuid.uuid4(),
+            user_id=uuid.uuid4(),
             content='',
             parent_id=None,
             status=CommentStatusEnum.ACTIVE,
@@ -379,8 +379,8 @@ def test_comment_create_invalid_schema():
 def test_comment_create_content_too_long_invalid_schema():
     with pytest.raises(ValidationError):
         CommentCreate(
-            post_id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
+            post_id=uuid.uuid4(),
+            user_id=uuid.uuid4(),
             content='a' * 1001,
             parent_id=None,
             status=CommentStatusEnum.ACTIVE,

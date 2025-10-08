@@ -694,8 +694,8 @@ def test_create_member_service_success():
     - Then it should return the CommunityMemberResponse
     """
     # Arrange
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
     fake_member_data = CommunityMemberCreate(
         user_id=fake_user_id,
         community_id=fake_community_id,
@@ -760,8 +760,8 @@ def test_create_member_service_success():
     mock_member_repo.save.assert_called_once()
     # Verify the real _map_member_to_response was executed by checking the result
     assert result is not None
-    assert str(result.user.id) == fake_user_id
-    assert str(result.community.id) == fake_community_id
+    assert str(result.user.id) == str(fake_user_id)
+    assert str(result.community.id) == str(fake_community_id)
     assert result.role == CommunityMemberRoleEnum.MEMBER
     assert result.reputation == 10
     assert result.status_participation == CommunityMemberStatusEnum.ACTIVE
@@ -785,8 +785,8 @@ def test_create_member_service_member_already_exists():
     - Then it should raise CommunityMemberAlreadyExistsError
     """
     # Arrange
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
     fake_member_data = CommunityMemberCreate(
         user_id=fake_user_id,
         community_id=fake_community_id,
@@ -836,8 +836,8 @@ def test_create_member_service_unexpected_error():
     - Then it should raise UnexpectedCommunityMemberError
     """
     # Arrange
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
     fake_member_data = CommunityMemberCreate(
         user_id=fake_user_id,
         community_id=fake_community_id,

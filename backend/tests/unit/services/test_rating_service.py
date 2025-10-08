@@ -31,8 +31,8 @@ def test_create_rating_service_success():
     """
     # Arrange
     fake_rating_id = uuid4()
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
     fake_datetime = datetime.now()
 
     fake_rating_data = RatingCreate(
@@ -94,8 +94,8 @@ def test_create_rating_service_without_description_success():
     """
     # Arrange
     fake_rating_id = uuid4()
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
     fake_datetime = datetime.now()
 
     fake_rating_data = RatingCreate(
@@ -148,8 +148,8 @@ def test_create_rating_service_minimum_rating_success():
     - Then it should return the expected RatingResponse with rating 1
     """
     # Arrange
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
     fake_datetime = datetime.now()
 
     fake_rating_data = RatingCreate(
@@ -202,8 +202,8 @@ def test_create_rating_service_maximum_rating_success():
     - Then it should return the expected RatingResponse with rating 5
     """
     # Arrange
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
     fake_datetime = datetime.now()
 
     fake_rating_data = RatingCreate(
@@ -257,8 +257,8 @@ def test_create_rating_service_rating_already_exists():
     - Then it should raise RatingAlreadyExistsError
     """
     # Arrange
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
     fake_rating_data = RatingCreate(
         user_id=fake_user_id,
         community_id=fake_community_id,
@@ -307,8 +307,8 @@ def test_create_rating_service_community_not_found():
     - Then it should propagate the CommunityNotFoundError
     """
     # Arrange
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
     fake_rating_data = RatingCreate(
         user_id=fake_user_id,
         community_id=fake_community_id,
@@ -345,8 +345,8 @@ def test_create_rating_service_user_not_member():
     - Then it should raise CommunityMemberNotFoundError
     """
     # Arrange
-    fake_user_id = str(uuid4())
-    fake_community_id = str(uuid4())
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
     fake_rating_data = RatingCreate(
         user_id=fake_user_id,
         community_id=fake_community_id,
@@ -394,8 +394,8 @@ def test_get_rating_service_success():
 
     expect_rating_model = Mock(spec=Rating)
     expect_rating_model.id = fake_rating_id
-    expect_rating_model.user_id = str(uuid4())
-    expect_rating_model.community_id = str(uuid4())
+    expect_rating_model.user_id = uuid4()
+    expect_rating_model.community_id = uuid4()
     expect_rating_model.rating = 5
     expect_rating_model.title = 'Test Rating'
     expect_rating_model.description = 'Test Description'
@@ -462,8 +462,8 @@ def test_list_ratings_by_community_service_success():
 
     fake_rating_model = Mock(spec=Rating)
     fake_rating_model.id = uuid4()
-    fake_rating_model.user_id = str(uuid4())
-    fake_rating_model.community_id = str(fake_community_id)
+    fake_rating_model.user_id = uuid4()
+    fake_rating_model.community_id = fake_community_id
     fake_rating_model.rating = 5
     fake_rating_model.title = 'Test Rating'
     fake_rating_model.description = 'Test Description'
@@ -510,8 +510,8 @@ def test_list_ratings_by_community_service_with_pagination_success():
 
     fake_rating_model = Mock(spec=Rating)
     fake_rating_model.id = uuid4()
-    fake_rating_model.user_id = str(uuid4())
-    fake_rating_model.community_id = str(fake_community_id)
+    fake_rating_model.user_id = uuid4()
+    fake_rating_model.community_id = fake_community_id
     fake_rating_model.rating = 5
     fake_rating_model.title = 'Test Rating'
     fake_rating_model.description = 'Test Description'
@@ -593,8 +593,8 @@ def test_update_rating_service_success():
 
     existing_rating_model = Mock(spec=Rating)
     existing_rating_model.id = fake_rating_id
-    existing_rating_model.user_id = str(uuid4())
-    existing_rating_model.community_id = str(uuid4())
+    existing_rating_model.user_id = uuid4()
+    existing_rating_model.community_id = uuid4()
     existing_rating_model.rating = 5
     existing_rating_model.title = 'Original Title'
     existing_rating_model.description = 'Original description'
@@ -646,8 +646,8 @@ def test_update_rating_service_partial_success():
 
     existing_rating_model = Mock(spec=Rating)
     existing_rating_model.id = fake_rating_id
-    existing_rating_model.user_id = str(uuid4())
-    existing_rating_model.community_id = str(uuid4())
+    existing_rating_model.user_id = uuid4()
+    existing_rating_model.community_id = uuid4()
     existing_rating_model.rating = 5
     existing_rating_model.title = 'Original Title'
     existing_rating_model.description = 'Original description'
@@ -690,8 +690,8 @@ def test_update_rating_service_set_description_to_none_success():
 
     existing_rating_model = Mock(spec=Rating)
     existing_rating_model.id = fake_rating_id
-    existing_rating_model.user_id = str(uuid4())
-    existing_rating_model.community_id = str(uuid4())
+    existing_rating_model.user_id = uuid4()
+    existing_rating_model.community_id = uuid4()
     existing_rating_model.rating = 5
     existing_rating_model.title = 'Original Title'
     existing_rating_model.description = 'Original description'
@@ -795,8 +795,8 @@ def test_delete_rating_service_success():
 
     existing_rating_model = Mock(spec=Rating)
     existing_rating_model.id = fake_rating_id
-    existing_rating_model.user_id = str(uuid4())
-    existing_rating_model.community_id = str(uuid4())
+    existing_rating_model.user_id = uuid4()
+    existing_rating_model.community_id = uuid4()
     existing_rating_model.rating = 5
     existing_rating_model.title = 'Test Rating'
     existing_rating_model.description = 'Test Description'
