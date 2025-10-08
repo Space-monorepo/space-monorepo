@@ -59,6 +59,9 @@ class ChatEventHandler(EventHandler):
     like typing indicators and presence updates.
     """
 
+    # Class variable for session factory (can be overridden for testing)
+    session_factory = SessionLocal
+
     def __init__(self, namespace: str = 'chat'):
         super().__init__(namespace)
 
@@ -127,17 +130,15 @@ class ChatEventHandler(EventHandler):
             'bulk_mark_read', BulkMarkReadEvent, self._handle_bulk_mark_read
         )
 
-    @staticmethod
-    async def _get_chat_service() -> ChatService:
+    @classmethod
+    async def _get_chat_service(cls) -> ChatService:
         """Get ChatService instance with transaction manager."""
-        # This is a simplified approach - in production, you might want to
-        # inject the session through the event handling mechanism
-        session = SessionLocal()
+        # Use the class-level session factory (can be overridden for testing)
+        session = cls.session_factory()
         try:
             return ChatService(TransactionManager(session))
         finally:
-            # Note: In a real implementation, session management should be
-            # handled more carefully, possibly through dependency injection
+            # Note: Session will be closed by the transaction manager
             pass
 
     @staticmethod
@@ -153,17 +154,20 @@ class ChatEventHandler(EventHandler):
         self._ensure_started()
 
         try:
-            chat_service = await self._get_chat_service()
+            # Get session and use TransactionManager as context manager
+            session = self.session_factory()
+            with TransactionManager(session) as tm:
+                chat_service = ChatService(tm)
 
-            # Send message through service
-            message_response = chat_service.send_message(
-                conversation_id=event.conversation_id,
-                sender_id=UUID(str(user.id)),
-                content=event.content,
-                reply_to_message_id=event.reply_to_message_id,
-            )
+                # Send message through service
+                message_response = chat_service.send_message(
+                    conversation_id=event.conversation_id,
+                    sender_id=UUID(str(user.id)),
+                    content=event.content,
+                    reply_to_message_id=event.reply_to_message_id,
+                )
 
-            # Broadcast to conversation participants
+            # Broadcast to conversation participants (after commit)
             await self._broadcast_message_to_conversation(
                 str(event.conversation_id),
                 MessageReceivedEvent(
@@ -450,7 +454,7 @@ class ChatEventHandler(EventHandler):
                 message='Typing indicator sent',
                 data=None,
                 error_code=None,
-                request_id=None,
+                request_id=event.request_id,
             )
 
         except Exception as e:
@@ -458,10 +462,10 @@ class ChatEventHandler(EventHandler):
             # Don't return error for typing indicators to avoid spam
             return EventResponse(
                 success=True,
-                message='Typing indicator sent',
-                data={},
+                message='Typing indicator processed',
+                data=None,
                 error_code=None,
-                request_id=None,
+                request_id=event.request_id,
             )
 
     async def _handle_stop_typing(
@@ -481,7 +485,7 @@ class ChatEventHandler(EventHandler):
                 message='Stopped typing indicator',
                 data=None,
                 error_code=None,
-                request_id=None,
+                request_id=event.request_id,
             )
 
         except Exception as e:
@@ -491,7 +495,7 @@ class ChatEventHandler(EventHandler):
                 message='Failed to stop typing indicator',
                 error_code='HANDLER_ERROR',
                 data=None,
-                request_id=None,
+                request_id=event.request_id,
             )
 
     async def _handle_mark_message_read(

@@ -412,7 +412,7 @@ class WebSocketManager:
                     await self._process_message(conn_info, data, session)
                 except Exception as e:
                     logger.error(f'Error processing message: {e}', exc_info=True)
-                    await self._send_error_response(conn_info, str(e))
+                    await self._send_error_response(conn_info, str(e), data)
                     self._stats['errors'] += 1
 
         except Exception as e:
@@ -432,7 +432,20 @@ class WebSocketManager:
             raise EventHandlingError('Message type is required')
 
         # Handle built-in message types
-        if message_type == 'pong':
+        if message_type == 'ping':
+            # Client sent ping, respond with pong
+            conn_info.update_activity()
+            pong_response = {
+                'type': 'pong',
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+            }
+            # Include request_id if provided
+            if 'request_id' in message_data:
+                pong_response['request_id'] = message_data['request_id']
+            await self._send_to_connection(conn_info, pong_response)
+            return
+
+        elif message_type == 'pong':
             # Client responded to ping
             conn_info.update_activity()
             return
@@ -567,13 +580,23 @@ class WebSocketManager:
             logger.error(f'Failed to send message to {conn_info.session_id}: {e}')
             # Don't raise here as it might be called during cleanup
 
-    async def _send_error_response(self, conn_info: ConnectionInfo, error_message: str):
+    async def _send_error_response(self, conn_info: ConnectionInfo, error_message: str, original_data: Optional[str] = None):
         """Send error response to connection."""
         error_response = {
             'type': 'error',
             'error_message': error_message,
             'timestamp': datetime.now(timezone.utc).isoformat(),
         }
+
+        # Include request_id from original message if available
+        if original_data:
+            try:
+                message_data = json.loads(original_data)
+                if 'request_id' in message_data:
+                    error_response['request_id'] = message_data['request_id']
+            except (json.JSONDecodeError, TypeError):
+                pass  # If we can't parse, just send error without request_id
+
         await self._send_to_connection(conn_info, error_response)
 
     # Public API methods
