@@ -737,22 +737,14 @@ def test_websocket_chat_concurrent_operations_route(authenticated_websocket_clie
             try:
                 response = websocket.receive_json()
                 responses.append(response)
-                print(f"Response {i}: {response}")
             except Exception as e:
-                print(f"Error receiving response {i}: {e}")
                 break
 
         # Verify all operations were processed
         request_ids = [event["request_id"] for event in concurrent_events]
         response_request_ids = [resp["request_id"] for resp in responses if "request_id" in resp]
 
-        print(f"Expected request_ids: {request_ids}")
-        print(f"Received request_ids: {response_request_ids}")
-        print(f"All responses: {responses}")
 
-        # Check if we got fewer responses than expected
-        if len(responses) < len(concurrent_events):
-            print(f"Warning: Only received {len(responses)} responses out of {len(concurrent_events)} expected")
 
         # Instead of strict equality, check that we got responses for the operations that worked
         assert len(response_request_ids) > 0, "Should receive at least one response"
