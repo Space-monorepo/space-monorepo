@@ -15,6 +15,7 @@ from app.api.moderation.routes import router as moderation_router
 from app.api.post.routes import router as post_router
 from app.api.rating.routes import router as rating_router
 from app.api.users.routes import router as users_router
+from app.api.search.routes import router as search_router
 
 app = FastAPI(
     title='Space API',
@@ -41,6 +42,7 @@ routes = [
     badges_router,
     badges_admin_router,
     rating_router,
+    search_router,
 ]
 
 for route in routes:
