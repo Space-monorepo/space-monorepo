@@ -22,16 +22,19 @@ pytest = "^8.3.4"
 pytest-cov = "^6.0.0"
 ruff = "^0.9.7"
 taskipy = "^1.14.1"
+pytest-asyncio = "^0.23.0"
 
 [tool.pytest.ini_options]
 pythonpath = "app"
 tests = "tests"
 addopts = '-p no:warnings'
+asyncio_mode = "auto"
 markers = [
     "unit: unit tests - verify individual components in isolation",
     "integration: integration tests - verify components working together or with external services",
     "smoke: smoke tests - verify critical features fastly",
-    "slow: slow tests - flag tests that take a long time to run"
+    "slow: slow tests - flag tests that take a long time to run",
+    "asyncio: mark test as an async test"
 ]
 
 [tool.ruff]

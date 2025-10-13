@@ -19,7 +19,7 @@ services:
     entrypoint: ["/bin/sh", "-c", "chmod +x /entrypoint.sh && /entrypoint.sh"]
     networks:
       - space-network
-  
+
   postgresql-test:
     image: postgres:14-alpine
     container_name: space-postgresql-test
@@ -65,7 +65,7 @@ services:
     command: ["--auth"]
     networks:
       - space-network
-  
+
   mongo-express:
     image: mongo-express:1.0.0
     container_name: space-mongo-express

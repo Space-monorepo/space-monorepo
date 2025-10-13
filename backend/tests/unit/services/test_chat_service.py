@@ -1,6 +1,6 @@
-
 def test_send_message_service(mongo_db, user_on_db):
     pass
+
 
 def test_get_message_service(mongo_db, user_on_db):
     pass
@@ -19,4 +19,4 @@ def test_delete_message_service(mongo_db, user_on_db):
 
 
 def test_get_user_conversation_service(mongo_db, user_on_db):
-    pass    
+    pass

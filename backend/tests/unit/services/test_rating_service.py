@@ -9,9 +9,12 @@ from app.api.rating.service import RatingService
 from app.api.rating.exceptions import (
     RatingNotFoundError,
     RatingAlreadyExistsError,
-    UnexpectedRatingError
+    UnexpectedRatingError,
 )
-from app.api.communities.exceptions import CommunityNotFoundError, CommunityMemberNotFoundError
+from app.api.communities.exceptions import (
+    CommunityNotFoundError,
+    CommunityMemberNotFoundError,
+)
 from app.api.communities.schema import CommunityResponse, CommunityMemberResponse
 from app.utils.schema import PaginationSearchParams, PaginationResponse
 
@@ -71,7 +74,9 @@ def test_create_rating_service_success():
 
     # Assert
     service.community_service.get_community.assert_called_once_with(fake_community_id)
-    service.community_service.get_member_association.assert_called_once_with(fake_user_id, fake_community_id)
+    service.community_service.get_member_association.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
     mock_rating_repo.save.assert_called_once()
     assert result is not None
     assert isinstance(result, RatingResponse)
@@ -270,7 +275,8 @@ def test_create_rating_service_rating_already_exists():
 
     # Import IntegrityError to simulate the actual exception
     from sqlalchemy.exc import IntegrityError
-    mock_rating_repo.save.side_effect = IntegrityError("", "", "")
+
+    mock_rating_repo.save.side_effect = IntegrityError('', '', '')
 
     service = RatingService(mock_tm)
     service.rating_repo = mock_rating_repo
@@ -278,11 +284,15 @@ def test_create_rating_service_rating_already_exists():
     service.community_service.get_member_association = Mock(return_value=mock_member)
 
     # Act & Assert
-    with pytest.raises(RatingAlreadyExistsError, match='User has already rated this community'):
+    with pytest.raises(
+        RatingAlreadyExistsError, match='User has already rated this community'
+    ):
         service.create_rating(fake_rating_data)
 
     service.community_service.get_community.assert_called_once_with(fake_community_id)
-    service.community_service.get_member_association.assert_called_once_with(fake_user_id, fake_community_id)
+    service.community_service.get_member_association.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
     mock_rating_repo.save.assert_called_once()
 
 
@@ -312,7 +322,9 @@ def test_create_rating_service_community_not_found():
 
     service = RatingService(mock_tm)
     service.rating_repo = mock_rating_repo
-    service.community_service.get_community = Mock(side_effect=CommunityNotFoundError('Community not found'))
+    service.community_service.get_community = Mock(
+        side_effect=CommunityNotFoundError('Community not found')
+    )
 
     # Act & Assert
     with pytest.raises(CommunityNotFoundError, match='Community not found'):
@@ -354,11 +366,15 @@ def test_create_rating_service_user_not_member():
     service.community_service.get_member_association = Mock(return_value=None)
 
     # Act & Assert
-    with pytest.raises(CommunityMemberNotFoundError, match='User is not a member of this community'):
+    with pytest.raises(
+        CommunityMemberNotFoundError, match='User is not a member of this community'
+    ):
         service.create_rating(fake_rating_data)
 
     service.community_service.get_community.assert_called_once_with(fake_community_id)
-    service.community_service.get_member_association.assert_called_once_with(fake_user_id, fake_community_id)
+    service.community_service.get_member_association.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
     mock_rating_repo.save.assert_not_called()
 
 
@@ -465,7 +481,9 @@ def test_list_ratings_by_community_service_success():
     result = service.list_ratings_by_community(fake_community_id, fake_params)
 
     # Assert
-    mock_rating_repo.list_ratings_by_community.assert_called_once_with(fake_community_id, fake_params)
+    mock_rating_repo.list_ratings_by_community.assert_called_once_with(
+        fake_community_id, fake_params
+    )
     assert result is not None
     assert isinstance(result, PaginationResponse)
     assert len(result.items) == 1
@@ -511,7 +529,9 @@ def test_list_ratings_by_community_service_with_pagination_success():
     result = service.list_ratings_by_community(fake_community_id, fake_params)
 
     # Assert
-    mock_rating_repo.list_ratings_by_community.assert_called_once_with(fake_community_id, fake_params)
+    mock_rating_repo.list_ratings_by_community.assert_called_once_with(
+        fake_community_id, fake_params
+    )
     assert result is not None
     assert isinstance(result, PaginationResponse)
     assert len(result.items) == 1
@@ -544,7 +564,9 @@ def test_list_ratings_by_community_service_empty_success():
     result = service.list_ratings_by_community(fake_community_id, fake_params)
 
     # Assert
-    mock_rating_repo.list_ratings_by_community.assert_called_once_with(fake_community_id, fake_params)
+    mock_rating_repo.list_ratings_by_community.assert_called_once_with(
+        fake_community_id, fake_params
+    )
     assert result is not None
     assert isinstance(result, PaginationResponse)
     assert len(result.items) == 0
@@ -566,9 +588,7 @@ def test_update_rating_service_success():
     fake_rating_id = uuid4()
     fake_datetime = datetime.now()
     fake_rating_update = RatingUpdate(
-        rating=4,
-        title='Updated Title',
-        description='Updated description'
+        rating=4, title='Updated Title', description='Updated description'
     )
 
     existing_rating_model = Mock(spec=Rating)
@@ -694,7 +714,9 @@ def test_update_rating_service_set_description_to_none_success():
     mock_rating_repo.save.assert_called_once_with(existing_rating_model)
     assert result is not None
     assert isinstance(result, RatingResponse)
-    assert existing_rating_model.description == 'Original description'  # Verify the description was not updated when None
+    assert (
+        existing_rating_model.description == 'Original description'
+    )  # Verify the description was not updated when None
 
 
 @pytest.mark.unit
@@ -744,7 +766,7 @@ def test_update_rating_service_unexpected_error():
     mock_tm = Mock()
     mock_rating_repo = Mock()
     mock_rating_repo.get_by_id.return_value = existing_rating_model
-    mock_rating_repo.save.side_effect = Exception("Database error")
+    mock_rating_repo.save.side_effect = Exception('Database error')
 
     service = RatingService(mock_tm)
     service.rating_repo = mock_rating_repo
@@ -843,7 +865,7 @@ def test_delete_rating_service_unexpected_error():
     mock_tm = Mock()
     mock_rating_repo = Mock()
     mock_rating_repo.get_by_id.return_value = existing_rating_model
-    mock_rating_repo.delete.side_effect = Exception("Database error")
+    mock_rating_repo.delete.side_effect = Exception('Database error')
 
     service = RatingService(mock_tm)
     service.rating_repo = mock_rating_repo

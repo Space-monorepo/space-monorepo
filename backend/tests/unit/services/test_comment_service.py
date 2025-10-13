@@ -15,7 +15,7 @@ from app.api.comment.exceptions import (
     CommentSuspendedError,
     CommentNotFoundError,
     CommentLikesNotFoundError,
-    UnexpectedCommentError
+    UnexpectedCommentError,
 )
 from app.api.post.exceptions import PostNotFoundError
 from app.api.users.model import User
@@ -40,6 +40,7 @@ DEFAULT_PAGINATION_LIMIT = 10
 # =============================================================================
 # FIXTURES
 # =============================================================================
+
 
 @pytest.fixture
 def fake_ids():
@@ -141,15 +142,20 @@ def comment_service(mock_repositories, mock_services):
 @pytest.fixture
 def pagination_params():
     """Fixture que retorna parâmetros de paginação padrão."""
-    return PaginationSearchParams(offset=DEFAULT_PAGINATION_OFFSET, limit=DEFAULT_PAGINATION_LIMIT)
+    return PaginationSearchParams(
+        offset=DEFAULT_PAGINATION_OFFSET, limit=DEFAULT_PAGINATION_LIMIT
+    )
 
 
 # =============================================================================
 # SUCCESS TESTS
 # =============================================================================
 
+
 @pytest.mark.unit
-def test_create_comment_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user, fake_comment):
+def test_create_comment_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user, fake_comment
+):
     """
     Tests the `create_comment` method of CommentService.
 
@@ -180,7 +186,9 @@ def test_create_comment_service_success(comment_service, mock_repositories, fake
     assert mock_repositories['post_repo'].get_by_id.call_count == 2
     mock_repositories['comment_repo'].save.assert_called_once()
     mock_repositories['post_repo'].save.assert_called_once_with(fake_post)
-    mock_repositories['member_repo'].get_member_role.assert_called_once_with(fake_ids['user_id'], fake_ids['community_id'])
+    mock_repositories['member_repo'].get_member_role.assert_called_once_with(
+        fake_ids['user_id'], fake_ids['community_id']
+    )
     assert fake_post.comments_count == 1
     assert result is not None
     assert isinstance(result, CommentResponse)
@@ -196,7 +204,9 @@ def test_create_comment_service_success(comment_service, mock_repositories, fake
 
 
 @pytest.mark.unit
-def test_create_comment_reply_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
+def test_create_comment_reply_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+):
     """
     Tests the `create_comment` method of CommentService for creating replies.
 
@@ -244,7 +254,9 @@ def test_create_comment_reply_service_success(comment_service, mock_repositories
 
     # Assert
     assert mock_repositories['post_repo'].get_by_id.call_count == 2
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['parent_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['parent_id']
+    )
     mock_repositories['comment_repo'].save.assert_called_once()
     assert result is not None
     assert isinstance(result, CommentResponse)
@@ -254,7 +266,9 @@ def test_create_comment_reply_service_success(comment_service, mock_repositories
 
 
 @pytest.mark.unit
-def test_get_comment_by_id_service_success(comment_service, mock_repositories, fake_ids, fake_comment):
+def test_get_comment_by_id_service_success(
+    comment_service, mock_repositories, fake_ids, fake_comment
+):
     """
     Tests the `get_comment` method of CommentService.
 
@@ -274,7 +288,9 @@ def test_get_comment_by_id_service_success(comment_service, mock_repositories, f
     result = comment_service.get_comment(fake_ids['comment_id'])
 
     # Assert
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['comment_id']
+    )
     assert result is not None
     assert isinstance(result, CommentResponse)
     assert str(result.id) == str(fake_ids['comment_id'])
@@ -287,7 +303,14 @@ def test_get_comment_by_id_service_success(comment_service, mock_repositories, f
 
 
 @pytest.mark.unit
-def test_list_comments_by_post_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_comment, pagination_params):
+def test_list_comments_by_post_service_success(
+    comment_service,
+    mock_repositories,
+    fake_ids,
+    fake_post,
+    fake_comment,
+    pagination_params,
+):
     """
     Tests the `list_comments_by_post` method of CommentService.
 
@@ -301,16 +324,23 @@ def test_list_comments_by_post_service_success(comment_service, mock_repositorie
     fake_comment.likes_count = 5
     fake_comment.report_count = 1
 
-    mock_repositories['comment_repo'].list_comments_by_post.return_value = ([fake_comment], 1)
+    mock_repositories['comment_repo'].list_comments_by_post.return_value = (
+        [fake_comment],
+        1,
+    )
     mock_repositories['post_repo'].get_by_id.return_value = fake_post
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = comment_service.list_comments_by_post(fake_ids['post_id'], pagination_params, include_replies=False)
+    result = comment_service.list_comments_by_post(
+        fake_ids['post_id'], pagination_params, include_replies=False
+    )
 
     # Assert
     mock_repositories['post_repo'].get_by_id.assert_called_once_with(fake_ids['post_id'])
-    mock_repositories['comment_repo'].list_comments_by_post.assert_called_once_with(fake_ids['post_id'], pagination_params)
+    mock_repositories['comment_repo'].list_comments_by_post.assert_called_once_with(
+        fake_ids['post_id'], pagination_params
+    )
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
@@ -323,7 +353,9 @@ def test_list_comments_by_post_service_success(comment_service, mock_repositorie
 
 
 @pytest.mark.unit
-def test_list_comments_by_user_service_success(comment_service, mock_repositories, fake_ids, fake_comment, pagination_params):
+def test_list_comments_by_user_service_success(
+    comment_service, mock_repositories, fake_ids, fake_comment, pagination_params
+):
     """
     Tests the `list_comments_by_user` method of CommentService.
 
@@ -337,14 +369,21 @@ def test_list_comments_by_user_service_success(comment_service, mock_repositorie
     fake_comment.content = 'User comment content'
     fake_comment.likes_count = 3
 
-    mock_repositories['comment_repo'].list_comments_by_user.return_value = ([fake_comment], 1)
+    mock_repositories['comment_repo'].list_comments_by_user.return_value = (
+        [fake_comment],
+        1,
+    )
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = comment_service.list_comments_by_user(fake_ids['user_id'], pagination_params)
+    result = comment_service.list_comments_by_user(
+        fake_ids['user_id'], pagination_params
+    )
 
     # Assert
-    mock_repositories['comment_repo'].list_comments_by_user.assert_called_once_with(fake_ids['user_id'], pagination_params)
+    mock_repositories['comment_repo'].list_comments_by_user.assert_called_once_with(
+        fake_ids['user_id'], pagination_params
+    )
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
@@ -357,7 +396,9 @@ def test_list_comments_by_user_service_success(comment_service, mock_repositorie
 
 
 @pytest.mark.unit
-def test_list_replies_by_parent_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user, pagination_params):
+def test_list_replies_by_parent_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user, pagination_params
+):
     """
     Tests the `list_replies_by_parent` method of CommentService.
 
@@ -387,15 +428,24 @@ def test_list_replies_by_parent_service_success(comment_service, mock_repositori
     fake_reply.user = fake_user
 
     mock_repositories['comment_repo'].get_by_id.return_value = fake_parent_comment
-    mock_repositories['comment_repo'].list_replies_by_parent.return_value = ([fake_reply], 1)
+    mock_repositories['comment_repo'].list_replies_by_parent.return_value = (
+        [fake_reply],
+        1,
+    )
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = comment_service.list_replies_by_parent(fake_ids['parent_id'], pagination_params)
+    result = comment_service.list_replies_by_parent(
+        fake_ids['parent_id'], pagination_params
+    )
 
     # Assert
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['parent_id'])
-    mock_repositories['comment_repo'].list_replies_by_parent.assert_called_once_with(fake_ids['parent_id'], pagination_params)
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['parent_id']
+    )
+    mock_repositories['comment_repo'].list_replies_by_parent.assert_called_once_with(
+        fake_ids['parent_id'], pagination_params
+    )
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
@@ -405,7 +455,9 @@ def test_list_replies_by_parent_service_success(comment_service, mock_repositori
 
 
 @pytest.mark.unit
-def test_update_comment_content_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
+def test_update_comment_content_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+):
     """
     Tests the `update_comment` method of CommentService for content updates.
 
@@ -447,7 +499,10 @@ def test_update_comment_content_service_success(comment_service, mock_repositori
     fake_saved_comment.post = fake_post
     fake_saved_comment.user = fake_user
 
-    mock_repositories['comment_repo'].get_by_id.side_effect = [fake_existing_comment, fake_saved_comment]
+    mock_repositories['comment_repo'].get_by_id.side_effect = [
+        fake_existing_comment,
+        fake_saved_comment,
+    ]
     mock_repositories['comment_repo'].save.return_value = fake_saved_comment
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
@@ -465,7 +520,9 @@ def test_update_comment_content_service_success(comment_service, mock_repositori
 
 
 @pytest.mark.unit
-def test_update_comment_status_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
+def test_update_comment_status_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+):
     """
     Tests the `update_comment` method of CommentService for status updates.
 
@@ -504,7 +561,10 @@ def test_update_comment_status_service_success(comment_service, mock_repositorie
     fake_saved_comment.post = fake_post
     fake_saved_comment.user = fake_user
 
-    mock_repositories['comment_repo'].get_by_id.side_effect = [fake_existing_comment, fake_saved_comment]
+    mock_repositories['comment_repo'].get_by_id.side_effect = [
+        fake_existing_comment,
+        fake_saved_comment,
+    ]
     mock_repositories['comment_repo'].save.return_value = fake_saved_comment
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
@@ -554,16 +614,22 @@ def test_delete_comment_service_success(comment_service, mock_repositories, fake
     result = comment_service.delete_comment(fake_ids['comment_id'])
 
     # Assert
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['comment_id']
+    )
     mock_repositories['post_repo'].get_by_id.assert_called_once_with(fake_ids['post_id'])
-    mock_repositories['comment_repo'].delete.assert_called_once_with(fake_existing_comment)
+    mock_repositories['comment_repo'].delete.assert_called_once_with(
+        fake_existing_comment
+    )
     mock_repositories['post_repo'].save.assert_called_once_with(fake_post)
     assert fake_post.comments_count == 4
     assert result is True
 
 
 @pytest.mark.unit
-def test_like_comment_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
+def test_like_comment_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+):
     """
     Tests the `like_comment` method of CommentService.
 
@@ -614,7 +680,9 @@ def test_like_comment_service_success(comment_service, mock_repositories, fake_i
     result = comment_service.like_comment(fake_ids['comment_id'], fake_ids['member_id'])
 
     # Assert
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['comment_id']
+    )
     mock_repositories['comment_likes_repo'].save.assert_called_once()
     mock_repositories['comment_repo'].save.assert_called_once_with(fake_existing_comment)
     assert fake_existing_comment.likes_count == 1
@@ -626,7 +694,9 @@ def test_like_comment_service_success(comment_service, mock_repositories, fake_i
 
 
 @pytest.mark.unit
-def test_unlike_comment_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
+def test_unlike_comment_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+):
     """
     Tests the `unlike_comment` method of CommentService.
 
@@ -670,17 +740,29 @@ def test_unlike_comment_service_success(comment_service, mock_repositories, fake
 
     mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
     mock_repositories['comment_repo'].save.return_value = fake_saved_comment
-    mock_repositories['comment_likes_repo'].get_by_comment_and_member.return_value = fake_existing_like
+    mock_repositories[
+        'comment_likes_repo'
+    ].get_by_comment_and_member.return_value = fake_existing_like
     mock_repositories['comment_likes_repo'].delete.return_value = True
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = comment_service.unlike_comment(fake_ids['comment_id'], fake_ids['member_id'])
+    result = comment_service.unlike_comment(
+        fake_ids['comment_id'], fake_ids['member_id']
+    )
 
     # Assert
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
-    mock_repositories['comment_likes_repo'].get_by_comment_and_member.assert_called_once_with(fake_ids['comment_id'], fake_ids['member_id'])
-    mock_repositories['comment_likes_repo'].delete.assert_called_once_with(fake_existing_like)
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['comment_id']
+    )
+    mock_repositories[
+        'comment_likes_repo'
+    ].get_by_comment_and_member.assert_called_once_with(
+        fake_ids['comment_id'], fake_ids['member_id']
+    )
+    mock_repositories['comment_likes_repo'].delete.assert_called_once_with(
+        fake_existing_like
+    )
     mock_repositories['comment_repo'].save.assert_called_once_with(fake_existing_comment)
     assert fake_existing_comment.likes_count == DEFAULT_LIKES_COUNT
     assert result is not None
@@ -691,7 +773,9 @@ def test_unlike_comment_service_success(comment_service, mock_repositories, fake
 
 
 @pytest.mark.unit
-def test_list_likes_comment_service_success(comment_service, mock_repositories, mock_services, fake_ids):
+def test_list_likes_comment_service_success(
+    comment_service, mock_repositories, mock_services, fake_ids
+):
     """
     Tests the `list_likes_comment` method of CommentService.
 
@@ -723,16 +807,26 @@ def test_list_likes_comment_service_success(comment_service, mock_repositories, 
     fake_member_response.role = CommunityMemberRoleEnum.MEMBER
 
     mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
-    mock_repositories['comment_likes_repo'].list_by_comment.return_value = [fake_community_member]
-    mock_services['community_service']._map_member_to_response.return_value = fake_member_response
+    mock_repositories['comment_likes_repo'].list_by_comment.return_value = [
+        fake_community_member
+    ]
+    mock_services[
+        'community_service'
+    ]._map_member_to_response.return_value = fake_member_response
 
     # Act
     result = comment_service.list_likes_comment(fake_ids['comment_id'])
 
     # Assert
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
-    mock_repositories['comment_likes_repo'].list_by_comment.assert_called_once_with(fake_ids['comment_id'])
-    mock_services['community_service']._map_member_to_response.assert_called_once_with(fake_community_member)
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['comment_id']
+    )
+    mock_repositories['comment_likes_repo'].list_by_comment.assert_called_once_with(
+        fake_ids['comment_id']
+    )
+    mock_services['community_service']._map_member_to_response.assert_called_once_with(
+        fake_community_member
+    )
     assert result is not None
     assert len(result) == 1
     assert result[0].user_id == fake_ids['user_id']
@@ -741,7 +835,9 @@ def test_list_likes_comment_service_success(comment_service, mock_repositories, 
 
 
 @pytest.mark.unit
-def test_report_comment_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
+def test_report_comment_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+):
     """
     Tests the `report_comment` method of CommentService.
 
@@ -787,7 +883,9 @@ def test_report_comment_service_success(comment_service, mock_repositories, fake
     result = comment_service.report_comment(fake_ids['comment_id'])
 
     # Assert
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['comment_id']
+    )
     mock_repositories['comment_repo'].save.assert_called_once_with(fake_existing_comment)
     assert fake_existing_comment.report_count == 1
     assert fake_existing_comment.status == CommentStatusEnum.ACTIVE
@@ -799,7 +897,9 @@ def test_report_comment_service_success(comment_service, mock_repositories, fake
 
 
 @pytest.mark.unit
-def test_report_comment_threshold_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
+def test_report_comment_threshold_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+):
     """
     Tests the `report_comment` method of CommentService when reaching threshold.
 
@@ -845,7 +945,9 @@ def test_report_comment_threshold_service_success(comment_service, mock_reposito
     result = comment_service.report_comment(fake_ids['comment_id'])
 
     # Assert
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['comment_id']
+    )
     mock_repositories['comment_repo'].save.assert_called_once()
     assert result is not None
     assert isinstance(result, CommentResponse)
@@ -855,7 +957,9 @@ def test_report_comment_threshold_service_success(comment_service, mock_reposito
 
 
 @pytest.mark.unit
-def test_list_comments_by_post_with_replies_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user, pagination_params):
+def test_list_comments_by_post_with_replies_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user, pagination_params
+):
     """
     Tests the `list_comments_by_post` method of CommentService with replies included.
 
@@ -898,7 +1002,10 @@ def test_list_comments_by_post_with_replies_service_success(comment_service, moc
     # Setup pagination with status filter
     pagination_params.status = ['active']
 
-    mock_repositories['comment_repo'].list_comments_by_post.return_value = ([fake_main_comment], 1)
+    mock_repositories['comment_repo'].list_comments_by_post.return_value = (
+        [fake_main_comment],
+        1,
+    )
     mock_repositories['post_repo'].get_by_id.return_value = fake_post
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
@@ -913,18 +1020,24 @@ def test_list_comments_by_post_with_replies_service_success(comment_service, moc
     mock_repositories['comment_repo'].session = mock_session
 
     # Act
-    result = comment_service.list_comments_by_post(fake_ids['post_id'], pagination_params, include_replies=True)
+    result = comment_service.list_comments_by_post(
+        fake_ids['post_id'], pagination_params, include_replies=True
+    )
 
     # Assert
     mock_repositories['post_repo'].get_by_id.assert_called_once_with(fake_ids['post_id'])
-    mock_repositories['comment_repo'].list_comments_by_post.assert_called_once_with(fake_ids['post_id'], pagination_params)
+    mock_repositories['comment_repo'].list_comments_by_post.assert_called_once_with(
+        fake_ids['post_id'], pagination_params
+    )
     assert result is not None
     assert len(result.items) == 1
     assert str(result.items[0].id) == str(fake_ids['comment_id'])
 
 
 @pytest.mark.unit
-def test_list_comments_by_post_empty_result_service_success(comment_service, mock_repositories, fake_ids, fake_post, pagination_params):
+def test_list_comments_by_post_empty_result_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, pagination_params
+):
     """
     Tests the `list_comments_by_post` method when no comments are found.
 
@@ -938,7 +1051,9 @@ def test_list_comments_by_post_empty_result_service_success(comment_service, moc
     mock_repositories['post_repo'].get_by_id.return_value = fake_post
 
     # Act
-    result = comment_service.list_comments_by_post(fake_ids['post_id'], pagination_params, include_replies=True)
+    result = comment_service.list_comments_by_post(
+        fake_ids['post_id'], pagination_params, include_replies=True
+    )
 
     # Assert
     assert result.items == []
@@ -961,18 +1076,26 @@ def test_get_like_service_success(comment_service, mock_repositories, fake_ids):
     fake_like.comment_id = fake_ids['comment_id']
     fake_like.member_id = fake_ids['member_id']
 
-    mock_repositories['comment_likes_repo'].get_by_comment_and_member.return_value = fake_like
+    mock_repositories[
+        'comment_likes_repo'
+    ].get_by_comment_and_member.return_value = fake_like
 
     # Act
     result = comment_service.get_like(fake_ids['comment_id'], fake_ids['member_id'])
 
     # Assert
-    mock_repositories['comment_likes_repo'].get_by_comment_and_member.assert_called_once_with(fake_ids['comment_id'], fake_ids['member_id'])
+    mock_repositories[
+        'comment_likes_repo'
+    ].get_by_comment_and_member.assert_called_once_with(
+        fake_ids['comment_id'], fake_ids['member_id']
+    )
     assert result == fake_like
 
 
 @pytest.mark.unit
-def test_delete_comment_with_zero_comments_count_service_success(comment_service, mock_repositories, fake_ids):
+def test_delete_comment_with_zero_comments_count_service_success(
+    comment_service, mock_repositories, fake_ids
+):
     """
     Tests the `delete_comment` method when post has zero comments count.
 
@@ -1003,7 +1126,9 @@ def test_delete_comment_with_zero_comments_count_service_success(comment_service
 
 
 @pytest.mark.unit
-def test_unlike_comment_with_zero_likes_service_success(comment_service, mock_repositories, fake_ids, fake_post, fake_user):
+def test_unlike_comment_with_zero_likes_service_success(
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+):
     """
     Tests the `unlike_comment` method when comment has zero likes.
 
@@ -1047,12 +1172,16 @@ def test_unlike_comment_with_zero_likes_service_success(comment_service, mock_re
 
     mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
     mock_repositories['comment_repo'].save.return_value = fake_saved_comment
-    mock_repositories['comment_likes_repo'].get_by_comment_and_member.return_value = fake_existing_like
+    mock_repositories[
+        'comment_likes_repo'
+    ].get_by_comment_and_member.return_value = fake_existing_like
     mock_repositories['comment_likes_repo'].delete.return_value = True
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
 
     # Act
-    result = comment_service.unlike_comment(fake_ids['comment_id'], fake_ids['member_id'])
+    result = comment_service.unlike_comment(
+        fake_ids['comment_id'], fake_ids['member_id']
+    )
 
     # Assert
     assert fake_existing_comment.likes_count == 0
@@ -1063,8 +1192,11 @@ def test_unlike_comment_with_zero_likes_service_success(comment_service, mock_re
 # EXCEPTION HANDLER TESTS
 # =============================================================================
 
+
 @pytest.mark.unit
-def test_create_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_post):
+def test_create_comment_with_unexpected_error_raises_exception(
+    comment_service, mock_repositories, fake_ids, fake_post
+):
     """
     Tests that unexpected errors during comment creation raise UnexpectedCommentError.
 
@@ -1091,7 +1223,9 @@ def test_create_comment_with_unexpected_error_raises_exception(comment_service, 
 
 
 @pytest.mark.unit
-def test_update_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_comment):
+def test_update_comment_with_unexpected_error_raises_exception(
+    comment_service, mock_repositories, fake_ids, fake_comment
+):
     """
     Tests that unexpected errors during comment update raise UnexpectedCommentError.
 
@@ -1112,7 +1246,9 @@ def test_update_comment_with_unexpected_error_raises_exception(comment_service, 
 
 
 @pytest.mark.unit
-def test_delete_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_comment):
+def test_delete_comment_with_unexpected_error_raises_exception(
+    comment_service, mock_repositories, fake_ids, fake_comment
+):
     """
     Tests that unexpected errors during comment deletion raise UnexpectedCommentError.
 
@@ -1137,7 +1273,9 @@ def test_delete_comment_with_unexpected_error_raises_exception(comment_service, 
 
 
 @pytest.mark.unit
-def test_like_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_comment):
+def test_like_comment_with_unexpected_error_raises_exception(
+    comment_service, mock_repositories, fake_ids, fake_comment
+):
     """
     Tests that unexpected errors during comment like raise UnexpectedCommentError.
 
@@ -1148,7 +1286,9 @@ def test_like_comment_with_unexpected_error_raises_exception(comment_service, mo
     """
     # Arrange
     mock_repositories['comment_repo'].get_by_id.return_value = fake_comment
-    mock_repositories['comment_likes_repo'].save.side_effect = Exception('Database error')
+    mock_repositories['comment_likes_repo'].save.side_effect = Exception(
+        'Database error'
+    )
 
     # Act & Assert
     with pytest.raises(UnexpectedCommentError):
@@ -1156,7 +1296,9 @@ def test_like_comment_with_unexpected_error_raises_exception(comment_service, mo
 
 
 @pytest.mark.unit
-def test_unlike_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_comment):
+def test_unlike_comment_with_unexpected_error_raises_exception(
+    comment_service, mock_repositories, fake_ids, fake_comment
+):
     """
     Tests that unexpected errors during comment unlike raise UnexpectedCommentError.
 
@@ -1169,8 +1311,12 @@ def test_unlike_comment_with_unexpected_error_raises_exception(comment_service, 
     fake_like = Mock(spec=CommentLikes)
 
     mock_repositories['comment_repo'].get_by_id.return_value = fake_comment
-    mock_repositories['comment_likes_repo'].get_by_comment_and_member.return_value = fake_like
-    mock_repositories['comment_likes_repo'].delete.side_effect = Exception('Database error')
+    mock_repositories[
+        'comment_likes_repo'
+    ].get_by_comment_and_member.return_value = fake_like
+    mock_repositories['comment_likes_repo'].delete.side_effect = Exception(
+        'Database error'
+    )
 
     # Act & Assert
     with pytest.raises(UnexpectedCommentError):
@@ -1178,7 +1324,9 @@ def test_unlike_comment_with_unexpected_error_raises_exception(comment_service, 
 
 
 @pytest.mark.unit
-def test_report_comment_with_unexpected_error_raises_exception(comment_service, mock_repositories, fake_ids, fake_comment):
+def test_report_comment_with_unexpected_error_raises_exception(
+    comment_service, mock_repositories, fake_ids, fake_comment
+):
     """
     Tests that unexpected errors during comment report raise UnexpectedCommentError.
 
@@ -1200,7 +1348,9 @@ def test_report_comment_with_unexpected_error_raises_exception(comment_service, 
 
 
 @pytest.mark.unit
-def test_get_like_not_found_raises_exception(comment_service, mock_repositories, fake_ids):
+def test_get_like_not_found_raises_exception(
+    comment_service, mock_repositories, fake_ids
+):
     """
     Tests that getting a non-existent like raises CommentLikesNotFoundError.
 
@@ -1215,15 +1365,22 @@ def test_get_like_not_found_raises_exception(comment_service, mock_repositories,
     # Act & Assert
     with pytest.raises(CommentLikesNotFoundError):
         comment_service.get_like(fake_ids['comment_id'], fake_ids['member_id'])
-    mock_repositories['comment_likes_repo'].get_by_comment_and_member.assert_called_once_with(fake_ids['comment_id'], fake_ids['member_id'])
+    mock_repositories[
+        'comment_likes_repo'
+    ].get_by_comment_and_member.assert_called_once_with(
+        fake_ids['comment_id'], fake_ids['member_id']
+    )
 
 
 # =============================================================================
 # ERROR HANDLING TESTS
 # =============================================================================
 
+
 @pytest.mark.unit
-def test_create_comment_with_nonexistent_post_raises_error(comment_service, mock_repositories, fake_ids):
+def test_create_comment_with_nonexistent_post_raises_error(
+    comment_service, mock_repositories, fake_ids
+):
     """
     Tests that creating a comment with nonexistent post raises PostNotFoundError.
 
@@ -1251,7 +1408,9 @@ def test_create_comment_with_nonexistent_post_raises_error(comment_service, mock
 
 
 @pytest.mark.unit
-def test_create_comment_with_nonexistent_parent_raises_error(comment_service, mock_repositories, fake_ids, fake_post):
+def test_create_comment_with_nonexistent_parent_raises_error(
+    comment_service, mock_repositories, fake_ids, fake_post
+):
     """
     Tests that creating a reply with nonexistent parent raises CommentNotFoundError.
 
@@ -1277,11 +1436,15 @@ def test_create_comment_with_nonexistent_parent_raises_error(comment_service, mo
         comment_service.create_comment(fake_comment_create)
 
     mock_repositories['post_repo'].get_by_id.assert_called_once_with(fake_ids['post_id'])
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['parent_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['parent_id']
+    )
 
 
 @pytest.mark.unit
-def test_get_nonexistent_comment_raises_error(comment_service, mock_repositories, fake_ids):
+def test_get_nonexistent_comment_raises_error(
+    comment_service, mock_repositories, fake_ids
+):
     """
     Tests that getting a nonexistent comment raises CommentNotFoundError.
 
@@ -1297,11 +1460,15 @@ def test_get_nonexistent_comment_raises_error(comment_service, mock_repositories
     with pytest.raises(CommentNotFoundError):
         comment_service.get_comment(fake_ids['comment_id'])
 
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['comment_id']
+    )
 
 
 @pytest.mark.unit
-def test_unlike_comment_without_like_raises_error(comment_service, mock_repositories, fake_ids, fake_comment):
+def test_unlike_comment_without_like_raises_error(
+    comment_service, mock_repositories, fake_ids, fake_comment
+):
     """
     Tests that unliking a comment without previous like raises CommentLikesNotFoundError.
 
@@ -1318,12 +1485,20 @@ def test_unlike_comment_without_like_raises_error(comment_service, mock_reposito
     with pytest.raises(CommentLikesNotFoundError):
         comment_service.unlike_comment(fake_ids['comment_id'], fake_ids['member_id'])
 
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
-    mock_repositories['comment_likes_repo'].get_by_comment_and_member.assert_called_once_with(fake_ids['comment_id'], fake_ids['member_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['comment_id']
+    )
+    mock_repositories[
+        'comment_likes_repo'
+    ].get_by_comment_and_member.assert_called_once_with(
+        fake_ids['comment_id'], fake_ids['member_id']
+    )
 
 
 @pytest.mark.unit
-def test_report_suspended_comment_raises_error(comment_service, mock_repositories, fake_ids):
+def test_report_suspended_comment_raises_error(
+    comment_service, mock_repositories, fake_ids
+):
     """
     Tests that reporting a suspended comment raises CommentSuspendedError.
 
@@ -1342,4 +1517,6 @@ def test_report_suspended_comment_raises_error(comment_service, mock_repositorie
     with pytest.raises(CommentSuspendedError):
         comment_service.report_comment(fake_ids['comment_id'])
 
-    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(fake_ids['comment_id'])
+    mock_repositories['comment_repo'].get_by_id.assert_called_once_with(
+        fake_ids['comment_id']
+    )

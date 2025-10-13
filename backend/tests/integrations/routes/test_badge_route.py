@@ -45,9 +45,9 @@ def authenticate_client(client, session_sql):
     """Cliente autenticado como administrador"""
     admin_user = User(
         id=uuid4(),
-        email=f"admin-{uuid4()}@test.com",
-        name="Test Admin",
-        hashed_password="pw"
+        email=f'admin-{uuid4()}@test.com',
+        name='Test Admin',
+        hashed_password='pw',
     )
     if hasattr(admin_user, 'status'):
         admin_user.status = 'admin'
@@ -56,7 +56,7 @@ def authenticate_client(client, session_sql):
     session_sql.commit()
     session_sql.refresh(admin_user)
 
-    client.headers["Authorization"] = f"Bearer admin-token"
+    client.headers['Authorization'] = f'Bearer admin-token'
     return client
 
 
@@ -66,25 +66,28 @@ def authenticate_member_client(client, session_sql):
     user_id_obj = uuid4()
     user = User(
         id=user_id_obj,
-        email=f"member-{user_id_obj}@test.com",
-        name="Test Member",
-        hashed_password="pw"
+        email=f'member-{user_id_obj}@test.com',
+        name='Test Member',
+        hashed_password='pw',
     )
     session_sql.add(user)
     session_sql.commit()
     session_sql.refresh(user)
 
-    client.headers["Authorization"] = f"Bearer member-token"
+    client.headers['Authorization'] = f'Bearer member-token'
     # Retornamos o objeto UUID original para uso nos testes
     return client, user_id_obj
 
 
 # --- TESTES DE ADMIN ---
 
+
 @pytest.mark.integration
 def test_admin_can_create_badge(authenticate_client, session_sql):
     community_id_obj = uuid4()
-    community = Community(id=community_id_obj, name='Comm Create Test', type_community='public')
+    community = Community(
+        id=community_id_obj, name='Comm Create Test', type_community='public'
+    )
     session_sql.add(community)
     session_sql.commit()
 
@@ -104,7 +107,9 @@ def test_admin_can_create_badge(authenticate_client, session_sql):
 def test_admin_cannot_create_duplicate_badge(authenticate_client, session_sql):
     # CORREÇÃO: Armazenar o UUID da comunidade em uma variável
     community_id_obj = uuid4()
-    community_obj = Community(id=community_id_obj, name='Comm Dupe Test', type_community='public')
+    community_obj = Community(
+        id=community_id_obj, name='Comm Dupe Test', type_community='public'
+    )
     session_sql.add(community_obj)
     session_sql.commit()
 
@@ -121,17 +126,23 @@ def test_admin_cannot_create_duplicate_badge(authenticate_client, session_sql):
 def test_admin_can_update_badge(authenticate_client, session_sql):
     # CORREÇÃO: Armazenar o UUID da comunidade em uma variável
     community_id_obj = uuid4()
-    community_obj = Community(id=community_id_obj, name='Comm Update Test', type_community='public')
+    community_obj = Community(
+        id=community_id_obj, name='Comm Update Test', type_community='public'
+    )
     session_sql.add(community_obj)
     session_sql.commit()
 
     badge_id_obj = uuid4()
-    badge_obj = Badge(id=badge_id_obj, community_id=community_id_obj, name='Badge Original')
+    badge_obj = Badge(
+        id=badge_id_obj, community_id=community_id_obj, name='Badge Original'
+    )
     session_sql.add(badge_obj)
     session_sql.commit()
 
     update_data = {'name': 'Nome Atualizado'}
-    response = authenticate_client.patch(f'{ADMIN_PREFIX}/{badge_id_obj}', json=update_data)
+    response = authenticate_client.patch(
+        f'{ADMIN_PREFIX}/{badge_id_obj}', json=update_data
+    )
     assert response.status_code == status.HTTP_200_OK
     assert response.json()['name'] == update_data['name']
 
@@ -140,12 +151,16 @@ def test_admin_can_update_badge(authenticate_client, session_sql):
 def test_admin_can_delete_badge(authenticate_client, session_sql):
     # CORREÇÃO: Armazenar o UUID da comunidade em uma variável
     community_id_obj = uuid4()
-    community_obj = Community(id=community_id_obj, name='Comm Delete Test', type_community='public')
+    community_obj = Community(
+        id=community_id_obj, name='Comm Delete Test', type_community='public'
+    )
     session_sql.add(community_obj)
     session_sql.commit()
 
     badge_id_obj = uuid4()
-    badge_obj = Badge(id=badge_id_obj, community_id=community_id_obj, name='Badge para deletar')
+    badge_obj = Badge(
+        id=badge_id_obj, community_id=community_id_obj, name='Badge para deletar'
+    )
     session_sql.add(badge_obj)
     session_sql.commit()
 
@@ -167,7 +182,9 @@ def test_admin_can_assign_and_revoke_badge(authenticate_client, session_sql):
     session_sql.commit()
 
     community_id_obj = uuid4()
-    community_obj = Community(id=community_id_obj, name='Comm Assign Test', type_community='public')
+    community_obj = Community(
+        id=community_id_obj, name='Comm Assign Test', type_community='public'
+    )
     session_sql.add(community_obj)
     session_sql.commit()
 
@@ -176,25 +193,32 @@ def test_admin_can_assign_and_revoke_badge(authenticate_client, session_sql):
         id=member_id_obj,
         user_id=user_id_obj,
         community_id=community_id_obj,
-        role='member'
+        role='member',
     )
     session_sql.add(member_obj)
     session_sql.commit()
 
     badge_id_obj = uuid4()
-    badge_obj = Badge(id=badge_id_obj, community_id=community_id_obj, name='Badge para Atribuir')
+    badge_obj = Badge(
+        id=badge_id_obj, community_id=community_id_obj, name='Badge para Atribuir'
+    )
     session_sql.add(badge_obj)
     session_sql.commit()
 
     assign_data = {'member_id': str(member_id_obj), 'badge_id': str(badge_id_obj)}
-    response_assign = authenticate_client.post(f'{ADMIN_PREFIX}/assign', json=assign_data)
+    response_assign = authenticate_client.post(
+        f'{ADMIN_PREFIX}/assign', json=assign_data
+    )
     assert response_assign.status_code == status.HTTP_201_CREATED
 
-    response_revoke = authenticate_client.delete(f'{ADMIN_PREFIX}/revoke/{member_id_obj}/{badge_id_obj}')
+    response_revoke = authenticate_client.delete(
+        f'{ADMIN_PREFIX}/revoke/{member_id_obj}/{badge_id_obj}'
+    )
     assert response_revoke.status_code == status.HTTP_204_NO_CONTENT
 
 
 # --- TESTES DE MEMBRO ---
+
 
 @pytest.mark.integration
 def test_member_can_get_badge(authenticate_member_client, session_sql):
@@ -202,21 +226,22 @@ def test_member_can_get_badge(authenticate_member_client, session_sql):
 
     # CORREÇÃO: Armazenar os UUIDs para garantir o tipo correto
     community_id_obj = uuid4()
-    community_obj = Community(id=community_id_obj, name='Comm Get Test', type_community='public')
+    community_obj = Community(
+        id=community_id_obj, name='Comm Get Test', type_community='public'
+    )
     session_sql.add(community_obj)
     session_sql.commit()
 
     member_link = CommunityMember(
-        id=uuid4(),
-        user_id=user_id_on_db,
-        community_id=community_id_obj,
-        role='member'
+        id=uuid4(), user_id=user_id_on_db, community_id=community_id_obj, role='member'
     )
     session_sql.add(member_link)
     session_sql.commit()
 
     badge_id_obj = uuid4()
-    badge_obj = Badge(id=badge_id_obj, community_id=community_id_obj, name='Badge para Get')
+    badge_obj = Badge(
+        id=badge_id_obj, community_id=community_id_obj, name='Badge para Get'
+    )
     session_sql.add(badge_obj)
     session_sql.commit()
 
@@ -237,15 +262,14 @@ def test_member_can_list_badges_from_community(authenticate_member_client, sessi
     client, user_id_on_db = authenticate_member_client
 
     community_id_obj = uuid4()
-    community = Community(id=community_id_obj, name='Comm List Test', type_community='public')
+    community = Community(
+        id=community_id_obj, name='Comm List Test', type_community='public'
+    )
     session_sql.add(community)
     session_sql.commit()
 
     member_link = CommunityMember(
-        id=uuid4(),
-        user_id=user_id_on_db,
-        community_id=community_id_obj,
-        role='member'
+        id=uuid4(), user_id=user_id_on_db, community_id=community_id_obj, role='member'
     )
     session_sql.add(member_link)
     session_sql.commit()
@@ -261,15 +285,14 @@ def test_member_can_list_badges_for_a_member(authenticate_member_client, session
 
     # CORREÇÃO: Usar variáveis para todos os UUIDs
     community_id_obj = uuid4()
-    community_obj = Community(id=community_id_obj, name='Comm List Member Test', type_community='public')
+    community_obj = Community(
+        id=community_id_obj, name='Comm List Member Test', type_community='public'
+    )
     session_sql.add(community_obj)
     session_sql.commit()
 
     auth_member_link = CommunityMember(
-        id=uuid4(),
-        user_id=user_id_on_db,
-        community_id=community_id_obj,
-        role='member'
+        id=uuid4(), user_id=user_id_on_db, community_id=community_id_obj, role='member'
     )
     session_sql.add(auth_member_link)
     session_sql.commit()
@@ -279,7 +302,7 @@ def test_member_can_list_badges_for_a_member(authenticate_member_client, session
         id=user_target_id,
         email=f'user-{user_target_id}@test.com',
         name='T. User Target',
-        hashed_password='pw'
+        hashed_password='pw',
     )
     session_sql.add(user_target)
     session_sql.commit()
@@ -289,24 +312,19 @@ def test_member_can_list_badges_for_a_member(authenticate_member_client, session
         id=member_target_id,
         user_id=user_target_id,
         community_id=community_id_obj,
-        role='member'
+        role='member',
     )
     session_sql.add(member_target)
     session_sql.commit()
 
     badge_id_obj = uuid4()
     badge_obj = Badge(
-        id=badge_id_obj,
-        community_id=community_id_obj,
-        name='Badge para Listar'
+        id=badge_id_obj, community_id=community_id_obj, name='Badge para Listar'
     )
     session_sql.add(badge_obj)
     session_sql.commit()
 
-    member_badge = MemberBadge(
-        member_id=member_target_id,
-        badge_id=badge_id_obj
-    )
+    member_badge = MemberBadge(member_id=member_target_id, badge_id=badge_id_obj)
     session_sql.add(member_badge)
     session_sql.commit()
 

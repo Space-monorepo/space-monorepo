@@ -552,9 +552,7 @@ def test_list_badges_for_user_service_success():
 
     # >> AQUI ESTÁ A CORREÇÃO <<
     # Simulamos a nova cadeia de chamadas de consulta para retornar a lista esperada
-    mock_badge_repo.session.query.return_value.join.return_value.filter.return_value.all.return_value = (
-        expected_badges
-    )
+    mock_badge_repo.session.query.return_value.join.return_value.filter.return_value.all.return_value = expected_badges
 
     service = BadgeService(mock_tm)
     # Atribuímos os mocks à instância do serviço

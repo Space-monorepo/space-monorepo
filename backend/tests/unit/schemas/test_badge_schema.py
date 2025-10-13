@@ -12,6 +12,7 @@ from app.api.badges.schema import (
     MemberBadgeResponse,
 )
 
+
 @pytest.mark.unit
 def test_badge_create_schema():
     community_uuid = uuid.uuid4()
@@ -27,6 +28,7 @@ def test_badge_create_schema():
         'description': 'Detalhes da badge.',
         'image_url': 'https://example.com/badge.png',
     }
+
 
 @pytest.mark.unit
 def test_badge_create_invalid_data():
@@ -48,6 +50,7 @@ def test_badge_create_invalid_data():
     with pytest.raises(ValidationError):
         BadgeCreate(name='Valid Name', description='Valid Desc')
 
+
 @pytest.mark.unit
 def test_badge_update_schema_valid():
     badge_update = BadgeUpdate(
@@ -60,6 +63,7 @@ def test_badge_update_schema_valid():
         'description': 'Descrição Atualizada',
         'image_url': '/badges/updated.png',
     }
+
 
 @pytest.mark.unit
 def test_badge_response_schema():
@@ -86,6 +90,7 @@ def test_badge_response_schema():
         'updated_at': now,
     }
 
+
 @pytest.mark.unit
 def test_member_badge_create_schema():
     member_uuid = uuid.uuid4()
@@ -99,6 +104,7 @@ def test_member_badge_create_schema():
         'member_id': member_uuid,
         'badge_id': badge_uuid,
     }
+
 
 @pytest.mark.unit
 def test_member_badge_response_schema():
