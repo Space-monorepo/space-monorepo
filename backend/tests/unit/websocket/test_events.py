@@ -14,7 +14,7 @@ class TestWebSocketEvent:
     """Test WebSocket event schema validation."""
 
     @pytest.mark.unit
-    def test_websocket_event_creation(self):
+    def test_event_creation_websocket_success(self):
         """Test creating a basic WebSocket event."""
         event = WebSocketEvent(
             type="test_event",
@@ -27,7 +27,7 @@ class TestWebSocketEvent:
         assert event.request_id == "req_123"
 
     @pytest.mark.unit
-    def test_websocket_event_to_dict(self):
+    def test_event_to_dict_websocket_success(self):
         """Test WebSocket event serialization."""
         event = WebSocketEvent(
             type="test_event",
@@ -45,7 +45,7 @@ class TestWebSocketEvent:
         assert result == expected
 
     @pytest.mark.unit
-    def test_websocket_event_from_dict_success(self):
+    def test_event_from_dict_websocket_success(self):
         """Test WebSocket event deserialization."""
         data = {
             "type": "test_event",
@@ -60,7 +60,7 @@ class TestWebSocketEvent:
         assert event.request_id == "req_123"
 
     @pytest.mark.unit
-    def test_websocket_event_from_dict_validation_error(self):
+    def test_event_from_dict_websocket_validation_error(self):
         """Test WebSocket event validation error."""
         data = {
             "timestamp": "invalid_timestamp",  # Should be float
@@ -76,7 +76,7 @@ class TestEventResponse:
     """Test event response schema validation."""
 
     @pytest.mark.unit
-    def test_event_response_success(self):
+    def test_event_response_websocket_success(self):
         """Test successful event response creation."""
         response = EventResponse(
             success=True,
@@ -90,7 +90,7 @@ class TestEventResponse:
         assert response.error_code is None
 
     @pytest.mark.unit
-    def test_event_response_error(self):
+    def test_event_response_websocket_error(self):
         """Test error event response creation."""
         response = EventResponse(
             success=False,
@@ -110,7 +110,7 @@ class TestPredefinedEvents:
     """Test predefined event schemas."""
 
     @pytest.mark.unit
-    def test_ping_event(self):
+    def test_ping_event_websocket_success(self):
         """Test ping event schema."""
         event = PingEvent(request_id="ping_123")
 
@@ -118,7 +118,7 @@ class TestPredefinedEvents:
         assert event.request_id == "ping_123"
 
     @pytest.mark.unit
-    def test_join_room_event(self):
+    def test_join_room_event_websocket_success(self):
         """Test join room event schema."""
         event = JoinRoomEvent(
             room_id="room_123",
@@ -130,7 +130,7 @@ class TestPredefinedEvents:
         assert event.request_id == "join_123"
 
     @pytest.mark.unit
-    def test_error_event(self):
+    def test_error_event_websocket_success(self):
         """Test error event schema."""
         event = ErrorEvent(
             error_code="VALIDATION_ERROR",

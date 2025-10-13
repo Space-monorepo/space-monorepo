@@ -13,7 +13,7 @@ class TestWebSocketError:
     """Test the base WebSocketError exception schema."""
 
     @pytest.mark.unit
-    def test_websocket_error_creation(self):
+    def test_error_creation_websocket_success(self):
         """Test WebSocketError creation with message and code."""
         error = WebSocketError("Test error")
         assert str(error) == "Test error"
@@ -21,7 +21,7 @@ class TestWebSocketError:
         assert error.code == status.WS_1011_INTERNAL_ERROR
 
     @pytest.mark.unit
-    def test_websocket_error_custom_code(self):
+    def test_error_custom_code_websocket_success(self):
         """Test WebSocketError with custom status code."""
         custom_code = status.WS_1008_POLICY_VIOLATION
         error = WebSocketError("Test error", custom_code)
@@ -33,7 +33,7 @@ class TestAuthenticationError:
     """Test AuthenticationError exception schema."""
 
     @pytest.mark.unit
-    def test_authentication_error_creation(self):
+    def test_authentication_error_creation_websocket_success(self):
         """Test AuthenticationError creation and properties."""
         error = AuthenticationError("Invalid token")
         assert error.message == "Invalid token"
@@ -45,7 +45,7 @@ class TestEventValidationError:
     """Test EventValidationError exception schema."""
 
     @pytest.mark.unit
-    def test_event_validation_error_creation(self):
+    def test_event_validation_error_creation_websocket_success(self):
         """Test EventValidationError creation and properties."""
         error = EventValidationError("Invalid event data")
         assert error.message == "Invalid event data"
@@ -57,7 +57,7 @@ class TestEventHandlingError:
     """Test EventHandlingError exception schema."""
 
     @pytest.mark.unit
-    def test_event_handling_error_creation(self):
+    def test_event_handling_error_creation_websocket_success(self):
         """Test EventHandlingError creation and properties."""
         error = EventHandlingError("Handler failed")
         assert error.message == "Handler failed"
@@ -77,7 +77,7 @@ class TestExceptionCodes:
             (EventValidationError, status.WS_1003_UNSUPPORTED_DATA),
         ],
     )
-    def test_exception_codes_parametrized(self, exception_class, expected_code):
+    def test_exception_codes_websocket_parametrized_success(self, exception_class, expected_code):
         """Test that exceptions use correct WebSocket status codes."""
         exception = exception_class("Test message")
         assert exception.code == expected_code

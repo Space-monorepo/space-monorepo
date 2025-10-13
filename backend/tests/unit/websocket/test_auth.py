@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import patch
+
+import pytest
 from fastapi import WebSocketException, status
 
 from app.core.websocket.exceptions import AuthenticationError
@@ -30,7 +31,7 @@ class TestWebSocketAuthentication:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    async def test_authenticate_websocket_no_token(
+    async def test_authenticate_websocket_no_token_error(
         self, websocket_auth, mock_websocket, mock_session
     ):
         """Test WebSocket authentication without token."""
@@ -46,7 +47,7 @@ class TestWebSocketAuthentication:
     @pytest.mark.unit
     @pytest.mark.asyncio
     @patch('app.core.websocket.auth.WebSocketAuth._check_rate_limit')
-    async def test_authenticate_websocket_rate_limit_exceeded(
+    async def test_authenticate_websocket_rate_limit_error(
         self, mock_rate_limit, websocket_auth, mock_authenticated_websocket, mock_session
     ):
         """Test WebSocket authentication with rate limit exceeded."""
@@ -63,7 +64,7 @@ class TestWebSocketAuthentication:
     @pytest.mark.unit
     @pytest.mark.asyncio
     @patch('app.core.websocket.auth.WebSocketAuth._validate_jwt_token')
-    async def test_authenticate_websocket_invalid_token(
+    async def test_authenticate_websocket_invalid_token_error(
         self, mock_validate_token, websocket_auth, mock_authenticated_websocket, mock_session
     ):
         """Test WebSocket authentication with invalid token."""

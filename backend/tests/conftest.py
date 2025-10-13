@@ -12,6 +12,8 @@ from uuid import uuid4
 
 from app.api.badges.model import Badge as BadgeModel
 from app.api.badges.model import MemberBadge as MemberBadgeModel
+from app.api.chat.model import Conversation
+from app.api.chat.websocket.handlers import ChatEventHandler
 from app.api.comment.model import Comment, CommentLikes
 from app.api.comment.schema import CommentStatusEnum
 from app.api.communities.model import Community, CommunityMember
@@ -37,6 +39,8 @@ from app.api.users.service import UserService
 from app.core.config import settings
 from app.core.database import Base, get_db, get_mongo_db
 from app.core.transaction import TransactionManager
+from app.core.websocket.auth import WebSocketAuth
+from app.core.websocket.auth import websocket_auth as global_websocket_auth
 from app.main import app
 
 
@@ -567,24 +571,36 @@ def websocket_client(session_sql):
 @pytest.fixture
 def authenticated_websocket_client(session_sql, user_on_db):
     """Create an authenticated WebSocket test client."""
+    global_websocket_auth._connection_limits.clear()
+    global_websocket_auth._active_sessions.clear()
+
     def get_db_override():
         return session_sql
 
     app.dependency_overrides[get_db] = get_db_override
 
+    session_sql.commit()
+
+    original_session_factory = ChatEventHandler.session_factory
+
+    def test_session_factory(*args, **kwargs):
+        session_sql.expire_all()
+        return session_sql
+
+    ChatEventHandler.session_factory = test_session_factory
+
     with TestClient(app) as client:
-        # Get authentication token
         response = client.post(
             '/users/login',
             data={'username': user_on_db.email, 'password': 'hashed_password'}
         )
         token = response.json().get('access_token')
 
-        # Store token for WebSocket connections
         client.token = token
         yield client
 
     app.dependency_overrides.clear()
+    ChatEventHandler.session_factory = original_session_factory
 
 
 @pytest.fixture
@@ -618,9 +634,26 @@ def websocket_event_data():
 
 
 @pytest.fixture
-def sample_conversation_id():
+def conversation_on_db(session_sql, user_on_db, secondary_user_on_db):
+    """Create a conversation in the database for testing."""
+    user_ids = sorted([str(user_on_db.id), str(secondary_user_on_db.id)])
+
+    conversation = Conversation(
+        id=str(uuid4()),
+        user1_id=user_ids[0],
+        user2_id=user_ids[1],
+    )
+
+    session_sql.add(conversation)
+    session_sql.commit()
+    session_sql.refresh(conversation)
+    return conversation
+
+
+@pytest.fixture
+def sample_conversation_id(conversation_on_db):
     """Sample conversation ID for testing."""
-    return "test_conversation_123"
+    return conversation_on_db.id
 
 
 @pytest.fixture
@@ -676,9 +709,7 @@ def mock_session():
 @pytest.fixture
 def websocket_auth():
     """Create a WebSocketAuth instance for testing."""
-    from app.core.websocket.auth import WebSocketAuth
     auth = WebSocketAuth()
-    # Clear any existing state
     auth._connection_limits.clear()
     auth._active_sessions.clear()
     auth._started = False
