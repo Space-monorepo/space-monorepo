@@ -215,9 +215,12 @@ export default function ModerationPage() {
                                             {report.reason}
                                         </span>
                                     </div>
-                                    <div className="mt-4 w-full">
-                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors">
+                                    <div className="mt-4 w-full flex flex-col items-start gap-2">
+                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
                                             Investigar usuário
+                                        </button>
+                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
+                                            Ver reportes
                                         </button>
                                     </div>
                                 </div>
@@ -356,9 +359,12 @@ export default function ModerationPage() {
                                             {report.reportedPost.content}
                                         </span>
                                     </div>
-                                    <div className="mt-4 w-full">
-                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors">
+                                    <div className="mt-4 w-full flex flex-col items-start gap-2">
+                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
                                             Investigar publicação
+                                        </button>
+                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
+                                            Ver reportes
                                         </button>
                                     </div>
                                 </div>
@@ -497,9 +503,12 @@ export default function ModerationPage() {
                                             {report.reportedComment.content}
                                         </span>
                                     </div>
-                                    <div className="mt-4 w-full">
-                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors">
+                                    <div className="mt-4 w-full flex flex-col items-start gap-2">
+                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
                                             Investigar comentário
+                                        </button>
+                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
+                                            Ver reportes
                                         </button>
                                     </div>
                                 </div>
