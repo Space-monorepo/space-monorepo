@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Tuple
 from uuid import UUID
 
-from sqlalchemy import and_, desc, func, or_
+from sqlalchemy import String, and_, desc, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.chat.model import Conversation, Message, MessageAttachment
@@ -20,14 +20,16 @@ class ConversationRepository(BaseRepository[Conversation]):
         self, conversation_id: UUID
     ) -> Conversation | None:
         """Get conversation with user details loaded - uses custom query for eager loading"""
+        is_string_column = isinstance(Conversation.id.type, String)
+        conv_id = str(conversation_id) if is_string_column else conversation_id
+
         return (
             self.session.query(Conversation)
             .options(
                 joinedload(Conversation.user1),
                 joinedload(Conversation.user2),
-                joinedload(Conversation.last_message).joinedload(Message.sender),
             )
-            .filter(Conversation.id == conversation_id)
+            .filter(Conversation.id == conv_id)
             .first()
         )
 
@@ -223,6 +225,9 @@ class MessageRepository(BaseRepository[Message]):
 
     def get_message_with_details(self, message_id: UUID) -> Message | None:
         """Get message with all related data loaded - custom query for eager loading (can't use base get_by_id)"""
+        is_string_column = isinstance(Message.id.type, String)
+        msg_id = str(message_id) if is_string_column else message_id
+
         return (
             self.session.query(Message)
             .options(
@@ -231,7 +236,7 @@ class MessageRepository(BaseRepository[Message]):
                 joinedload(Message.reply_to_message).joinedload(Message.sender),
                 joinedload(Message.attachments),
             )
-            .filter(Message.id == message_id)
+            .filter(Message.id == msg_id)
             .first()
         )
 
@@ -245,7 +250,10 @@ class MessageRepository(BaseRepository[Message]):
         if str(message.sender_id) == str(user_id):
             return False
 
-        self.session.query(Message).filter(Message.id == message_id).update({
+        is_string_column = isinstance(Message.id.type, String)
+        msg_id = str(message_id) if is_string_column else message_id
+
+        self.session.query(Message).filter(Message.id == msg_id).update({
             'is_read': True
         })
         self.session.flush()
@@ -373,10 +381,13 @@ class MessageAttachmentRepository(BaseRepository[MessageAttachment]):
         self, attachment_id: UUID
     ) -> MessageAttachment | None:
         """Get attachment with message details loaded - custom query for eager loading (can't use base get_by_id)"""
+        is_string_column = isinstance(MessageAttachment.id.type, String)
+        attach_id = str(attachment_id) if is_string_column else attachment_id
+
         return (
             self.session.query(MessageAttachment)
             .options(joinedload(MessageAttachment.message))
-            .filter(MessageAttachment.id == attachment_id)
+            .filter(MessageAttachment.id == attach_id)
             .first()
         )
 
