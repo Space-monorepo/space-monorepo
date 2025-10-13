@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.utils.schema import PaginationResponse
 
@@ -75,9 +75,10 @@ class MessageCreate(BaseModel):
         None, description='The ID of the message being replied to'
     )
 
-    @validator('content')
-    def validate_content_for_text_messages(cls, v, values):
-        message_type = values.get('message_type', MessageTypeEnum.text)
+    @field_validator('content')
+    @classmethod
+    def validate_content_for_text_messages(cls, v, info):
+        message_type = info.data.get('message_type', MessageTypeEnum.text)
         if message_type == MessageTypeEnum.text and (not v or not v.strip()):
             raise ValueError('Text messages must have content')
         return v
@@ -92,7 +93,8 @@ class MessageWithAttachmentCreate(BaseModel):
         None, max_length=2000, description='Optional message content for attachments'
     )
 
-    @validator('message_type')
+    @field_validator('message_type')
+    @classmethod
     def validate_attachment_message_type(cls, v):
         if v == MessageTypeEnum.text:
             raise ValueError('Use MessageCreate for text messages')
