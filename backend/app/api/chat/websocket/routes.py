@@ -15,11 +15,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, WebSocket
 from sqlalchemy.orm import Session
 
+from app.api.chat.websocket.handlers import ChatEventHandler
+from app.api.chat.websocket.rooms import get_chat_room_manager
 from app.core.database import get_db
 from app.core.websocket.manager import websocket_manager
-
-from .websocket.handlers import ChatEventHandler
-from .websocket.rooms import get_chat_room_manager
 
 logger = logging.getLogger(__name__)
 
