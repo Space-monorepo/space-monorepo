@@ -43,11 +43,14 @@ class ConversationRoom(Room):
         conversation_id: Optional[UUID] = None,
         **kwargs,
     ):
+        # Extract max_connections from kwargs to avoid duplicate argument error
+        max_connections = kwargs.pop('max_connections', 10)
+
         super().__init__(
             room_id=room_id,
             room_type='conversation',
             namespace=namespace,
-            max_connections=10,  # Reasonable limit for conversation participants
+            max_connections=max_connections,
             is_private=True,  # Conversations are private by default
             **kwargs,
         )
