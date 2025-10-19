@@ -39,6 +39,7 @@ class PostStatusEnum(str, Enum):
     ACTIVE = 'active'
     REPORTED = 'reported'
     SUSPENDED = 'suspended'
+    REJECTED = 'rejected'
 
 
 class PostTypeEnum(str, Enum):
