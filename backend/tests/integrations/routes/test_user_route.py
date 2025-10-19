@@ -27,7 +27,7 @@ def test_create_user_route(transaction_manager, client_sql):
         hashed_password='hashed_password',
         profile_image_url=None,
         reputation_level=1,
-        status=UserStatusEnum.pending,
+        status=UserStatusEnum.PENDING,
     )
 
     response = client_sql.post('/users/signup', json=user.model_dump(mode='json'))

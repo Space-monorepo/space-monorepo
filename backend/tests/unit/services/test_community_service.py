@@ -717,7 +717,7 @@ def test_create_member_service_success():
     fake_user_model.hashed_password = 'hashedpassword123456789'
     fake_user_model.profile_image_url = 'https://example.com/profile.jpg'
     fake_user_model.reputation_level = 5
-    fake_user_model.status = UserStatusEnum.active
+    fake_user_model.status = UserStatusEnum.ACTIVE
     fake_user_model.created_at = datetime.now()
     fake_user_model.updated_at = datetime.now()
 

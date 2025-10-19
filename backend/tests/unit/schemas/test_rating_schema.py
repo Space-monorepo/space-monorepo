@@ -76,8 +76,8 @@ def test_rating_base_maximum_rating():
 
 
 def test_rating_create_schema():
-    user_id = uuid.uuid4()
-    community_id = uuid.uuid4()
+    user_id = str(uuid.uuid4())
+    community_id = str(uuid.uuid4())
 
     rating = RatingCreate(
         user_id=user_id,
@@ -99,8 +99,8 @@ def test_rating_create_schema():
 
 
 def test_rating_create_without_description():
-    user_id = uuid.uuid4()
-    community_id = uuid.uuid4()
+    user_id = str(uuid.uuid4())
+    community_id = str(uuid.uuid4())
 
     rating = RatingCreate(
         user_id=user_id,
