@@ -120,7 +120,7 @@ class ReportPostRepository(BaseRepository[ReportPost]):
     def __init__(self, session: Session):
         super().__init__(ReportPost, session)
         self.session = session
-    
+
     def save(self, model: ReportPost) -> ReportPost:
         self.session.add(model)
         self.session.flush()
@@ -129,7 +129,7 @@ class ReportPostRepository(BaseRepository[ReportPost]):
             f'Model {ReportPost.__qualname__} with id {model.report_id} saved successfully'
         )
         return model
-    
+
     def delete(self, model: ReportPost) -> bool:
         self.session.delete(model)
         self.session.flush()
@@ -203,7 +203,7 @@ class ReportCommentRepository(BaseRepository[ReportComment]):
             f'Model {ReportComment.__qualname__} with id {model.report_id} saved successfully'
         )
         return model
-        
+
     def delete(self, model: ReportComment) -> bool:
         self.session.delete(model)
         self.session.flush()
