@@ -15,6 +15,7 @@ from app.api.communities.routes import router as communities_router
 from app.api.moderation.routes import router as moderation_router
 from app.api.post.routes import router as post_router
 from app.api.rating.routes import router as rating_router
+from app.api.reports.routes import router as reports_router
 from app.api.users.routes import router as users_router
 from app.api.search.routes import router as search_router
 
@@ -41,6 +42,7 @@ routes = [
     chat_router,
     chat_websocket_router,
     moderation_router,
+    reports_router,
     badges_router,
     badges_admin_router,
     rating_router,

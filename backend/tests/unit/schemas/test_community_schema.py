@@ -196,7 +196,7 @@ def test_community_member_response_schema():
         hashed_password='securehashedpassword123456',  # This is the missing field
         profile_image_url='https://example.com/image.jpg',
         reputation_level=5,
-        status=UserStatusEnum.active,
+        status=UserStatusEnum.ACTIVE,
         created_at=created_at,
         updated_at=updated_at,
     )

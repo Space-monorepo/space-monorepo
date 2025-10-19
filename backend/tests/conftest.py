@@ -33,6 +33,8 @@ from app.api.post.schemas import (
     PostTypeEnum,
 )
 from app.api.rating.model import Rating
+from app.api.reports.model import Report, ReportComment, ReportMember, ReportPost, ModerationVotes
+from app.api.reports.schema import ReportTypeEnum, ReportReasonEnum
 from app.api.users.model import User
 from app.api.users.schema import UserCreate
 from app.api.users.service import UserService
@@ -552,6 +554,87 @@ def comment_like_on_db(session_sql, comment_on_db, user_on_db):
     session_sql.flush()
     session_sql.refresh(comment_like)
     return comment_like
+
+
+@pytest.fixture
+def report_to_member_on_db(session_sql, community_member_on_db):
+    report = Report(
+        reporter_id=community_member_on_db.id,
+        type=ReportTypeEnum.MEMBER_REPORT,
+        reason=ReportReasonEnum.DISCRIMINATION,
+        description='The description of the report',
+    )
+    session_sql.add(report)
+    session_sql.flush()
+    session_sql.refresh(report)
+    return report
+
+
+@pytest.fixture
+def report_to_post_on_db(session_sql, community_member_on_db):
+    report = Report(
+        reporter_id=community_member_on_db.id,
+        type=ReportTypeEnum.POST_REPORT,
+        reason=ReportReasonEnum.DISCRIMINATION,
+        description='The description of the report',
+    )
+    session_sql.add(report)
+    session_sql.flush()
+    session_sql.refresh(report)
+    return report
+
+
+@pytest.fixture
+def report_to_comment_on_db(session_sql, community_member_on_db):
+    report = Report(
+        reporter_id=community_member_on_db.id,
+        type=ReportTypeEnum.COMMENT_REPORT,
+        reason=ReportReasonEnum.DISCRIMINATION,
+        description='The description of the report',
+    )
+    session_sql.add(report)
+    session_sql.flush()
+    session_sql.refresh(report)
+    return report
+
+
+@pytest.fixture
+def report_member_on_db(session_sql, report_to_member_on_db, comum_member_on_db, community_on_db):
+    report_member = ReportMember(
+        report_id=report_to_member_on_db.id,
+        member_id=comum_member_on_db.id,
+        community_id=community_on_db.id,
+    )
+    session_sql.add(report_member)
+    session_sql.flush()
+    session_sql.refresh(report_member)
+    return report_member
+
+
+@pytest.fixture
+def report_post_on_db(session_sql, report_to_post_on_db, post_on_db, community_on_db):
+    report_post = ReportPost(
+        report_id=report_to_post_on_db.id,
+        post_id=post_on_db.id,
+        community_id=community_on_db.id,
+    )
+    session_sql.add(report_post)
+    session_sql.flush()
+    session_sql.refresh(report_post)
+    return report_post
+
+
+@pytest.fixture
+def report_comment_on_db(session_sql, report_to_comment_on_db, comment_on_db, community_on_db):
+    report_comment = ReportComment(
+        report_id=report_to_comment_on_db.id,
+        comment_id=comment_on_db.id,
+        community_id=community_on_db.id,
+    )
+    session_sql.add(report_comment)
+    session_sql.flush()
+    session_sql.refresh(report_comment)
+    return report_comment
 
 
 @pytest.fixture

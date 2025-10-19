@@ -56,6 +56,7 @@ class Post(Base):
         back_populates='liked_posts',
     )
     comments = relationship('Comment', back_populates='post')
+    reports = relationship('ReportPost', back_populates='post')
 
 
 class CampaignPost(Base):

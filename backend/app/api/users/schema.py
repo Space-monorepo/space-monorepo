@@ -6,18 +6,18 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserStatusEnum(str, Enum):
-    pending = 'pending'
-    active = 'active'
-    suspended = 'suspended'
-    banned = 'banned'
-    inactive = 'inactive'
+    PENDING = 'pending'
+    ACTIVE = 'active'
+    SUSPENDED = 'suspended'
+    BANNED = 'banned'
+    INACTIVE = 'inactive'
 
 
 class ConnectionStatusEnum(str, Enum):
-    pending = 'pending'
-    accepted = 'accepted'
-    rejected = 'rejected'
-    blocked = 'blocked'
+    PENDING = 'pending'
+    ACCEPTED = 'accepted'
+    REJECTED = 'rejected'
+    BLOCKED = 'blocked'
 
 
 class UserCreate(BaseModel):
@@ -35,7 +35,7 @@ class UserCreate(BaseModel):
     )
     reputation_level: int = Field(0, description='The reputation level of user.')
     status: UserStatusEnum = Field(
-        UserStatusEnum.pending, description='Whether the user is active or not.'
+        UserStatusEnum.PENDING, description='Whether the user is active or not.'
     )
 
 
@@ -76,7 +76,7 @@ class UserResponse(UserCreate):
     )
     reputation_level: int = Field(0, description='The reputation level of user.')
     status: UserStatusEnum = Field(
-        UserStatusEnum.pending, description='Whether the user is active or not.'
+        UserStatusEnum.PENDING, description='Whether the user is active or not.'
     )
     created_at: datetime = Field(
         ..., description='The date and time the user was created.'
