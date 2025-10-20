@@ -88,10 +88,10 @@ def test_user_response_schema():
 @pytest.mark.unit
 def test_connection_status_enum():
     """Test ConnectionStatusEnum values"""
-    assert ConnectionStatusEnum.pending.value == 'pending'
-    assert ConnectionStatusEnum.accepted.value == 'accepted'
-    assert ConnectionStatusEnum.rejected.value == 'rejected'
-    assert ConnectionStatusEnum.blocked.value == 'blocked'
+    assert ConnectionStatusEnum.PENDING.value == 'pending'
+    assert ConnectionStatusEnum.ACCEPTED.value == 'accepted'
+    assert ConnectionStatusEnum.REJECTED.value == 'rejected'
+    assert ConnectionStatusEnum.BLOCKED.value == 'blocked'
 
 
 @pytest.mark.unit
@@ -121,19 +121,19 @@ def test_user_connection_create_invalid_schema():
 @pytest.mark.unit
 def test_user_connection_update_schema():
     """Test UserConnectionUpdate schema validation"""
-    connection_update = UserConnectionUpdate(status=ConnectionStatusEnum.accepted)
+    connection_update = UserConnectionUpdate(status=ConnectionStatusEnum.ACCEPTED)
 
     assert connection_update.model_dump() == {
         'status': 'accepted',
     }
 
     # Test with different statuses
-    update_rejected = UserConnectionUpdate(status=ConnectionStatusEnum.rejected)
+    update_rejected = UserConnectionUpdate(status=ConnectionStatusEnum.REJECTED)
     assert update_rejected.model_dump() == {
         'status': 'rejected',
     }
 
-    update_blocked = UserConnectionUpdate(status=ConnectionStatusEnum.blocked)
+    update_blocked = UserConnectionUpdate(status=ConnectionStatusEnum.BLOCKED)
     assert update_blocked.model_dump() == {
         'status': 'blocked',
     }
@@ -164,7 +164,7 @@ def test_user_connection_response_schema():
         id=connection_id,
         requester_id=requester_id,
         addressee_id=addressee_id,
-        status=ConnectionStatusEnum.pending,
+        status=ConnectionStatusEnum.PENDING,
         created_at=created_at,
         updated_at=updated_at,
         rejected_at=None,
@@ -195,7 +195,7 @@ def test_user_connection_response_with_rejected_at():
         id=connection_id,
         requester_id=requester_id,
         addressee_id=addressee_id,
-        status=ConnectionStatusEnum.rejected,
+        status=ConnectionStatusEnum.REJECTED,
         created_at=created_at,
         updated_at=updated_at,
         rejected_at=rejected_at,
@@ -226,24 +226,24 @@ def test_user_connection_response_all_statuses():
         id=connection_id,
         requester_id=requester_id,
         addressee_id=addressee_id,
-        status=ConnectionStatusEnum.accepted,
+        status=ConnectionStatusEnum.ACCEPTED,
         created_at=created_at,
         updated_at=updated_at,
         rejected_at=None,
     )
-    assert accepted_response.status == ConnectionStatusEnum.accepted
+    assert accepted_response.status == ConnectionStatusEnum.ACCEPTED
 
     # Test blocked status
     blocked_response = UserConnectionResponse(
         id=connection_id,
         requester_id=requester_id,
         addressee_id=addressee_id,
-        status=ConnectionStatusEnum.blocked,
+        status=ConnectionStatusEnum.BLOCKED,
         created_at=created_at,
         updated_at=updated_at,
         rejected_at=None,
     )
-    assert blocked_response.status == ConnectionStatusEnum.blocked
+    assert blocked_response.status == ConnectionStatusEnum.BLOCKED
 
 
 @pytest.mark.unit
@@ -273,7 +273,7 @@ def test_user_connection_response_invalid_schema():
             id='invalid-uuid',
             requester_id=requester_id,
             addressee_id=addressee_id,
-            status=ConnectionStatusEnum.pending,
+            status=ConnectionStatusEnum.PENDING,
             created_at=created_at,
             updated_at=updated_at,
             rejected_at=None,
@@ -305,7 +305,7 @@ def test_user_connection_model_config():
         id=connection_id,
         requester_id=requester_id,
         addressee_id=addressee_id,
-        status=ConnectionStatusEnum.pending,
+        status=ConnectionStatusEnum.PENDING,
         created_at=created_at,
         updated_at=updated_at,
         rejected_at=None,

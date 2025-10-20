@@ -36,12 +36,11 @@ def test_update_community_route(
     community_update = CommunityUpdate(
         name='Updated Community Name',
         description='This is an updated description for the community',
-        image_url='https://example.com/updated-image.jpg',
     )
 
     response = authenticate_client.patch(
         f'/communities/{community_on_db.id}',
-        json=community_update.model_dump(mode='json', exclude_unset=True),
+        json=community_update.model_dump(exclude_unset=True),
     )
     response_data = response.json()
 

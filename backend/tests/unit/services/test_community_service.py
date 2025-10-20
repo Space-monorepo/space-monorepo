@@ -18,8 +18,8 @@ from app.api.communities.schema import (
     CommunityMemberResponse,
     CommunityMemberRoleEnum,
     CommunityMemberStatusEnum,
-    CommunityTypeEnum,
-    CommunityUpdate,
+    CommunityMemberCreate,
+    CommunityMemberResponse,
 )
 from app.api.communities.service import CommunityService
 from app.api.users.schema import UserStatusEnum
@@ -811,7 +811,6 @@ def test_create_member_service_success():
     fake_community_model = Mock(spec=Community)
     fake_community_model.id = fake_community_id
     fake_community_model.name = 'Test Community'
-    fake_community_model.image_url = 'https://example.com/community-image.jpg'
 
     # Create properly configured user mock with all required UserResponse fields
     fake_user_model = Mock()
@@ -821,7 +820,7 @@ def test_create_member_service_success():
     fake_user_model.hashed_password = 'hashedpassword123456789'
     fake_user_model.profile_image_url = 'https://example.com/profile.jpg'
     fake_user_model.reputation_level = 5
-    fake_user_model.status = UserStatusEnum.active
+    fake_user_model.status = UserStatusEnum.ACTIVE
     fake_user_model.created_at = datetime.now()
     fake_user_model.updated_at = datetime.now()
 

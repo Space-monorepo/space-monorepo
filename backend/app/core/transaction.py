@@ -15,8 +15,20 @@ from app.api.post.repository import (
     PostLikesRepository,
 )
 from app.api.rating.repository import RatingRepository
+from app.api.reports.repository import (
+    ModerationVotesRepository,
+    ReportRepository,
+    ReportMemberRepository,
+    ReportPostRepository,
+    ReportCommentRepository
+)
 from app.api.users.repository import UserRepository, UserConnectionRepository
 from app.api.badges.repository import BadgeRepository, MemberBadgeRepository
+from app.api.chat.repository import (
+    ConversationRepository,
+    MessageRepository,
+    MessageAttachmentRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,3 +113,27 @@ class TransactionManager:
 
     def get_user_connection_repository(self):
         return UserConnectionRepository(self._session)
+
+    def get_report_repository(self):
+        return ReportRepository(self._session)
+
+    def get_report_member_repository(self):
+        return ReportMemberRepository(self._session)
+
+    def get_report_post_repository(self):
+        return ReportPostRepository(self._session)
+
+    def get_report_comment_repository(self):
+        return ReportCommentRepository(self._session)
+
+    def get_moderation_votes_repository(self):
+        return ModerationVotesRepository(self._session)
+    
+    def get_conversation_repository(self):
+        return ConversationRepository(self._session)
+
+    def get_message_repository(self):
+        return MessageRepository(self._session)
+
+    def get_message_attachment_repository(self):
+        return MessageAttachmentRepository(self._session)

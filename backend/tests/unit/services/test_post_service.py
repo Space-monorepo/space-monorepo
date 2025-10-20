@@ -72,9 +72,7 @@ def test_create_post_service_success():
 
     # Mock objects
     fake_community = Mock()
-    fake_community.id = fake_community_id
     fake_community.name = 'Test Community'
-    fake_community.image_url = 'https://example.com/community.jpg'
     fake_created_post.community = fake_community
 
     fake_user = Mock()
@@ -157,9 +155,7 @@ def test_get_post_by_id_service_success():
 
     # Mock relacionamentos
     fake_community = Mock()
-    fake_community.id = fake_community_id
     fake_community.name = 'Test Community'
-    fake_community.image_url = 'https://example.com/community.jpg'
     fake_post.community = fake_community
 
     fake_user = Mock()
@@ -226,9 +222,7 @@ def test_list_posts_by_user_service_success():
 
     # Mock relacionamentos
     fake_community = Mock()
-    fake_community.id = fake_community_id
     fake_community.name = 'User Community'
-    fake_community.image_url = 'https://example.com/community.jpg'
     fake_post.community = fake_community
 
     fake_user = Mock()
@@ -295,9 +289,7 @@ def test_list_posts_by_community_service_success():
 
     # Mock relacionamentos
     fake_community = Mock()
-    fake_community.id = fake_community_id
     fake_community.name = 'Test Community'
-    fake_community.image_url = 'https://example.com/community.jpg'
     fake_post.community = fake_community
 
     fake_user = Mock()
@@ -373,9 +365,7 @@ def test_get_user_feed_service_success():
 
         # Mock relacionamentos
         fake_community = Mock()
-        fake_community.id = uuid4()
         fake_community.name = f'Feed Community {i + 1}'
-        fake_community.image_url = f'https://example.com/community{i + 1}.jpg'
         fake_post.community = fake_community
 
         fake_user = Mock()
@@ -467,9 +457,7 @@ def test_update_post_service_success():
     # Mock relacionamentos para ambos os posts
     for post in [fake_existing_post, fake_saved_post]:
         fake_community = Mock()
-        fake_community.id = fake_community_id
         fake_community.name = 'Test Community'
-        fake_community.image_url = 'https://example.com/community.jpg'
         post.community = fake_community
 
         fake_user = Mock()
@@ -603,9 +591,7 @@ def test_like_post_service_success():
     # Mock relacionamentos para ambos os posts
     for post in [fake_existing_post, fake_saved_post]:
         fake_community = Mock()
-        fake_community.id = fake_community_id
         fake_community.name = 'Test Community'
-        fake_community.image_url = 'https://example.com/community.jpg'
         post.community = fake_community
 
         fake_user = Mock()
@@ -702,9 +688,7 @@ def test_unlike_post_service_success():
     # Mock relacionamentos para ambos os posts
     for post in [fake_existing_post, fake_saved_post]:
         fake_community = Mock()
-        fake_community.id = fake_community_id
         fake_community.name = 'Test Community'
-        fake_community.image_url = 'https://example.com/community.jpg'
         post.community = fake_community
 
         fake_user = Mock()
@@ -860,7 +844,6 @@ def test_create_campaign_service_success():
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = fake_community_id
     fake_community.name = 'Test Community'
-    fake_community.image_url = 'https://example.com/community.jpg'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = fake_user_id
@@ -1020,7 +1003,6 @@ def test_list_user_campaigns_subscriptions_service_success():
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = uuid4()
     fake_community.name = 'Campaign Community'
-    fake_community.image_url = 'https://example.com/community.jpg'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = fake_user_id
@@ -1108,7 +1090,6 @@ def test_create_complaint_service_success():
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = fake_community_id
     fake_community.name = 'Test Community'
-    fake_community.image_url = 'https://example.com/community.jpg'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = fake_user_id
@@ -1208,7 +1189,6 @@ def test_create_poll_service_success():
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = fake_community_id
     fake_community.name = 'Test Community'
-    fake_community.image_url = 'https://example.com/community.jpg'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = fake_user_id
@@ -1386,7 +1366,6 @@ def test_vote_poll_service_success():
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = uuid4()
     fake_community.name = 'Tech Community'
-    fake_community.image_url = 'https://example.com/community.jpg'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = uuid4()

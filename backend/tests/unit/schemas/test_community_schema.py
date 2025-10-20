@@ -11,10 +11,7 @@ from app.api.communities.schema import (
     CommunityMemberRoleEnum,
     CommunityMemberStatusEnum,
     CommunityMemberUpdate,
-    CommunityRelated,
-    CommunityResponse,
-    CommunityTypeEnum,
-    CommunityUpdate,
+    CommunityMemberResponse,
 )
 from app.api.users.schema import UserResponse, UserStatusEnum
 
@@ -22,15 +19,9 @@ from app.api.users.schema import UserResponse, UserStatusEnum
 @pytest.mark.unit
 def test_community_related_schema():
     community_id = uuid.uuid4()
-    community = CommunityRelated(
-        id=community_id, name='Test Community', image_url='https://example.com/image.jpg'
-    )
+    community = CommunityRelated(id=community_id, name='Test Community')
 
-    assert community.model_dump(mode='json') == {
-        'id': str(community_id),
-        'name': 'Test Community',
-        'image_url': 'https://example.com/image.jpg',
-    }
+    assert community.model_dump() == {'id': community_id, 'name': 'Test Community'}
 
 
 @pytest.mark.unit
@@ -68,11 +59,10 @@ def test_community_create_schema():
         image_url='https://example.com/image.jpg',
     )
 
-    assert community.model_dump(mode='json') == {
+    assert community.model_dump() == {
         'name': 'Test Community',
         'description': 'Test Description',
         'type_community': 'university',
-        'image_url': 'https://example.com/image.jpg',
     }
 
 
@@ -85,22 +75,20 @@ def test_community_update_schema():
         image_url='https://example.com/updated-image.jpg',
     )
 
-    assert community_update.model_dump(mode='json') == {
+    assert community_update.model_dump() == {
         'name': 'Updated Community',
         'description': 'Updated Description',
         'type_community': 'commercial',
-        'image_url': 'https://example.com/updated-image.jpg',
     }
 
     # Test with partial updates
     partial_update = CommunityUpdate(
         name='Updated Community',
     )
-    assert partial_update.model_dump(mode='json') == {
+    assert partial_update.model_dump() == {
         'name': 'Updated Community',
         'description': None,
         'type_community': None,
-        'image_url': None,
     }
 
 
@@ -120,14 +108,13 @@ def test_community_response_schema():
         updated_at=updated_at,
     )
 
-    assert community.model_dump(mode='json') == {
-        'id': str(community_id),
+    assert community.model_dump() == {
+        'id': community_id,
         'name': 'Test Community',
         'description': 'Test Description',
         'type_community': 'university',
-        'image_url': 'https://example.com/image.jpg',
-        'created_at': created_at.isoformat(),
-        'updated_at': updated_at.isoformat(),
+        'created_at': created_at,
+        'updated_at': updated_at,
     }
 
 
@@ -144,12 +131,12 @@ def test_community_member_create_schema():
         status_participation=CommunityMemberStatusEnum.ACTIVE,
     )
 
-    assert member.model_dump(mode='json') == {
+    assert member.model_dump() == {
         'user_id': user_id,
         'community_id': community_id,
-        'role': 'admin',
+        'role': CommunityMemberRoleEnum.ADMIN,
         'reputation': 10,
-        'status_participation': 'active',
+        'status_participation': CommunityMemberStatusEnum.ACTIVE,
     }
 
     member_with_defaults = CommunityMemberCreate(
@@ -157,7 +144,7 @@ def test_community_member_create_schema():
         community_id=community_id,
     )
 
-    assert member_with_defaults.model_dump(mode='json') == {
+    assert member_with_defaults.model_dump() == {
         'user_id': user_id,
         'community_id': community_id,
         'role': 'member',
@@ -175,7 +162,7 @@ def test_community_member_update_schema():
         status_participation=CommunityMemberStatusEnum.SUSPENDED,
     )
 
-    assert member_update.model_dump(mode='json') == {
+    assert member_update.model_dump() == {
         'role': 'moderator',
         'reputation': 20,
         'status_participation': 'suspended',
@@ -185,7 +172,7 @@ def test_community_member_update_schema():
     partial_update = CommunityMemberUpdate(
         role=CommunityMemberRoleEnum.MODERATOR,
     )
-    assert partial_update.model_dump(mode='json') == {
+    assert partial_update.model_dump() == {
         'role': 'moderator',
         'reputation': None,
         'status_participation': None,
@@ -209,16 +196,12 @@ def test_community_member_response_schema():
         hashed_password='securehashedpassword123456',  # This is the missing field
         profile_image_url='https://example.com/image.jpg',
         reputation_level=5,
-        status=UserStatusEnum.active,
+        status=UserStatusEnum.ACTIVE,
         created_at=created_at,
         updated_at=updated_at,
     )
 
-    community = CommunityRelated(
-        id=community_id,
-        name='Test Community',
-        image_url='https://example.com/community-image.jpg',
-    )
+    community = CommunityRelated(id=community_id, name='Test Community')
 
     member_response = CommunityMemberResponse(
         id=id,
@@ -230,14 +213,14 @@ def test_community_member_response_schema():
         entered_in=entered_in,
     )
 
-    assert member_response.model_dump(mode='json') == {
-        'id': str(id),
-        'user': user.model_dump(mode='json'),
-        'community': community.model_dump(mode='json'),
+    assert member_response.model_dump() == {
+        'id': id,
+        'user': user.model_dump(),
+        'community': community.model_dump(),
         'role': 'admin',
         'status_participation': 'active',
         'reputation': 10,
-        'entered_in': entered_in.isoformat(),
+        'entered_in': entered_in,
     }
 
 
@@ -306,13 +289,6 @@ def test_community_update_invalid_schema():
         CommunityUpdate(
             name='Updated Community',
             description='a' * 1001,
-        )
-
-    # Test invalid image_url (invalid URL format)
-    with pytest.raises(ValidationError):
-        CommunityUpdate(
-            name='Updated Community',
-            image_url='invalid-url-format',
         )
 
     # Test invalid community type

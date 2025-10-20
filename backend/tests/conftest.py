@@ -1,14 +1,19 @@
 import uuid
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import pytest
+from fastapi import WebSocket
 from fastapi.testclient import TestClient
 from pymongo import MongoClient
 from sqlalchemy import StaticPool, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
+from uuid import uuid4
+
 
 from app.api.badges.model import Badge as BadgeModel
 from app.api.badges.model import MemberBadge as MemberBadgeModel
+from app.api.chat.model import Conversation
+from app.api.chat.websocket.handlers import ChatEventHandler
 from app.api.comment.model import Comment, CommentLikes
 from app.api.comment.schema import CommentStatusEnum
 from app.api.communities.model import Community, CommunityMember
@@ -28,11 +33,16 @@ from app.api.post.schemas import (
     PostTypeEnum,
 )
 from app.api.rating.model import Rating
+from app.api.reports.model import Report, ReportComment, ReportMember, ReportPost, ModerationVotes
+from app.api.reports.schema import ReportTypeEnum, ReportReasonEnum
+from app.api.users.model import User
 from app.api.users.schema import UserCreate
 from app.api.users.service import UserService
 from app.core.config import settings
 from app.core.database import Base, get_db, get_mongo_db
 from app.core.transaction import TransactionManager
+from app.core.websocket.auth import WebSocketAuth
+from app.core.websocket.auth import websocket_auth as global_websocket_auth
 from app.main import app
 
 
@@ -545,3 +555,246 @@ def comment_like_on_db(session_sql, comment_on_db, user_on_db):
     session_sql.flush()
     session_sql.refresh(comment_like)
     return comment_like
+
+
+@pytest.fixture
+def report_to_member_on_db(session_sql, community_member_on_db):
+    report = Report(
+        reporter_id=community_member_on_db.id,
+        type=ReportTypeEnum.MEMBER_REPORT,
+        reason=ReportReasonEnum.DISCRIMINATION,
+        description='The description of the report',
+    )
+    session_sql.add(report)
+    session_sql.flush()
+    session_sql.refresh(report)
+    return report
+
+
+@pytest.fixture
+def report_to_post_on_db(session_sql, community_member_on_db):
+    report = Report(
+        reporter_id=community_member_on_db.id,
+        type=ReportTypeEnum.POST_REPORT,
+        reason=ReportReasonEnum.DISCRIMINATION,
+        description='The description of the report',
+    )
+    session_sql.add(report)
+    session_sql.flush()
+    session_sql.refresh(report)
+    return report
+
+
+@pytest.fixture
+def report_to_comment_on_db(session_sql, community_member_on_db):
+    report = Report(
+        reporter_id=community_member_on_db.id,
+        type=ReportTypeEnum.COMMENT_REPORT,
+        reason=ReportReasonEnum.DISCRIMINATION,
+        description='The description of the report',
+    )
+    session_sql.add(report)
+    session_sql.flush()
+    session_sql.refresh(report)
+    return report
+
+
+@pytest.fixture
+def report_member_on_db(session_sql, report_to_member_on_db, comum_member_on_db, community_on_db):
+    report_member = ReportMember(
+        report_id=report_to_member_on_db.id,
+        member_id=comum_member_on_db.id,
+        community_id=community_on_db.id,
+    )
+    session_sql.add(report_member)
+    session_sql.flush()
+    session_sql.refresh(report_member)
+    return report_member
+
+
+@pytest.fixture
+def report_post_on_db(session_sql, report_to_post_on_db, post_on_db, community_on_db):
+    report_post = ReportPost(
+        report_id=report_to_post_on_db.id,
+        post_id=post_on_db.id,
+        community_id=community_on_db.id,
+    )
+    session_sql.add(report_post)
+    session_sql.flush()
+    session_sql.refresh(report_post)
+    return report_post
+
+
+@pytest.fixture
+def report_comment_on_db(session_sql, report_to_comment_on_db, comment_on_db, community_on_db):
+    report_comment = ReportComment(
+        report_id=report_to_comment_on_db.id,
+        comment_id=comment_on_db.id,
+        community_id=community_on_db.id,
+    )
+    session_sql.add(report_comment)
+    session_sql.flush()
+    session_sql.refresh(report_comment)
+    return report_comment
+
+
+@pytest.fixture
+def websocket_client(session_sql):
+    """Create a WebSocket test client for unauthenticated connections."""
+    def get_db_override():
+        return session_sql
+
+    app.dependency_overrides[get_db] = get_db_override
+
+    with TestClient(app) as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def authenticated_websocket_client(session_sql, user_on_db):
+    """Create an authenticated WebSocket test client."""
+    global_websocket_auth._connection_limits.clear()
+    global_websocket_auth._active_sessions.clear()
+
+    def get_db_override():
+        return session_sql
+
+    app.dependency_overrides[get_db] = get_db_override
+
+    session_sql.commit()
+
+    original_session_factory = ChatEventHandler.session_factory
+
+    def test_session_factory(*args, **kwargs):
+        session_sql.expire_all()
+        return session_sql
+
+    ChatEventHandler.session_factory = test_session_factory
+
+    with TestClient(app) as client:
+        response = client.post(
+            '/users/login',
+            data={'username': user_on_db.email, 'password': 'hashed_password'}
+        )
+        token = response.json().get('access_token')
+
+        client.token = token
+        yield client
+
+    app.dependency_overrides.clear()
+    ChatEventHandler.session_factory = original_session_factory
+
+
+@pytest.fixture
+def websocket_event_data():
+    """Sample WebSocket event data for testing."""
+    return {
+        "ping": {
+            "type": "ping",
+            "request_id": "ping_123",
+            "timestamp": 1703001600.0
+        },
+        "join_room": {
+            "type": "join_conversation",
+            "conversation_id": "test_room_123",
+            "request_id": "join_123",
+            "timestamp": 1703001600.0
+        },
+        "send_message": {
+            "type": "send_message",
+            "conversation_id": "conv_123",
+            "content": "Hello, World!",
+            "request_id": "msg_123",
+            "timestamp": 1703001600.0
+        },
+        "invalid_event": {
+            "type": "invalid_type",
+            "invalid_field": "invalid_value",
+            "request_id": "invalid_123"
+        }
+    }
+
+
+@pytest.fixture
+def conversation_on_db(session_sql, user_on_db, secondary_user_on_db):
+    """Create a conversation in the database for testing."""
+    user_ids = sorted([str(user_on_db.id), str(secondary_user_on_db.id)])
+
+    conversation = Conversation(
+        id=str(uuid4()),
+        user1_id=user_ids[0],
+        user2_id=user_ids[1],
+    )
+
+    session_sql.add(conversation)
+    session_sql.commit()
+    session_sql.refresh(conversation)
+    return conversation
+
+
+@pytest.fixture
+def sample_conversation_id(conversation_on_db):
+    """Sample conversation ID for testing."""
+    return conversation_on_db.id
+
+
+@pytest.fixture
+def sample_room_data():
+    """Sample room data for testing."""
+    return {
+        "room_id": "test_room_123",
+        "conversation_id": "test_conversation_123",
+        "participants": ["user1", "user2"]
+    }
+
+
+@pytest.fixture
+def mock_websocket():
+    """Create a mock WebSocket connection for testing."""
+    websocket = Mock(spec=WebSocket)
+    websocket.client = Mock()
+    websocket.client.host = "127.0.0.1"
+    websocket.headers = {}
+    websocket.query_params = {}
+    return websocket
+
+
+@pytest.fixture
+def mock_authenticated_websocket(mock_websocket):
+    """Create a mock authenticated WebSocket with token."""
+    mock_websocket.query_params = {"token": "valid_jwt_token"}
+    mock_websocket.headers = {
+        "authorization": "Bearer valid_jwt_token",
+        "x-forwarded-for": "192.168.1.1",
+    }
+    return mock_websocket
+
+
+@pytest.fixture
+def mock_user():
+    """Create a mock User object for testing."""
+    user = Mock(spec=User)
+    user.id = uuid4()
+    user.email = "test@example.com"
+    user.name = "Test User"
+    user.status = "active"
+    return user
+
+
+@pytest.fixture
+def mock_session():
+    """Create a mock database session."""
+    session = Mock(spec=Session)
+    return session
+
+
+@pytest.fixture
+def websocket_auth():
+    """Create a WebSocketAuth instance for testing."""
+    auth = WebSocketAuth()
+    auth._connection_limits.clear()
+    auth._active_sessions.clear()
+    auth._started = False
+    return auth

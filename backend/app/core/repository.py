@@ -2,6 +2,7 @@ import logging
 from typing import Generic, TypeVar
 from uuid import UUID
 
+from sqlalchemy import String
 from sqlalchemy.orm import DeclarativeBase, Session
 
 from app.utils.schema import PaginationSearchParams
@@ -16,7 +17,11 @@ class BaseRepository(Generic[Model]):
         self.logger = logging.getLogger(__name__)
 
     def get_by_id(self, id: UUID) -> Model:
-        model = self.session.query(self.model).filter(self.model.id == id).first()
+        id_column = self.model.id
+        is_string_column = isinstance(id_column.type, String)
+        id_value = str(id) if is_string_column else id
+
+        model = self.session.query(self.model).filter(self.model.id == id_value).first()
         if model:
             self.logger.debug(
                 f'Model {self.model.__qualname__} with id {id} retrieved successfully'
