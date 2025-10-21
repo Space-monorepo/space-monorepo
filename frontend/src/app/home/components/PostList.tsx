@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { fetchPostsByCommunity } from "@/app/api/src/services/post/postService";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
+import { fetchUserCampaigns } from "@/app/api/src/services/post/fetchUserCampaigns";
 import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { PostResponse, PostsListFeed } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
@@ -144,8 +145,6 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
       setError('Erro ao curtir/descurtir comentário');
     }
   };
-
-  // ...
 
   const renderComment = (comment: Comment, isChild = false) => (
     <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]' : 'flex flex-wrap justify-between w-full max-md:max-w-full'}`}>
@@ -456,11 +455,23 @@ export default function PostList() {
         communityId
       );
 
-      // Checar participação em paralelo usando hook
-      const fetchedPosts = await Promise.all(feedData.items.map(async (item: PostResponse): Promise<PostDisplay> => {
+      // Buscar campanhas que o usuário já participa
+      const userCampaigns = await fetchUserCampaigns();
+      const userCampaignPostIds = userCampaigns.map((c: any) => c.post?.id).filter(Boolean);
+
+      // Obter ID do usuário atual do token
+      const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).sub : null;
+
+      // Marcar participação nos posts de campanha
+      const fetchedPosts = feedData.items.map((item: PostResponse): PostDisplay => {
+        if (translatePostType(item.type_post) === 'Campanha') {
+          console.log('ID do usuário do post:', item.user.id, 'ID do usuário logado:', currentUserId);
+        }
         let alreadyParticipating = false;
         if (translatePostType(item.type_post) === 'Campanha') {
-          alreadyParticipating = await checkParticipation(item.community.id, item.id);
+          // Se é o próprio usuário que criou o post, ele já "participa" automaticamente
+          // Ou se ele está na lista de campanhas que participa
+          alreadyParticipating = item.user.id === currentUserId || userCampaignPostIds.includes(item.id);
         }
         return {
           ...item,
@@ -478,7 +489,7 @@ export default function PostList() {
           liked: false,
           alreadyParticipating,
         };
-      }));
+      });
 
       setAllPosts(fetchedPosts);
 
@@ -825,14 +836,14 @@ export default function PostList() {
                     {/* Botão Participar da Campanha */}
                     {post.type === 'Campanha' && (
                       <button
-                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${participating[post.id] ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${post.alreadyParticipating || participating[post.id] ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!participating[post.id]) handleParticipateCampaign(post);
+                          if (!post.alreadyParticipating && !participating[post.id]) handleParticipateCampaign(post);
                         }}
-                        disabled={participating[post.id]}
+                        disabled={post.alreadyParticipating || participating[post.id]}
                       >
-                        {participating[post.id] ? 'Já participa da campanha' : 'Participar da Campanha'}
+                        {post.alreadyParticipating || participating[post.id] ? 'Já participa da campanha' : 'Participar da Campanha'}
                       </button>
                     )}
                   </div>
