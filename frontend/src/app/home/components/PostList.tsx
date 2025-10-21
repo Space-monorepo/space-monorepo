@@ -412,6 +412,8 @@ type PostDisplay = PostResponse & {
 
 export default function PostList() {
   const [allPosts, setAllPosts] = useState<PostDisplay[]>([]);
+  const [newPosts, setNewPosts] = useState<PostDisplay[]>([]); // Para armazenar posts novos detectados
+  const [showNewPostsBanner, setShowNewPostsBanner] = useState(false);
   // Estado para menu de opções do post (custom, sem MUI)
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
   const { reportPost } = useReportPost();
@@ -439,38 +441,24 @@ export default function PostList() {
   const [isPostPreviewOpen, setIsPostPreviewOpen] = useState(false);
   const [postPreviewData, setPostPreviewData] = useState<any>(null);
 
-  // Função para carregar posts iniciais
-  const loadInitialPosts = async () => {
+
+  // Função para buscar posts do backend (usada tanto para inicial quanto para atualização)
+  const fetchPosts = async () => {
     const token = getTokenFromCookies();
     if (!token) {
       setError(new Error("Usuário não autenticado."));
       setLoading(false);
-      return;
+      return [];
     }
-
     try {
       const communityId = "default-community-id";
-      const feedData: PostsListFeed = await fetchPostsByCommunity(
-        token,
-        communityId
-      );
-
-      // Buscar campanhas que o usuário já participa
+      const feedData: PostsListFeed = await fetchPostsByCommunity(token, communityId);
       const userCampaigns = await fetchUserCampaigns();
       const userCampaignPostIds = userCampaigns.map((c: any) => c.post?.id).filter(Boolean);
-
-      // Obter ID do usuário atual do token
       const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).sub : null;
-
-      // Marcar participação nos posts de campanha
       const fetchedPosts = feedData.items.map((item: PostResponse): PostDisplay => {
-        if (translatePostType(item.type_post) === 'Campanha') {
-          console.log('ID do usuário do post:', item.user.id, 'ID do usuário logado:', currentUserId);
-        }
         let alreadyParticipating = false;
         if (translatePostType(item.type_post) === 'Campanha') {
-          // Se é o próprio usuário que criou o post, ele já "participa" automaticamente
-          // Ou se ele está na lista de campanhas que participa
           alreadyParticipating = item.user.id === currentUserId || userCampaignPostIds.includes(item.id);
         }
         return {
@@ -490,52 +478,59 @@ export default function PostList() {
           alreadyParticipating,
         };
       });
-
-      setAllPosts(fetchedPosts);
-
-      // Mostrar apenas os primeiros 3 posts
-      setDisplayedPosts(fetchedPosts.slice(0, postsPerPage));
-      setCurrentPage(1);
-
-      if (fetchedPosts.length <= postsPerPage) {
-        setHasMorePosts(false);
-      }
-
-      if (fetchedPosts.length === 0) {
-        setShowNoCommunitiesMessage(true);
-      }
+      return fetchedPosts;
     } catch (err) {
       setError(err as Error);
       console.error("Erro ao buscar posts:", err);
-    } finally {
-      setLoading(false);
+      return [];
     }
   };
 
-  // Função para carregar mais posts
+  // Carrega posts iniciais
+  const loadInitialPosts = async () => {
+    setLoading(true);
+    const fetchedPosts = await fetchPosts();
+    setAllPosts(fetchedPosts);
+    setDisplayedPosts(fetchedPosts.slice(0, postsPerPage));
+    setCurrentPage(1);
+    if (fetchedPosts.length <= postsPerPage) setHasMorePosts(false);
+    if (fetchedPosts.length === 0) setShowNoCommunitiesMessage(true);
+    setLoading(false);
+  };
+
+  // Atualização periódica: busca novos posts a cada 5s
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const fetchedPosts = await fetchPosts();
+      if (fetchedPosts.length > 0 && allPosts.length > 0) {
+        // Verifica se há posts novos (comparando IDs)
+        const currentIds = new Set(allPosts.map(p => p.id));
+        const onlyNew = fetchedPosts.filter(p => !currentIds.has(p.id));
+        if (onlyNew.length > 0) {
+          setNewPosts(onlyNew);
+          setShowNewPostsBanner(true);
+        }
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allPosts]);
+
+  // Função para carregar mais posts (scroll infinito)
   const loadMorePosts = useCallback(async () => {
     if (loadingMore || !hasMorePosts) return;
-
     setLoadingMore(true);
-
-    // Simular delay para melhor UX
     await new Promise(resolve => setTimeout(resolve, 500));
-
     const startIndex = currentPage * postsPerPage;
     const endIndex = startIndex + postsPerPage;
-    const newPosts = allPosts.slice(startIndex, endIndex);
-
-    if (newPosts.length > 0) {
-      setDisplayedPosts(prev => [...prev, ...newPosts]);
+    const morePosts = allPosts.slice(startIndex, endIndex);
+    if (morePosts.length > 0) {
+      setDisplayedPosts(prev => [...prev, ...morePosts]);
       setCurrentPage(prev => prev + 1);
-
-      if (endIndex >= allPosts.length) {
-        setHasMorePosts(false);
-      }
+      if (endIndex >= allPosts.length) setHasMorePosts(false);
     } else {
       setHasMorePosts(false);
     }
-
     setLoadingMore(false);
   }, [loadingMore, hasMorePosts, currentPage, allPosts]);
 
@@ -648,6 +643,33 @@ export default function PostList() {
   return (
     <div className="flex-1 p-4 overflow-auto pr-72 flex justify-center">
       <main className="overflow-hidden max-w-[680px] w-full space-y-6">
+        {/* Banner de novos posts fixo na tela */}
+        {showNewPostsBanner && newPosts.length > 0 && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 70,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 0,
+              minWidth: 220,
+              maxWidth: 360,
+            }}
+            className="flex justify-center animate-fade-in"
+          >
+            <button
+              className="px-4 py-2 bg-black text-white rounded-xl shadow-lg hover:bg-gray-900 transition-colors border-gray-200 cursor-pointer"
+              onClick={() => {
+                setAllPosts(prev => [...newPosts, ...prev]);
+                setDisplayedPosts(prev => [...newPosts, ...prev]);
+                setShowNewPostsBanner(false);
+                setNewPosts([]);
+              }}
+            >
+              {newPosts.length === 1 ? '1 publicado' : `${newPosts.length} publicados`}
+            </button>
+          </div>
+        )}
         {displayedPosts.map((post) => (
           <React.Fragment key={post.id}>
             <article
