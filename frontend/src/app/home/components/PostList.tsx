@@ -874,7 +874,7 @@ export default function PostList() {
                 <div className="flex justify-between items-center mt-10 w-full text-xs font-medium leading-none text-neutral-500 max-md:max-w-full">
                   <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5 w-[214px]">
                     <button
-                      className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap"
+                      className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleLike(post);
@@ -887,7 +887,7 @@ export default function PostList() {
                       </div>
                     </button>
                     <button
-                      className={`flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap transition-colors px-3 py-1 ${openCommentsPostId === post.id ? 'bg-neutral-200' : ''}`}
+                      className={`flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap transition-colors px-3 py-1 cursor-pointer ${openCommentsPostId === post.id ? 'bg-neutral-200' : ''}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleComment(post);
