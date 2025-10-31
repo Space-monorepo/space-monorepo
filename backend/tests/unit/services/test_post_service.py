@@ -1,23 +1,25 @@
-import pytest
+from datetime import datetime, timezone
 from unittest.mock import Mock
 from uuid import uuid4
 
-from datetime import datetime, timezone
+import pytest
 
 from app.api.communities.schema import CommunityMemberRoleEnum
-from app.api.post.model import Post, CampaignPost, ComplaintPost, PollPosts, PollOptions
+from app.api.post.exceptions import ComplaintNotFoundError, PostSuspendedError
+from app.api.post.model import CampaignPost, ComplaintPost, PollOptions, PollPosts, Post
 from app.api.post.schemas import (
-    PostCreate,
-    PostTypeEnum,
-    PostUpdate,
     CampaignStatusEnum,
-    ComplaintStatusEnum,
+    CommunityRelated,
     ComplaintLevelEnum,
+    ComplaintResponse,
+    ComplaintStatusEnum,
     PollCreate,
+    PostAuthor,
+    PostCreate,
     PostResponse,
     PostStatusEnum,
-    CommunityRelated,
-    PostAuthor,
+    PostTypeEnum,
+    PostUpdate,
 )
 from app.api.post.service import PostService
 from app.utils.schema import PaginationSearchParams
@@ -1423,3 +1425,450 @@ def test_vote_poll_service_success():
     assert result.options[1].votes_count == 0
     assert result.options[2].answer == 'Python'  # A que foi votada
     assert result.options[2].votes_count == 1
+
+
+@pytest.mark.unit
+def test_report_post_service_success():
+    """
+    Tests the `report_post` method of PostService.
+
+    Scenario:
+    - Given a valid post ID with active status
+    - When the service reports the post
+    - Then it should increment report_count and return updated post response
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
+
+    fake_existing_post = Mock(spec=Post)
+    fake_existing_post.id = fake_post_id
+    fake_existing_post.user_id = fake_user_id
+    fake_existing_post.community_id = fake_community_id
+    fake_existing_post.title = 'Post to Report'
+    fake_existing_post.content = 'Content to be reported'
+    fake_existing_post.type_post = PostTypeEnum.ANNOUNCEMENT
+    fake_existing_post.image_url = None
+    fake_existing_post.status = PostStatusEnum.ACTIVE
+    fake_existing_post.user_role_in_community = CommunityMemberRoleEnum.MEMBER
+    fake_existing_post.likes_count = 5
+    fake_existing_post.comments_count = 2
+    fake_existing_post.report_count = 0  # Começando com 0 reports
+    fake_existing_post.created_at = '2024-01-01T00:00:00Z'
+    fake_existing_post.updated_at = '2024-01-01T00:00:00Z'
+
+    fake_saved_post = Mock(spec=Post)
+    fake_saved_post.id = fake_post_id
+    fake_saved_post.user_id = fake_user_id
+    fake_saved_post.community_id = fake_community_id
+    fake_saved_post.title = 'Post to Report'
+    fake_saved_post.content = 'Content to be reported'
+    fake_saved_post.type_post = PostTypeEnum.ANNOUNCEMENT
+    fake_saved_post.image_url = None
+    fake_saved_post.status = PostStatusEnum.ACTIVE
+    fake_saved_post.user_role_in_community = CommunityMemberRoleEnum.MEMBER
+    fake_saved_post.likes_count = 5
+    fake_saved_post.comments_count = 2
+    fake_saved_post.report_count = 1  # Incrementado após report
+    fake_saved_post.created_at = '2024-01-01T00:00:00Z'
+    fake_saved_post.updated_at = '2024-01-01T00:00:00Z'
+
+    # Mock relacionamentos para ambos os posts
+    for post in [fake_existing_post, fake_saved_post]:
+        fake_community = Mock()
+        fake_community.name = 'Test Community'
+        post.community = fake_community
+
+        fake_user = Mock()
+        fake_user.name = 'Test User'
+        fake_user.profile_image_url = 'https://example.com/profile.jpg'
+        post.user = fake_user
+
+    mock_tm = Mock()
+    mock_post_repo = Mock()
+    mock_post_repo.get_by_id.return_value = fake_existing_post
+    mock_post_repo.save.return_value = fake_saved_post
+
+    service = PostService(mock_tm)
+    service.post_repo = mock_post_repo
+
+    # Act
+    result = service.report_post(fake_post_id)
+
+    # Assert
+    mock_post_repo.get_by_id.assert_called_once_with(str(fake_post_id))
+    mock_post_repo.save.assert_called_once_with(fake_existing_post)
+    assert fake_existing_post.report_count == 1  # Verificar que foi incrementado
+    assert result is not None
+    assert isinstance(result, PostResponse)
+    assert str(result.id) == str(fake_post_id)
+    assert result.report_count == 1
+
+
+@pytest.mark.unit
+def test_report_post_service_suspended_error():
+    """
+    Tests the `report_post` method of PostService when post is already suspended.
+
+    Scenario:
+    - Given a post ID with suspended status
+    - When the service tries to report the post
+    - Then it should raise PostSuspendedError
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
+
+    fake_suspended_post = Mock(spec=Post)
+    fake_suspended_post.id = fake_post_id
+    fake_suspended_post.user_id = fake_user_id
+    fake_suspended_post.community_id = fake_community_id
+    fake_suspended_post.title = 'Suspended Post'
+    fake_suspended_post.content = 'Suspended content'
+    fake_suspended_post.type_post = PostTypeEnum.ANNOUNCEMENT
+    fake_suspended_post.image_url = None
+    fake_suspended_post.status = PostStatusEnum.SUSPENDED  # Post já suspenso
+    fake_suspended_post.user_role_in_community = CommunityMemberRoleEnum.MEMBER
+    fake_suspended_post.likes_count = 0
+    fake_suspended_post.comments_count = 0
+    fake_suspended_post.report_count = 0
+    fake_suspended_post.created_at = '2024-01-01T00:00:00Z'
+    fake_suspended_post.updated_at = '2024-01-01T00:00:00Z'
+
+    # Mock relacionamentos
+    fake_community = Mock()
+    fake_community.name = 'Test Community'
+    fake_suspended_post.community = fake_community
+
+    fake_user = Mock()
+    fake_user.name = 'Test User'
+    fake_user.profile_image_url = 'https://example.com/profile.jpg'
+    fake_suspended_post.user = fake_user
+
+    mock_tm = Mock()
+    mock_post_repo = Mock()
+    mock_post_repo.get_by_id.return_value = fake_suspended_post
+
+    service = PostService(mock_tm)
+    service.post_repo = mock_post_repo
+
+    # Act & Assert
+    with pytest.raises(PostSuspendedError) as exc_info:
+        service.report_post(fake_post_id)
+    assert 'Post is already suspended' in str(exc_info.value)
+
+
+@pytest.mark.unit
+def test_report_post_service_reports_threshold():
+    """
+    Tests the `report_post` method of PostService when reaching threshold.
+
+    Scenario:
+    - Given a post ID with report_count at threshold - 1
+    - When the service reports the post
+    - Then it should change status to REPORTED and increment report_count
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
+
+    fake_existing_post = Mock(spec=Post)
+    fake_existing_post.id = fake_post_id
+    fake_existing_post.user_id = fake_user_id
+    fake_existing_post.community_id = fake_community_id
+    fake_existing_post.title = 'Post Near Threshold'
+    fake_existing_post.content = 'Content near threshold'
+    fake_existing_post.type_post = PostTypeEnum.ANNOUNCEMENT
+    fake_existing_post.image_url = None
+    fake_existing_post.status = PostStatusEnum.ACTIVE
+    fake_existing_post.user_role_in_community = CommunityMemberRoleEnum.MEMBER
+    fake_existing_post.likes_count = 0
+    fake_existing_post.comments_count = 0
+    fake_existing_post.report_count = 29  # Um abaixo do threshold (30)
+    fake_existing_post.created_at = '2024-01-01T00:00:00Z'
+    fake_existing_post.updated_at = '2024-01-01T00:00:00Z'
+
+    fake_saved_post = Mock(spec=Post)
+    fake_saved_post.id = fake_post_id
+    fake_saved_post.user_id = fake_user_id
+    fake_saved_post.community_id = fake_community_id
+    fake_saved_post.title = 'Post Near Threshold'
+    fake_saved_post.content = 'Content near threshold'
+    fake_saved_post.type_post = PostTypeEnum.ANNOUNCEMENT
+    fake_saved_post.image_url = None
+    fake_saved_post.status = PostStatusEnum.REPORTED  # Status mudou para REPORTED
+    fake_saved_post.user_role_in_community = CommunityMemberRoleEnum.MEMBER
+    fake_saved_post.likes_count = 0
+    fake_saved_post.comments_count = 0
+    fake_saved_post.report_count = 30  # Agora no threshold
+    fake_saved_post.created_at = '2024-01-01T00:00:00Z'
+    fake_saved_post.updated_at = '2024-01-01T00:00:00Z'
+
+    # Mock relacionamentos para ambos os posts
+    for post in [fake_existing_post, fake_saved_post]:
+        fake_community = Mock()
+        fake_community.name = 'Test Community'
+        post.community = fake_community
+
+        fake_user = Mock()
+        fake_user.name = 'Test User'
+        fake_user.profile_image_url = 'https://example.com/profile.jpg'
+        post.user = fake_user
+
+    mock_tm = Mock()
+    mock_post_repo = Mock()
+    mock_post_repo.get_by_id.return_value = fake_existing_post
+    mock_post_repo.save.return_value = fake_saved_post
+
+    service = PostService(mock_tm)
+    service.post_repo = mock_post_repo
+
+    # Act
+    result = service.report_post(fake_post_id)
+
+    # Assert
+    mock_post_repo.get_by_id.assert_called_once_with(str(fake_post_id))
+    mock_post_repo.save.assert_called_once_with(fake_existing_post)
+    assert fake_existing_post.report_count == 30  # Verificar que foi incrementado
+    assert fake_existing_post.status == PostStatusEnum.REPORTED  # Status mudou
+    assert result is not None
+    assert isinstance(result, PostResponse)
+    assert result.report_count == 30
+    assert result.status == PostStatusEnum.REPORTED
+
+
+@pytest.mark.unit
+def test_confirm_complaint_service_success():
+    """
+    Tests the `confirm_complaint` method of PostService.
+
+    Scenario:
+    - Given a valid complaint post ID with low confirmations
+    - When the service confirms the complaint
+    - Then it should increment confirmations_count and maintain LOW level
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_community_id = uuid4()
+    fake_user_id = uuid4()
+
+    fake_complaint = Mock(spec=ComplaintPost)
+    fake_complaint.post_id = fake_post_id
+    fake_complaint.confirmations_count = 5  # Baixo número de confirmações
+    fake_complaint.status_complaint = ComplaintStatusEnum.PENDING
+    fake_complaint.level_complaint = ComplaintLevelEnum.LOW
+
+    fake_saved_complaint = Mock(spec=ComplaintPost)
+    fake_saved_complaint.post_id = fake_post_id
+    fake_saved_complaint.confirmations_count = 6  # Incrementado
+    fake_saved_complaint.status_complaint = ComplaintStatusEnum.PENDING
+    fake_saved_complaint.level_complaint = ComplaintLevelEnum.LOW  # Mantém LOW
+
+    # Mock do PostResponse
+    fake_community = Mock(spec=CommunityRelated)
+    fake_community.id = fake_community_id
+    fake_community.name = 'Test Community'
+
+    fake_user = Mock(spec=PostAuthor)
+    fake_user.id = fake_user_id
+    fake_user.name = 'Test User'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
+    fake_user.role = CommunityMemberRoleEnum.MEMBER
+
+    fake_post_response = Mock(spec=PostResponse)
+    fake_post_response.id = fake_post_id
+    fake_post_response.community = fake_community
+    fake_post_response.user = fake_user
+    fake_post_response.type_post = PostTypeEnum.COMPLAINT
+    fake_post_response.title = 'Complaint Title'
+    fake_post_response.content = 'Complaint content'
+    fake_post_response.image_url = None
+    fake_post_response.status = PostStatusEnum.ACTIVE
+    fake_post_response.likes_count = 0
+    fake_post_response.comments_count = 0
+    fake_post_response.report_count = 0
+    fake_post_response.created_at = datetime.now(timezone.utc)
+    fake_post_response.updated_at = datetime.now(timezone.utc)
+
+    mock_tm = Mock()
+    mock_complaint_repo = Mock()
+    mock_complaint_repo.get_by_id.return_value = fake_complaint
+    mock_complaint_repo.save.return_value = fake_saved_complaint
+
+    service = PostService(mock_tm)
+    service.complaint_repo = mock_complaint_repo
+    service.get_post = Mock(return_value=fake_post_response)
+
+    # Act
+    result = service.confirm_complaint(fake_post_id)
+
+    # Assert
+    mock_complaint_repo.get_by_id.assert_called_once_with(fake_post_id)
+    mock_complaint_repo.save.assert_called_once_with(fake_complaint)
+    assert fake_complaint.confirmations_count == 6  # Verificar que foi incrementado
+    assert fake_complaint.level_complaint == ComplaintLevelEnum.LOW  # Mantém LOW
+    service.get_post.assert_called_once_with(fake_post_id)
+    assert result is not None
+    assert isinstance(result, ComplaintResponse)
+    assert result.confirmations_count == 6
+    assert result.level_complaint == ComplaintLevelEnum.LOW
+    assert result.status_complaint == ComplaintStatusEnum.PENDING
+
+
+@pytest.mark.unit
+def test_confirm_complaint_service_updates_level_low_to_medium():
+    """
+    Tests the `confirm_complaint` method when confirmations reach medium threshold.
+
+    Scenario:
+    - Given a complaint with 29 confirmations (below medium threshold)
+    - When the service confirms the complaint
+    - Then it should update level_complaint to MEDIUM
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_community_id = uuid4()
+    fake_user_id = uuid4()
+
+    fake_complaint = Mock(spec=ComplaintPost)
+    fake_complaint.post_id = fake_post_id
+    fake_complaint.confirmations_count = 29  # Um abaixo do threshold de 30
+    fake_complaint.status_complaint = ComplaintStatusEnum.PENDING
+    fake_complaint.level_complaint = ComplaintLevelEnum.LOW
+
+    fake_saved_complaint = Mock(spec=ComplaintPost)
+    fake_saved_complaint.post_id = fake_post_id
+    fake_saved_complaint.confirmations_count = 30  # Agora no threshold
+    fake_saved_complaint.status_complaint = ComplaintStatusEnum.PENDING
+    fake_saved_complaint.level_complaint = ComplaintLevelEnum.MEDIUM  # Mudou para MEDIUM
+
+    # Mock do PostResponse
+    fake_community = Mock(spec=CommunityRelated)
+    fake_community.id = fake_community_id
+    fake_community.name = 'Test Community'
+
+    fake_user = Mock(spec=PostAuthor)
+    fake_user.id = fake_user_id
+    fake_user.name = 'Test User'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
+    fake_user.role = CommunityMemberRoleEnum.MEMBER
+
+    fake_post_response = Mock(spec=PostResponse)
+    fake_post_response.id = fake_post_id
+    fake_post_response.community = fake_community
+    fake_post_response.user = fake_user
+    fake_post_response.type_post = PostTypeEnum.COMPLAINT
+    fake_post_response.title = 'Complaint Title'
+    fake_post_response.content = 'Complaint content'
+    fake_post_response.image_url = None
+    fake_post_response.status = PostStatusEnum.ACTIVE
+    fake_post_response.likes_count = 0
+    fake_post_response.comments_count = 0
+    fake_post_response.report_count = 0
+    fake_post_response.created_at = datetime.now(timezone.utc)
+    fake_post_response.updated_at = datetime.now(timezone.utc)
+
+    mock_tm = Mock()
+    mock_complaint_repo = Mock()
+    mock_complaint_repo.get_by_id.return_value = fake_complaint
+    mock_complaint_repo.save.return_value = fake_saved_complaint
+
+    service = PostService(mock_tm)
+    service.complaint_repo = mock_complaint_repo
+    service.get_post = Mock(return_value=fake_post_response)
+
+    # Act
+    result = service.confirm_complaint(fake_post_id)
+
+    # Assert
+    mock_complaint_repo.get_by_id.assert_called_once_with(fake_post_id)
+    mock_complaint_repo.save.assert_called_once_with(fake_complaint)
+    assert fake_complaint.confirmations_count == 30
+    assert fake_complaint.level_complaint == ComplaintLevelEnum.MEDIUM  # Mudou para MEDIUM
+    service.get_post.assert_called_once_with(fake_post_id)
+    assert result is not None
+    assert isinstance(result, ComplaintResponse)
+    assert result.confirmations_count == 30
+    assert result.level_complaint == ComplaintLevelEnum.MEDIUM
+    assert result.status_complaint == ComplaintStatusEnum.PENDING
+
+
+@pytest.mark.unit
+def test_confirm_complaint_service_updates_level_to_high():
+    """
+    Tests the `confirm_complaint` method when confirmations reach high threshold.
+
+    Scenario:
+    - Given a complaint with 49 confirmations (below high threshold)
+    - When the service confirms the complaint
+    - Then it should update level_complaint to HIGH
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_community_id = uuid4()
+    fake_user_id = uuid4()
+
+    fake_complaint = Mock(spec=ComplaintPost)
+    fake_complaint.post_id = fake_post_id
+    fake_complaint.confirmations_count = 49  # Um abaixo do threshold de 50
+    fake_complaint.status_complaint = ComplaintStatusEnum.PENDING
+    fake_complaint.level_complaint = ComplaintLevelEnum.MEDIUM
+
+    fake_saved_complaint = Mock(spec=ComplaintPost)
+    fake_saved_complaint.post_id = fake_post_id
+    fake_saved_complaint.confirmations_count = 50  # Agora no threshold HIGH
+    fake_saved_complaint.status_complaint = ComplaintStatusEnum.PENDING
+    fake_saved_complaint.level_complaint = ComplaintLevelEnum.HIGH  # Mudou para HIGH
+
+    # Mock do PostResponse
+    fake_community = Mock(spec=CommunityRelated)
+    fake_community.id = fake_community_id
+    fake_community.name = 'Test Community'
+
+    fake_user = Mock(spec=PostAuthor)
+    fake_user.id = fake_user_id
+    fake_user.name = 'Test User'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
+    fake_user.role = CommunityMemberRoleEnum.MEMBER
+
+    fake_post_response = Mock(spec=PostResponse)
+    fake_post_response.id = fake_post_id
+    fake_post_response.community = fake_community
+    fake_post_response.user = fake_user
+    fake_post_response.type_post = PostTypeEnum.COMPLAINT
+    fake_post_response.title = 'Complaint Title'
+    fake_post_response.content = 'Complaint content'
+    fake_post_response.image_url = None
+    fake_post_response.status = PostStatusEnum.ACTIVE
+    fake_post_response.likes_count = 0
+    fake_post_response.comments_count = 0
+    fake_post_response.report_count = 0
+    fake_post_response.created_at = datetime.now(timezone.utc)
+    fake_post_response.updated_at = datetime.now(timezone.utc)
+
+    mock_tm = Mock()
+    mock_complaint_repo = Mock()
+    mock_complaint_repo.get_by_id.return_value = fake_complaint
+    mock_complaint_repo.save.return_value = fake_saved_complaint
+
+    service = PostService(mock_tm)
+    service.complaint_repo = mock_complaint_repo
+    service.get_post = Mock(return_value=fake_post_response)
+
+    # Act
+    result = service.confirm_complaint(fake_post_id)
+
+    # Assert
+    mock_complaint_repo.get_by_id.assert_called_once_with(fake_post_id)
+    mock_complaint_repo.save.assert_called_once_with(fake_complaint)
+    assert fake_complaint.confirmations_count == 50
+    assert fake_complaint.level_complaint == ComplaintLevelEnum.HIGH  # Mudou para HIGH
+    service.get_post.assert_called_once_with(fake_post_id)
+    assert result is not None
+    assert isinstance(result, ComplaintResponse)
+    assert result.confirmations_count == 50
+    assert result.level_complaint == ComplaintLevelEnum.HIGH
+    assert result.status_complaint == ComplaintStatusEnum.PENDING

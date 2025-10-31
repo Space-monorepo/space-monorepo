@@ -44,6 +44,14 @@ class ReportCommentAlreadyExistsError(Exception):
     pass
 
 
+class ModeratorAlreadyVotedError(Exception):
+    """
+    Exception raised when a moderator tries to vote twice on the same report.
+    """
+
+    pass
+
+
 def add_report_exception_handler(app: FastAPI):
     @app.exception_handler(UnexpectedReportError)
     async def unexpected_report_error_exception_handler(
@@ -97,5 +105,16 @@ def add_report_exception_handler(app: FastAPI):
             status_code=status.HTTP_409_CONFLICT,
             content=ErrorResponse(
                 message=str(exc), error_type='report_comment_already_exists', details={}
+            ).model_dump(mode='json'),
+        )
+
+    @app.exception_handler(ModeratorAlreadyVotedError)
+    async def moderator_already_voted_exception_handler(
+        request: Request, exc: ModeratorAlreadyVotedError
+    ):
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content=ErrorResponse(
+                message=str(exc), error_type='moderator_already_voted', details={}
             ).model_dump(mode='json'),
         )

@@ -3,7 +3,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.api.administration.schema import ImportMembers, MemberRoleUpdate
+from app.api.administration.schema import (
+    ImportMembers,
+    MemberRoleUpdate,
+)
 from app.api.administration.service import AdministrationService
 from app.api.communities.model import CommunityMember
 from app.api.communities.schema import (
@@ -13,8 +16,6 @@ from app.api.communities.schema import (
 from app.api.post.schemas import (
     CampaignResponse,
     CampaignUpdate,
-    ComplaintResponse,
-    ComplaintUpdate,
     PostFeedbackCreate,
     PostFeedbackResponse,
 )
@@ -133,38 +134,6 @@ def list_all_campaigns_from_community(
 ) -> PaginationResponse[CampaignResponse]:
     with TransactionManager(session) as tm:
         return AdministrationService(tm).list_all_campaigns_from_community(
-            community_id, params
-        )
-
-
-@router.patch(
-    '/post/{post_id}/complaint',
-    response_model=ComplaintResponse,
-    status_code=status.HTTP_200_OK,
-)
-def update_complaint(
-    post_id: str,
-    complaint_update: ComplaintUpdate,
-    session: Session = Depends(get_db),
-    _: CommunityMember = Depends(require_roles(['admin'])),
-) -> ComplaintResponse:
-    with TransactionManager(session) as tm:
-        return AdministrationService(tm).update_complaint(post_id, complaint_update)
-
-
-@router.get(
-    '/post/list-all-complaints',
-    response_model=PaginationResponse[ComplaintResponse],
-    status_code=status.HTTP_200_OK,
-)
-def list_all_complaints_from_community(
-    community_id: str,
-    params: PaginationSearchParams = Depends(PaginationSearchParams),
-    session: Session = Depends(get_db),
-    _: CommunityMember = Depends(require_roles(['admin'])),
-) -> PaginationResponse[ComplaintResponse]:
-    with TransactionManager(session) as tm:
-        return AdministrationService(tm).list_all_complaints_from_community(
             community_id, params
         )
 

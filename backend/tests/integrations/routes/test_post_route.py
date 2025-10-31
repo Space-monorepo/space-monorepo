@@ -19,18 +19,18 @@ from app.api.post.schemas import (
 
 
 @pytest.mark.integration
-def test_create_post_route(authenticate_client, community_member_on_db):
+def test_create_announcement_route(authenticate_client, community_member_on_db):
     post = PostCreate(
         title='Title test',
         content='Content test',
         user_id=str(community_member_on_db.user_id),
         community_id=str(community_member_on_db.community_id),
-        type_post=PostTypeEnum.CAMPAIGN,
+        type_post=PostTypeEnum.ANNOUNCEMENT,
         image_url=None,
     )
 
     response = authenticate_client.post(
-        f'/posts/{community_member_on_db.community_id}/create-post',
+        f'/posts/{community_member_on_db.community_id}/create-announcement',
         json=post.model_dump(mode='json'),
     )
     response_data = response.json()
@@ -329,3 +329,109 @@ def test_list_user_campaigns_route(
         response.json()['items'][0]['status_campaign']
         == campaign_post_on_db.status_campaign
     )
+
+
+@pytest.mark.integration
+def test_report_post_route(authenticate_client, post_on_db):
+    """
+    Tests the report_post route.
+
+    Scenario:
+    - Given a valid post ID
+    - When the route reports the post
+    - Then it should increment report_count and return updated post
+    """
+    initial_report_count = post_on_db.report_count or 0
+    
+    response = authenticate_client.patch(
+        f'/posts/{post_on_db.community_id}/post/{post_on_db.id}/report'
+    )
+    
+    response_data = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert response_data['id'] == str(post_on_db.id)
+    assert response_data['report_count'] == initial_report_count + 1
+    assert response_data['status'] == post_on_db.status or PostStatusEnum.ACTIVE
+
+
+@pytest.mark.integration
+def test_report_post_suspended_route(session_sql, authenticate_client, post_on_db):
+    """
+    Tests the report_post route when post is already suspended.
+
+    Scenario:
+    - Given a post with suspended status
+    - When the route tries to report the post
+    - Then it should return 409 Conflict
+    """
+    # Atualizar post para status SUSPENDED
+    from app.api.post.model import Post
+    post = session_sql.query(Post).filter(Post.id == post_on_db.id).first()
+    post.status = PostStatusEnum.SUSPENDED
+    session_sql.commit()
+    
+    response = authenticate_client.patch(
+        f'/posts/{post_on_db.community_id}/post/{post_on_db.id}/report'
+    )
+    
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+@pytest.mark.integration
+def test_report_post_threshold_route(session_sql, authenticate_client, post_on_db):
+    """
+    Tests the report_post route when reaching report threshold.
+
+    Scenario:
+    - Given a post with report_count at threshold - 1
+    - When the route reports the post
+    - Then it should change status to REPORTED
+    """
+    # Atualizar post para ter report_count próximo ao threshold
+    from app.api.post.model import Post
+    post = session_sql.query(Post).filter(Post.id == post_on_db.id).first()
+    post.report_count = 29  # Um abaixo do threshold de 30
+    post.status = PostStatusEnum.ACTIVE
+    session_sql.commit()
+    
+    response = authenticate_client.patch(
+        f'/posts/{post_on_db.community_id}/post/{post_on_db.id}/report'
+    )
+    
+    response_data = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert response_data['report_count'] == 30
+    assert response_data['status'] == PostStatusEnum.REPORTED
+
+
+@pytest.mark.integration
+def test_confirm_complaint_route(authenticate_client, complaint_post_on_db, post_on_db):
+    """
+    Tests the confirm_complaint route.
+
+    Scenario:
+    - Given a valid complaint post ID
+    - When the route confirms the complaint
+    - Then it should increment confirmations_count and return updated complaint
+    """
+    initial_confirmations = complaint_post_on_db.confirmations_count or 0
+    initial_level = complaint_post_on_db.level_complaint or ComplaintLevelEnum.LOW
+    
+    response = authenticate_client.post(
+        f'/posts/{post_on_db.community_id}/complaint/{complaint_post_on_db.post_id}/confirm'
+    )
+    
+    response_data = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert response_data['post']['id'] == str(complaint_post_on_db.post_id)
+    assert response_data['confirmations_count'] == initial_confirmations + 1
+    assert response_data['status_complaint'] == complaint_post_on_db.status_complaint
+    
+    # Verificar se o level foi atualizado corretamente
+    new_confirmations = initial_confirmations + 1
+    if new_confirmations >= 50:
+        assert response_data['level_complaint'] == ComplaintLevelEnum.HIGH
+    elif new_confirmations >= 30:
+        assert response_data['level_complaint'] == ComplaintLevelEnum.MEDIUM
+    else:
+        assert response_data['level_complaint'] == ComplaintLevelEnum.LOW

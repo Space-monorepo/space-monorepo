@@ -1,5 +1,6 @@
 import uuid
 from unittest.mock import MagicMock, Mock
+from uuid import uuid4
 
 import pytest
 from fastapi import WebSocket
@@ -7,8 +8,6 @@ from fastapi.testclient import TestClient
 from pymongo import MongoClient
 from sqlalchemy import StaticPool, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
-from uuid import uuid4
-
 
 from app.api.badges.model import Badge as BadgeModel
 from app.api.badges.model import MemberBadge as MemberBadgeModel
@@ -33,8 +32,13 @@ from app.api.post.schemas import (
     PostTypeEnum,
 )
 from app.api.rating.model import Rating
-from app.api.reports.model import Report, ReportComment, ReportMember, ReportPost, ModerationVotes
-from app.api.reports.schema import ReportTypeEnum, ReportReasonEnum
+from app.api.reports.model import (
+    Report,
+    ReportComment,
+    ReportMember,
+    ReportPost,
+)
+from app.api.reports.schema import ReportReasonEnum, ReportTypeEnum
 from app.api.users.model import User
 from app.api.users.schema import UserCreate
 from app.api.users.service import UserService
@@ -378,6 +382,24 @@ def poll_option_on_db(session_sql, poll_post_on_db):
 
 
 @pytest.fixture
+def announcement_post_on_db(session_sql, community_on_db, user_on_db, community_member_on_db):
+    announcement_post = Post(
+        community_id=community_on_db.id,
+        user_id=user_on_db.id,
+        user_role_in_community=community_member_on_db.role,
+        type_post=PostTypeEnum.ANNOUNCEMENT,
+        title='Test Announcement',
+        content='Test Announcement Content',
+        image_url=None,
+    )
+
+    session_sql.add(announcement_post)
+    session_sql.flush()
+    session_sql.refresh(announcement_post)
+    return announcement_post
+
+
+@pytest.fixture
 def post_feedback_on_db(session_sql, post_on_db, community_member_on_db):
     post_feedback = PostFeedback(
         post_id=post_on_db.id,
@@ -599,10 +621,10 @@ def report_to_comment_on_db(session_sql, community_member_on_db):
 
 
 @pytest.fixture
-def report_member_on_db(session_sql, report_to_member_on_db, comum_member_on_db, community_on_db):
+def report_member_on_db(session_sql, report_to_member_on_db, commun_member_on_db, community_on_db):
     report_member = ReportMember(
         report_id=report_to_member_on_db.id,
-        member_id=comum_member_on_db.id,
+        member_id=commun_member_on_db.id,
         community_id=community_on_db.id,
     )
     session_sql.add(report_member)

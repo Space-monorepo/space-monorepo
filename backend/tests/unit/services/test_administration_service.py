@@ -1,24 +1,22 @@
-import pytest
 from datetime import datetime
 from unittest.mock import Mock
 from uuid import uuid4
 
-from app.api.administration.schema import ImportMembers
+import pytest
+
 from app.api.administration.service import AdministrationService
 from app.api.communities.schema import (
     CommunityMemberCreate,
-    CommunityMemberRoleEnum,
     CommunityMemberResponse,
-)
-from app.api.post.schemas import (
-    CampaignUpdate,
-    ComplaintLevelEnum,
-    ComplaintUpdate,
-    PostFeedbackCreate,
-    PostTypeEnum,
+    CommunityMemberRoleEnum,
 )
 from app.api.post.model import CampaignPost, PostFeedback
-from app.api.post.schemas import PostResponse
+from app.api.post.schemas import (
+    CampaignUpdate,
+    PostFeedbackCreate,
+    PostResponse,
+    PostTypeEnum,
+)
 from app.api.users.model import User
 from app.utils.schema import PaginationSearchParams
 
@@ -339,155 +337,6 @@ def test_list_all_campaigns_from_community_service_success():
 
 
 @pytest.mark.unit
-def test_get_complaint_service_success():
-    """
-    Tests the `get_complaint` method of AdministrationService.
-
-    Scenario:
-    - Given a complaint post ID
-    - When the service retrieves the complaint from repository
-    - Then it should return the expected complaint
-    """
-    # Arrange
-    fake_post_id = uuid4()
-
-    fake_complaint = Mock()
-    fake_complaint.post_id = fake_post_id
-    fake_complaint.confirmations_count = 5
-    fake_complaint.status_complaint = 'pending'
-    fake_complaint.level_complaint = ComplaintLevelEnum.LOW
-
-    mock_tm = Mock()
-    mock_complaint_repo = Mock()
-    mock_complaint_repo.get_by_id.return_value = fake_complaint
-
-    service = AdministrationService(mock_tm)
-    service.complaint_repo = mock_complaint_repo
-
-    # Act
-    result = service.get_complaint(fake_post_id)
-
-    # Assert
-    mock_complaint_repo.get_by_id.assert_called_once_with(fake_post_id)
-    assert result is not None
-    assert result.post_id == fake_post_id
-    assert result.confirmations_count == 5
-    assert result.status_complaint == 'pending'
-    assert result.level_complaint == ComplaintLevelEnum.LOW
-
-
-@pytest.mark.unit
-def test_update_complaint_service_success():
-    """
-    Tests the `update_complaint` method of AdministrationService.
-
-    Scenario:
-    - Given a complaint post ID and update data
-    - When the service updates the complaint and adjusts level based on confirmations
-    - Then it should return the expected updated complaint
-    """
-    # Arrange
-    fake_post_id = uuid4()
-    fake_complaint_update = ComplaintUpdate(confirmations_count=1)
-
-    fake_complaint = Mock()
-    fake_complaint.post_id = fake_post_id
-    fake_complaint.confirmations_count = 0
-    fake_complaint.status_complaint = 'pending'
-    fake_complaint.level_complaint = ComplaintLevelEnum.LOW
-
-    fake_saved_complaint = Mock()
-    fake_saved_complaint.confirmations_count = 1
-    fake_saved_complaint.status_complaint = 'pending'
-    fake_saved_complaint.level_complaint = ComplaintLevelEnum.LOW
-
-    fake_post = Mock(spec=PostResponse)
-    fake_post.id = fake_post_id
-
-    mock_tm = Mock()
-    mock_complaint_repo = Mock()
-    mock_complaint_repo.get_by_id.return_value = fake_complaint
-    mock_complaint_repo.save.return_value = fake_saved_complaint
-
-    mock_post_service = Mock()
-    mock_post_service.get_post.return_value = fake_post
-
-    service = AdministrationService(mock_tm)
-    service.complaint_repo = mock_complaint_repo
-    service.post_service = mock_post_service
-
-    # Act
-    result = service.update_complaint(fake_post_id, fake_complaint_update)
-
-    # Assert
-    mock_complaint_repo.get_by_id.assert_called_once_with(fake_post_id)
-    mock_complaint_repo.save.assert_called_once_with(fake_complaint)
-    mock_post_service.get_post.assert_called_once_with(fake_post_id)
-    assert result is not None
-    assert result.post.id == fake_post_id
-    assert result.confirmations_count == 1
-    assert result.status_complaint == 'pending'
-    assert result.level_complaint == ComplaintLevelEnum.LOW
-
-
-@pytest.mark.unit
-def test_list_all_complaints_from_community_service_success():
-    """
-    Tests the `list_all_complaints_from_community` method of AdministrationService.
-
-    Scenario:
-    - Given a community ID and pagination parameters
-    - When the service lists complaints and creates responses
-    - Then it should return a paginated response with complaint data
-    """
-    # Arrange
-    fake_community_id = uuid4()
-    fake_post_id = uuid4()
-
-    fake_pagination_params = PaginationSearchParams(offset=0, limit=10)
-
-    fake_complaint = Mock()
-    fake_complaint.post_id = fake_post_id
-    fake_complaint.confirmations_count = 5
-    fake_complaint.status_complaint = 'pending'
-    fake_complaint.level_complaint = ComplaintLevelEnum.LOW
-
-    fake_post = Mock(spec=PostResponse)
-    fake_post.id = fake_post_id
-
-    mock_tm = Mock()
-    mock_complaint_repo = Mock()
-    mock_complaint_repo.list_complaints_by_community.return_value = ([fake_complaint], 1)
-
-    mock_post_service = Mock()
-    mock_post_service.get_post.return_value = fake_post
-
-    service = AdministrationService(mock_tm)
-    service.complaint_repo = mock_complaint_repo
-    service.post_service = mock_post_service
-
-    # Act
-    result = service.list_all_complaints_from_community(
-        fake_community_id, fake_pagination_params
-    )
-
-    # Assert
-    mock_complaint_repo.list_complaints_by_community.assert_called_once_with(
-        fake_community_id, fake_pagination_params
-    )
-    mock_post_service.get_post.assert_called_once_with(fake_post_id)
-    assert result is not None
-    assert result.items is not None
-    assert len(result.items) == 1
-    assert result.items[0].post.id == fake_post_id
-    assert result.items[0].confirmations_count == 5
-    assert result.items[0].status_complaint == 'pending'
-    assert result.items[0].level_complaint == ComplaintLevelEnum.LOW
-    assert result.total == 1
-    assert result.has_more == False
-
-
-@pytest.mark.unit
 def test_create_post_feedback_service_success():
     """
     Tests the `create_post_feedback` method of AdministrationService.
@@ -594,3 +443,68 @@ def test_list_all_post_feedbacks_service_success():
     assert result.items[0].message == 'Example message'
     assert result.total == 1
     assert result.has_more == False
+
+
+@pytest.mark.unit
+def test_remove_member_from_community_service_success():
+    """
+    Tests the `remove_member_from_community` method of AdministrationService.
+
+    Scenario:
+    - Given a valid member ID
+    - When the service removes the member from the community
+    - Then it should return True indicating successful removal
+    """
+    # Arrange
+    fake_member_id = str(uuid4())
+
+    mock_tm = Mock()
+    mock_community_service = Mock()
+    mock_community_service.remove_member.return_value = True
+
+    service = AdministrationService(mock_tm)
+    service.community_service = mock_community_service
+
+    # Act
+    result = service.remove_member_from_community(fake_member_id)
+
+    # Assert
+    mock_community_service.remove_member.assert_called_once_with(fake_member_id)
+    assert result is True
+
+
+@pytest.mark.unit
+def test_update_member_role_service_success():
+    """
+    Tests the `update_member_role` method of AdministrationService.
+
+    Scenario:
+    - Given a valid member ID and new role
+    - When the service updates the member role
+    - Then it should return the updated CommunityMemberResponse
+    """
+    # Arrange
+    fake_member_id = uuid4()
+    fake_new_role = CommunityMemberRoleEnum.MODERATOR
+
+    fake_member_response = Mock(spec=CommunityMemberResponse)
+    fake_member_response.id = fake_member_id
+    fake_member_response.role = fake_new_role
+
+    mock_tm = Mock()
+    mock_community_service = Mock()
+    mock_community_service.update_member_role.return_value = fake_member_response
+
+    service = AdministrationService(mock_tm)
+    service.community_service = mock_community_service
+
+    # Act
+    result = service.update_member_role(fake_member_id, fake_new_role)
+
+    # Assert
+    mock_community_service.update_member_role.assert_called_once_with(
+        fake_member_id, fake_new_role
+    )
+    assert result is not None
+    assert result.id == fake_member_id
+    assert result.role == fake_new_role

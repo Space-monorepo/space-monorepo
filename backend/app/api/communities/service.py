@@ -13,6 +13,7 @@ from app.api.communities.schema import (
     CommunityMemberCreate,
     CommunityMemberResponse,
     CommunityMemberRoleEnum,
+    CommunityMemberStatusEnum,
     CommunityRelated,
     CommunityResponse,
     CommunityUpdate,
@@ -202,4 +203,17 @@ class CommunityService:
         except Exception as e:
             raise UnexpectedCommunityMemberError(
                 f'Unexpected error updating member role: {e}'
+            ) from e
+
+    def update_member_status(
+        self, member_id: UUID, new_status: CommunityMemberStatusEnum
+    ) -> CommunityMemberResponse:
+        member = self.get_member(member_id)
+        member.status_participation = new_status
+        try:
+            updated_member = self.member_repo.save(member)
+            return self._map_member_to_response(updated_member)
+        except Exception as e:
+            raise UnexpectedCommunityMemberError(
+                f'Unexpected error updating member status: {e}'
             ) from e

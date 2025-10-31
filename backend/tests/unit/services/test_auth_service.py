@@ -1,14 +1,14 @@
-import pytest
-import app.auth.security as auth_security
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 from uuid import uuid4
 
-from app.auth.deps import get_current_user
+import pytest
+
+import app.auth.security as auth_security
+from app.api.users.model import User
+from app.api.users.schema import LoginSchema
 from app.auth.schema import TokenSchema
 from app.auth.security import AuthService
-from app.api.users.schema import LoginSchema
-from app.api.users.model import User
 
 
 @pytest.fixture

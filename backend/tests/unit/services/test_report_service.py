@@ -1,27 +1,27 @@
-import pytest
+from datetime import datetime, timezone
 from unittest.mock import Mock
 from uuid import uuid4
 
-from datetime import datetime, timezone
+import pytest
 
-from app.api.reports.service import ReportService
-from app.api.reports.schema import (
-    ReportCreate,
-    ReportTypeEnum,
-    ReportMemberCreate,
-    ReportPostCreate,
-    ReportCommentCreate,
-    ReportReasonEnum,
-    MemberBriefReport,
-    PostBriefReport,
-    CommentBriefReport,
-    Author,
-)
-from app.api.reports.model import Report, ReportMember, ReportPost, ReportComment
 from app.api.communities.model import CommunityMember
 from app.api.communities.schema import CommunityMemberRoleEnum
+from app.api.reports.model import Report, ReportComment, ReportMember, ReportPost
+from app.api.reports.schema import (
+    CommentBriefReport,
+    MemberBriefReport,
+    PostBriefReport,
+    ReportCommentCreate,
+    ReportCreate,
+    ReportMemberCreate,
+    ReportPostCreate,
+    ReportReasonEnum,
+    ReportTypeEnum,
+)
+from app.api.reports.service import ReportService
 from app.api.users.model import User
 from app.utils.schema import PaginationSearchParams
+
 
 @pytest.mark.unit
 def test_get_report_service_success():
@@ -419,8 +419,12 @@ def test_delete_report_member_service_success():
     fake_existing_report.description = "Member is harassing others"
     fake_existing_report.created_at = datetime.now(timezone.utc)
 
+    fake_report_member = Mock(spec=ReportMember)
+    fake_report_member.report_id = str(fake_report_member_id)
+
     mock_tm = Mock()
     mock_report_member_repo = Mock()
+    mock_report_member_repo.get_by_id.return_value = fake_report_member
     mock_report_member_repo.delete.return_value = True
 
     service = ReportService(mock_tm)
@@ -434,7 +438,8 @@ def test_delete_report_member_service_success():
     # Assert
     service._get_report.assert_called_once_with(fake_report_member_id)
     service.delete_report.assert_called_once_with(fake_report_member_id)
-    mock_report_member_repo.delete.assert_called_once_with(fake_report_member_id)
+    mock_report_member_repo.get_by_id.assert_called_once_with(fake_report_member_id)
+    mock_report_member_repo.delete.assert_called_once_with(fake_report_member)
     assert result is True
 
 
@@ -460,8 +465,12 @@ def test_delete_report_post_service_success():
     fake_existing_report.description = "Post contains spam"
     fake_existing_report.created_at = datetime.now(timezone.utc)
 
+    fake_report_post = Mock(spec=ReportPost)
+    fake_report_post.report_id = str(fake_report_post_id)
+
     mock_tm = Mock()
     mock_report_post_repo = Mock()
+    mock_report_post_repo.get_by_id.return_value = fake_report_post
     mock_report_post_repo.delete.return_value = True
 
     service = ReportService(mock_tm)
@@ -475,7 +484,8 @@ def test_delete_report_post_service_success():
     # Assert
     service._get_report.assert_called_once_with(fake_report_post_id)
     service.delete_report.assert_called_once_with(fake_report_post_id)
-    mock_report_post_repo.delete.assert_called_once_with(fake_report_post_id)
+    mock_report_post_repo.get_by_id.assert_called_once_with(fake_report_post_id)
+    mock_report_post_repo.delete.assert_called_once_with(fake_report_post)
     assert result is True
 
 
@@ -501,8 +511,12 @@ def test_delete_report_comment_service_success():
     fake_existing_report.description = "Comment contains hate speech"
     fake_existing_report.created_at = datetime.now(timezone.utc)
 
+    fake_report_comment = Mock(spec=ReportComment)
+    fake_report_comment.report_id = str(fake_report_comment_id)
+
     mock_tm = Mock()
     mock_report_comment_repo = Mock()
+    mock_report_comment_repo.get_by_id.return_value = fake_report_comment
     mock_report_comment_repo.delete.return_value = True
 
     service = ReportService(mock_tm)
@@ -516,7 +530,8 @@ def test_delete_report_comment_service_success():
     # Assert
     service._get_report.assert_called_once_with(fake_report_comment_id)
     service.delete_report.assert_called_once_with(fake_report_comment_id)
-    mock_report_comment_repo.delete.assert_called_once_with(fake_report_comment_id)
+    mock_report_comment_repo.get_by_id.assert_called_once_with(fake_report_comment_id)
+    mock_report_comment_repo.delete.assert_called_once_with(fake_report_comment)
     assert result is True
 
 
@@ -777,22 +792,23 @@ def test_list_member_brief_reports_service_success():
     fake_user_2.name = "User 2"
     fake_user_2.profile_image_url = "https://example.com/user2.jpg"
 
-    # Mock dos dados do repositório
-    fake_member_ids = [fake_member_id_1, fake_member_id_2]
-    fake_reasons_1 = [ReportReasonEnum.HARASSMENT, ReportReasonEnum.DISCRIMINATION]
-    fake_reasons_2 = [ReportReasonEnum.SPAM]
+    # Mock dos dados do repositório - retorna tuplas (member_id, reason, reports_count)
+    # Cada tupla representa uma combinação única de (member_id, reason)
+    fake_report_members = [
+        (fake_member_id_1, ReportReasonEnum.HARASSMENT, 2),
+        (fake_member_id_1, ReportReasonEnum.DISCRIMINATION, 1),
+        (fake_member_id_2, ReportReasonEnum.SPAM, 1),
+    ]
 
     mock_tm = Mock()
     mock_report_member_repo = Mock()
-    mock_report_member_repo.list_member_ids_by_community.return_value = fake_member_ids
-    mock_report_member_repo.count_reports_by_member.side_effect = [3, 1]
-    mock_report_member_repo.list_reasons_by_member.side_effect = [fake_reasons_1, fake_reasons_2]
+    mock_report_member_repo.list_members_by_reason_and_count.return_value = fake_report_members
 
     mock_community_service = Mock()
-    mock_community_service.get_member.side_effect = [fake_member_1, fake_member_2]
+    mock_community_service.get_member.side_effect = [fake_member_1, fake_member_1, fake_member_2]
 
     mock_user_service = Mock()
-    mock_user_service.get_user.side_effect = [fake_user_1, fake_user_2]
+    mock_user_service.get_user.side_effect = [fake_user_1, fake_user_1, fake_user_2]
 
     service = ReportService(mock_tm)
     service.report_member_repo = mock_report_member_repo
@@ -803,23 +819,24 @@ def test_list_member_brief_reports_service_success():
     result = service.list_member_brief_reports(fake_community_id, fake_pagination_params)
 
     # Assert
-    mock_report_member_repo.list_member_ids_by_community.assert_called_once_with(fake_community_id)
-    assert mock_community_service.get_member.call_count == 2
-    assert mock_user_service.get_user.call_count == 2
-    assert mock_report_member_repo.count_reports_by_member.call_count == 2
-    assert mock_report_member_repo.list_reasons_by_member.call_count == 2
+    mock_report_member_repo.list_members_by_reason_and_count.assert_called_once_with(fake_community_id)
+    assert mock_community_service.get_member.call_count == 3
+    assert mock_user_service.get_user.call_count == 3
     assert result is not None
     assert result.items is not None
-    assert len(result.items) == 2
+    assert len(result.items) == 3
     assert isinstance(result.items[0], MemberBriefReport)
     assert result.items[0].member.id == fake_member_id_1
-    assert result.items[0].reports_count == 3
-    assert result.items[0].reason == fake_reasons_1
+    assert result.items[0].reports_count == 2
+    assert result.items[0].reason == ReportReasonEnum.HARASSMENT
     assert result.items[0].member_reputation == 50
-    assert result.items[1].member.id == fake_member_id_2
+    assert result.items[1].member.id == fake_member_id_1
     assert result.items[1].reports_count == 1
-    assert result.items[1].reason == fake_reasons_2
-    assert result.total == 2
+    assert result.items[1].reason == ReportReasonEnum.DISCRIMINATION
+    assert result.items[2].member.id == fake_member_id_2
+    assert result.items[2].reports_count == 1
+    assert result.items[2].reason == ReportReasonEnum.SPAM
+    assert result.total == 3
     assert result.has_more == False
     assert result.current_offset == 0
     assert result.current_limit == 10
@@ -847,7 +864,7 @@ def test_list_post_brief_reports_service_success():
     fake_member = Mock(spec=CommunityMember)
     fake_member.id = fake_member_id
     fake_member.user_id = fake_user_id
-    fake_member.role = CommunityMemberRoleEnum.MEMBER
+    fake_member.role = CommunityMemberRoleEnum.MODERATOR
 
     fake_user = Mock(spec=User)
     fake_user.name = "Post Author"
@@ -855,7 +872,8 @@ def test_list_post_brief_reports_service_success():
 
     # Mock dos posts
     fake_post_1 = Mock()
-    fake_post_1.user_id = fake_member_id
+    fake_post_1.user = Mock()
+    fake_post_1.user.id = fake_member_id
     fake_post_1.title = "Post Title 1"
     fake_post_1.content = "Post content 1"
     fake_post_1.image_url = "https://example.com/post1.jpg"
@@ -865,7 +883,8 @@ def test_list_post_brief_reports_service_success():
     fake_post_1.created_at = datetime.now(timezone.utc)
 
     fake_post_2 = Mock()
-    fake_post_2.user_id = fake_member_id
+    fake_post_2.user = Mock()
+    fake_post_2.user.id = fake_member_id
     fake_post_2.title = "Post Title 2"
     fake_post_2.content = "Post content 2"
     fake_post_2.image_url = None
@@ -874,21 +893,23 @@ def test_list_post_brief_reports_service_success():
     fake_post_2.comments_count = 1
     fake_post_2.created_at = datetime.now(timezone.utc)
 
-    # Mock dos dados do repositório
-    fake_post_ids = [fake_post_id_1, fake_post_id_2]
-    fake_reasons_1 = [ReportReasonEnum.SPAM, ReportReasonEnum.INAPPROPRIATE_CONTENT]
-    fake_reasons_2 = [ReportReasonEnum.HATE_SPEECH]
+    # Mock dos dados do repositório - retorna tuplas (post_id, reason, reports_count)
+    # Cada tupla representa uma combinação única de (post_id, reason)
+    fake_report_posts = [
+        (fake_post_id_1, ReportReasonEnum.SPAM, 3),
+        (fake_post_id_1, ReportReasonEnum.INAPPROPRIATE_CONTENT, 2),
+        (fake_post_id_2, ReportReasonEnum.HATE_SPEECH, 2),
+    ]
 
     mock_tm = Mock()
     mock_report_post_repo = Mock()
-    mock_report_post_repo.list_post_ids_by_community.return_value = fake_post_ids
-    mock_report_post_repo.list_reasons_by_post.side_effect = [fake_reasons_1, fake_reasons_2]
+    mock_report_post_repo.list_posts_by_reason_and_count.return_value = fake_report_posts
 
     mock_post_service = Mock()
-    mock_post_service.get_post.side_effect = [fake_post_1, fake_post_2]
+    mock_post_service.get_post.side_effect = [fake_post_1, fake_post_1, fake_post_2]
 
     mock_community_service = Mock()
-    mock_community_service.get_member.return_value = fake_member
+    mock_community_service.get_member_association.return_value = fake_member
 
     mock_user_service = Mock()
     mock_user_service.get_user.return_value = fake_user
@@ -903,24 +924,28 @@ def test_list_post_brief_reports_service_success():
     result = service.list_post_brief_reports(fake_community_id, fake_pagination_params)
 
     # Assert
-    mock_report_post_repo.list_post_ids_by_community.assert_called_once_with(fake_community_id)
-    assert mock_post_service.get_post.call_count == 2
-    assert mock_community_service.get_member.call_count == 2
-    assert mock_user_service.get_user.call_count == 2
-    assert mock_report_post_repo.list_reasons_by_post.call_count == 2
+    mock_report_post_repo.list_posts_by_reason_and_count.assert_called_once_with(fake_community_id)
+    assert mock_post_service.get_post.call_count == 3
+    assert mock_community_service.get_member_association.call_count == 3
+    assert mock_user_service.get_user.call_count == 3
     assert result is not None
     assert result.items is not None
-    assert len(result.items) == 2
+    assert len(result.items) == 3
     assert isinstance(result.items[0], PostBriefReport)
     assert result.items[0].post_id == fake_post_id_1
     assert result.items[0].title == "Post Title 1"
-    assert result.items[0].reasons == fake_reasons_1
-    assert result.items[0].report_count == 5
+    assert result.items[0].reason == ReportReasonEnum.SPAM
+    assert result.items[0].report_count == 3
     assert result.items[0].likes_count == 10
-    assert result.items[1].post_id == fake_post_id_2
-    assert result.items[1].title == "Post Title 2"
-    assert result.items[1].reasons == fake_reasons_2
-    assert result.total == 2
+    assert result.items[1].post_id == fake_post_id_1
+    assert result.items[1].title == "Post Title 1"
+    assert result.items[1].reason == ReportReasonEnum.INAPPROPRIATE_CONTENT
+    assert result.items[1].report_count == 2
+    assert result.items[2].post_id == fake_post_id_2
+    assert result.items[2].title == "Post Title 2"
+    assert result.items[2].reason == ReportReasonEnum.HATE_SPEECH
+    assert result.items[2].report_count == 2
+    assert result.total == 3
     assert result.has_more == False
     assert result.current_offset == 0
     assert result.current_limit == 10
@@ -948,7 +973,7 @@ def test_list_comment_brief_reports_service_success():
     fake_member = Mock(spec=CommunityMember)
     fake_member.id = fake_member_id
     fake_member.user_id = fake_user_id
-    fake_member.role = CommunityMemberRoleEnum.MEMBER
+    fake_member.role = CommunityMemberRoleEnum.MODERATOR
 
     fake_user = Mock(spec=User)
     fake_user.name = "Comment Author"
@@ -956,7 +981,8 @@ def test_list_comment_brief_reports_service_success():
 
     # Mock dos comments
     fake_comment_1 = Mock()
-    fake_comment_1.user_id = fake_member_id
+    fake_comment_1.user = Mock()
+    fake_comment_1.user.id = fake_member_id
     fake_comment_1.content = "Comment content 1"
     fake_comment_1.report_count = 3
     fake_comment_1.likes_count = 7
@@ -964,28 +990,31 @@ def test_list_comment_brief_reports_service_success():
     fake_comment_1.created_at = datetime.now(timezone.utc)
 
     fake_comment_2 = Mock()
-    fake_comment_2.user_id = fake_member_id
+    fake_comment_2.user = Mock()
+    fake_comment_2.user.id = fake_member_id
     fake_comment_2.content = "Comment content 2"
     fake_comment_2.report_count = 1
     fake_comment_2.likes_count = 4
     fake_comment_2.comments_count = 0
     fake_comment_2.created_at = datetime.now(timezone.utc)
 
-    # Mock dos dados do repositório
-    fake_comment_ids = [fake_comment_id_1, fake_comment_id_2]
-    fake_reasons_1 = [ReportReasonEnum.HATE_SPEECH, ReportReasonEnum.HARASSMENT]
-    fake_reasons_2 = [ReportReasonEnum.SPAM]
+    # Mock dos dados do repositório - retorna tuplas (comment_id, reason, reports_count)
+    # Cada tupla representa uma combinação única de (comment_id, reason)
+    fake_report_comments = [
+        (fake_comment_id_1, ReportReasonEnum.HATE_SPEECH, 2),
+        (fake_comment_id_1, ReportReasonEnum.HARASSMENT, 1),
+        (fake_comment_id_2, ReportReasonEnum.SPAM, 1),
+    ]
 
     mock_tm = Mock()
     mock_report_comment_repo = Mock()
-    mock_report_comment_repo.list_comment_ids_by_community.return_value = fake_comment_ids
-    mock_report_comment_repo.list_reasons_by_comment.side_effect = [fake_reasons_1, fake_reasons_2]
+    mock_report_comment_repo.list_comments_by_reason_and_count.return_value = fake_report_comments
 
     mock_comment_service = Mock()
-    mock_comment_service.get_comment.side_effect = [fake_comment_1, fake_comment_2]
+    mock_comment_service.get_comment.side_effect = [fake_comment_1, fake_comment_1, fake_comment_2]
 
     mock_community_service = Mock()
-    mock_community_service.get_member.return_value = fake_member
+    mock_community_service.get_member_association.return_value = fake_member
 
     mock_user_service = Mock()
     mock_user_service.get_user.return_value = fake_user
@@ -1000,24 +1029,28 @@ def test_list_comment_brief_reports_service_success():
     result = service.list_comment_brief_reports(fake_community_id, fake_pagination_params)
 
     # Assert
-    mock_report_comment_repo.list_comment_ids_by_community.assert_called_once_with(fake_community_id)
-    assert mock_comment_service.get_comment.call_count == 2
-    assert mock_community_service.get_member.call_count == 2
-    assert mock_user_service.get_user.call_count == 2
-    assert mock_report_comment_repo.list_reasons_by_comment.call_count == 2
+    mock_report_comment_repo.list_comments_by_reason_and_count.assert_called_once_with(fake_community_id)
+    assert mock_comment_service.get_comment.call_count == 3
+    assert mock_community_service.get_member_association.call_count == 3
+    assert mock_user_service.get_user.call_count == 3
     assert result is not None
     assert result.items is not None
-    assert len(result.items) == 2
+    assert len(result.items) == 3
     assert isinstance(result.items[0], CommentBriefReport)
     assert result.items[0].comment_id == fake_comment_id_1
     assert result.items[0].content == "Comment content 1"
-    assert result.items[0].reasons == fake_reasons_1
-    assert result.items[0].report_count == 3
+    assert result.items[0].reason == ReportReasonEnum.HATE_SPEECH
+    assert result.items[0].report_count == 2
     assert result.items[0].likes_count == 7
-    assert result.items[1].comment_id == fake_comment_id_2
-    assert result.items[1].content == "Comment content 2"
-    assert result.items[1].reasons == fake_reasons_2
-    assert result.total == 2
+    assert result.items[1].comment_id == fake_comment_id_1
+    assert result.items[1].content == "Comment content 1"
+    assert result.items[1].reason == ReportReasonEnum.HARASSMENT
+    assert result.items[1].report_count == 1
+    assert result.items[2].comment_id == fake_comment_id_2
+    assert result.items[2].content == "Comment content 2"
+    assert result.items[2].reason == ReportReasonEnum.SPAM
+    assert result.items[2].report_count == 1
+    assert result.total == 3
     assert result.has_more == False
     assert result.current_offset == 0
     assert result.current_limit == 10
