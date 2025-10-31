@@ -11,6 +11,7 @@ class ReputationLevelEnum(str, Enum):
 class ReputationActionEnum(str, Enum):
     CREATE_CAMPAIGN = 'create_campaign'
     CAMPAIGN_ACCEPTED = 'campaign_accepted'
+    CAMPAIGN_REJECTED = 'campaign_rejected'
     CAMPAIGN_SUPPORT = 'campaign_support'
     REPORT_APPROVED = 'report_approved'
     REPORT_REJECTED = 'report_rejected'
@@ -21,6 +22,7 @@ class ReputationActionEnum(str, Enum):
 REPUTATION_POINTS = {
     ReputationActionEnum.CREATE_CAMPAIGN: 100,
     ReputationActionEnum.CAMPAIGN_ACCEPTED: 400,
+    ReputationActionEnum.CAMPAIGN_REJECTED: -50,
     ReputationActionEnum.CAMPAIGN_SUPPORT: 50,
     ReputationActionEnum.REPORT_APPROVED: 200,
     ReputationActionEnum.REPORT_REJECTED: -100,
