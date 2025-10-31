@@ -1,23 +1,23 @@
 import uuid
-
-import pytest
 from datetime import datetime
 
+import pytest
+
 from app.api.reports.schema import (
-    ReportCreate,
-    ReportResponse,
-    ReportMemberCreate,
-    ReportPostCreate,
-    ReportCommentCreate,
-    ReportTypeEnum,
+    Author,
+    CommentBriefReport,
+    MemberBriefReport,
     ModerationVotesCreate,
     ModerationVotesResponse,
-    VoteTypeEnum,
-    ReportReasonEnum,
-    MemberBriefReport,
-    Author,
     PostBriefReport,
-    CommentBriefReport,
+    ReportCommentCreate,
+    ReportCreate,
+    ReportMemberCreate,
+    ReportPostCreate,
+    ReportReasonEnum,
+    ReportResponse,
+    ReportTypeEnum,
+    VoteTypeEnum,
 )
 
 
@@ -103,7 +103,7 @@ def test_report_member_schema():
 
     member_brief_report = MemberBriefReport(
         member=author,
-        reason=[reason],
+        reason=reason,
         reports_count=reports_count,
         member_reputation=member_reputation,
         member_popularity=member_popularity,
@@ -112,7 +112,7 @@ def test_report_member_schema():
 
     assert member_brief_report.model_dump() == {
         'member': author.model_dump(),
-        'reason': [reason],
+        'reason': reason,
         'reports_count': reports_count,
         'member_reputation': member_reputation,
         'member_popularity': member_popularity,
@@ -129,7 +129,7 @@ def test_report_post_schema():
     type = ReportTypeEnum.POST_REPORT
     reason = ReportReasonEnum.DISCRIMINATION
     description = 'The description of the report'
-    community_id = str(uuid.uuid4())    
+    community_id = str(uuid.uuid4())
     created_at = datetime.now()
 
     report_post = ReportPostCreate(
@@ -155,11 +155,11 @@ def test_report_post_schema():
     comments_count = 10
     access_count = 10
     published_at = datetime.now()
-    
+
     post_brief_report = PostBriefReport(
         post_id=post_id,
         member=author,
-        reasons=[reason],
+        reason=reason,
         title='Title of the post',
         content='Content of the post',
         image_url='https://example.com/image.jpg',
@@ -173,7 +173,7 @@ def test_report_post_schema():
     assert post_brief_report.model_dump() == {
         'post_id': post_id,
         'member': author.model_dump(),
-        'reasons': [reason],
+        'reason': reason,
         'title': 'Title of the post',
         'content': 'Content of the post',
         'image_url': 'https://example.com/image.jpg',
@@ -217,18 +217,16 @@ def test_report_comment_schema():
     )
     report_count = 10
     likes_count = 10
-    comments_count = 10
     access_count = 10
     published_at = datetime.now()
 
     comment_brief_report = CommentBriefReport(
         comment_id=comment_id,
         member=author,
-        reasons=[reason],
+        reason=reason,
         content='Content of the comment',
         report_count=report_count,
         likes_count=likes_count,
-        comments_count=comments_count,
         access_count=access_count,
         published_at=published_at,
     )
@@ -236,11 +234,10 @@ def test_report_comment_schema():
     assert comment_brief_report.model_dump() == {
         'comment_id': comment_id,
         'member': author.model_dump(),
-        'reasons': [reason],
+        'reason': reason,
         'content': 'Content of the comment',
         'report_count': report_count,
         'likes_count': likes_count,
-        'comments_count': comments_count,
         'access_count': access_count,
         'published_at': published_at,
     }
