@@ -2,15 +2,10 @@ import pytest
 from fastapi import status
 
 from app.api.users.exceptions import (
-    ConnectionAlreadyExistsError,
-    ConnectionCooldownError,
-    ConnectionNotFoundError,
-    SelfConnectionError,
     UserNotFoundError,
 )
 from app.api.users.schema import (
     UserConnectionCreate,
-    UserConnectionResponse,
     UserCreate,
     UserResponse,
     UserStatusEnum,
