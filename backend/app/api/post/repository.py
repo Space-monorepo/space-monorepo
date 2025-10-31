@@ -1,7 +1,7 @@
 from typing import List
 from uuid import UUID
 
-from sqlalchemy import desc, select
+from sqlalchemy import case, desc, select
 from sqlalchemy.orm import Session
 
 from app.api.communities.model import CommunityMember
@@ -15,7 +15,7 @@ from app.api.post.model import (
     PostFeedback,
     PostLikes,
 )
-from app.api.post.schemas import PostStatusEnum
+from app.api.post.schemas import ComplaintLevelEnum, ComplaintStatusEnum, PostStatusEnum
 from app.core.repository import BaseRepository
 from app.utils.schema import PaginationSearchParams
 
@@ -139,15 +139,26 @@ class ComplaintPostRepository(BaseRepository[ComplaintPost]):
     def list_complaints_by_community(
         self, community_id: UUID, params: PaginationSearchParams
     ) -> tuple[list[ComplaintPost], int]:
-        query = self.session.query(ComplaintPost)
-        query = query.join(Post, Post.id == ComplaintPost.post_id)
-        query = query.filter(Post.community_id == community_id)
+        query = (
+            self.session.query(ComplaintPost)
+            .filter(ComplaintPost.status_complaint == ComplaintStatusEnum.PENDING)
+            .join(Post, Post.id == ComplaintPost.post_id)
+            .filter(Post.community_id == community_id)
+        )
 
         if params.status:
             query = query.filter(Post.status.in_(params.status))
 
         if params.name:
             query = query.filter(Post.title.ilike(f'%{params.name}%'))
+
+        priority_order = case(
+            (ComplaintPost.level_complaint == ComplaintLevelEnum.HIGH.value, 3),
+            (ComplaintPost.level_complaint == ComplaintLevelEnum.MEDIUM.value, 2),
+            (ComplaintPost.level_complaint == ComplaintLevelEnum.LOW.value, 1),
+            else_=0,
+        )
+        query = query.order_by(desc(priority_order))
 
         total = query.count()
         complaints = query.offset(params.offset).limit(params.limit).all()
@@ -240,6 +251,18 @@ class PollPostsRepository(BaseRepository[PollPosts]):
             self.logger.warning(
                 f'Model {PollPosts.__qualname__} with id {post_id} not found'
             )
+
+    def list_polls_by_community(
+        self, community_id: UUID, params: PaginationSearchParams
+    ) -> tuple[list[PollPosts], int]:
+        query = (
+            self.session.query(PollPosts)
+            .join(Post, Post.id == PollPosts.post_id)
+            .filter(Post.community_id == community_id)
+        )
+        total = query.count()
+        polls = query.offset(params.offset).limit(params.limit).all()
+        return polls, total
 
     def save(self, model: PollPosts) -> PollPosts:
         self.session.add(model)
