@@ -3,6 +3,7 @@ from uuid import UUID
 from app.api.communities.schema import CommunityMemberResponse
 from app.api.communities.service import CommunityService
 from app.api.post.exceptions import (
+    ComplaintNotFoundError,
     PollOptionNotFoundError,
     PostLikesNotFoundError,
     PostNotFoundError,
@@ -21,6 +22,7 @@ from app.api.post.model import (
 from app.api.post.schemas import (
     CampaignResponse,
     CommunityRelated,
+    ComplaintLevelEnum,
     ComplaintResponse,
     PollCreate,
     PollOptionResponse,
@@ -40,6 +42,8 @@ from app.utils.schema import PaginationResponse, PaginationSearchParams
 # ruff: noqa: PLR0904
 class PostService:
     REPORT_THRESHOLD = 30
+    COMPLAINT_MEDIUM_THRESHOLD = 30
+    COMPLAINT_HIGH_THRESHOLD = 50
 
     def __init__(self, tm: TransactionManager):
         self.tm = tm
@@ -274,6 +278,12 @@ class PostService:
             for participant in participants
         ]
 
+    def get_complaint(self, post_id: UUID) -> ComplaintPost:
+        complaint = self.complaint_repo.get_by_id(post_id)
+        if not complaint:
+            raise ComplaintNotFoundError('Complaint not found')
+        return complaint
+
     def create_complaint(self, post: PostCreate) -> ComplaintResponse:
         try:
             post = self.create_post(post)
@@ -287,6 +297,23 @@ class PostService:
             )
         except Exception as e:
             raise UnexpectedPostError('Unexpected error creating complaint') from e
+
+    def confirm_complaint(self, post_id: UUID) -> ComplaintResponse:
+        complaint = self.get_complaint(post_id)
+        complaint.confirmations_count += 1
+        if complaint.confirmations_count >= self.COMPLAINT_HIGH_THRESHOLD:
+            complaint.level_complaint = ComplaintLevelEnum.HIGH
+        elif complaint.confirmations_count >= self.COMPLAINT_MEDIUM_THRESHOLD:
+            complaint.level_complaint = ComplaintLevelEnum.MEDIUM
+        else:
+            complaint.level_complaint = ComplaintLevelEnum.LOW
+        complaint_saved = self.complaint_repo.save(complaint)
+        return ComplaintResponse(
+            post=self.get_post(post_id),
+            confirmations_count=complaint_saved.confirmations_count,
+            status_complaint=complaint_saved.status_complaint,
+            level_complaint=complaint_saved.level_complaint,
+        )
 
     def get_poll(self, post_id: UUID) -> PollPosts:
         try:

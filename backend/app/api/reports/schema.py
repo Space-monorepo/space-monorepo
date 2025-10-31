@@ -159,7 +159,7 @@ class ReportMemberResponse(BaseModel):
 
 class MemberBriefReport(BaseModel):
     member: Author = Field(..., description='The member of the report')
-    reason: list[ReportReasonEnum] = Field(..., description='The reasons of the report')
+    reason: ReportReasonEnum = Field(..., description='The reason of the report')
     reports_count: int = Field(..., description='The quantity of the reports')
     member_reputation: int = Field(..., description='The reputation of the member')
     member_popularity: float = Field(
@@ -180,7 +180,7 @@ class MemberBriefReport(BaseModel):
                         'profile_picture': 'https://example.com/image.jpg',
                         'role': 'admin',
                     },
-                    'reason': [ReportReasonEnum.DISCRIMINATION],
+                    'reason': ReportReasonEnum.DISCRIMINATION,
                     'reports_count': 10,
                     'member_reputation': 100,
                     'member_popularity': 0.5,
@@ -255,7 +255,7 @@ class PostBriefReport(BaseModel):
         ..., min_length=36, max_length=36, description='The ID of the post'
     )
     member: Author = Field(..., description='The member of the report')
-    reasons: list[ReportReasonEnum] = Field(..., description='The reasons of the report')
+    reason: ReportReasonEnum = Field(..., description='The reason of the report')
     title: str = Field(
         ..., min_length=1, max_length=255, description='The title of the post'
     )
@@ -283,7 +283,7 @@ class PostBriefReport(BaseModel):
                         'profile_picture': 'https://example.com/image.jpg',
                         'role': 'admin',
                     },
-                    'reasons': [ReportReasonEnum.DISCRIMINATION],
+                    'reason': ReportReasonEnum.DISCRIMINATION,
                     'title': 'Title of the post',
                     'content': 'Content of the post',
                     'image_url': 'https://example.com/image.jpg',
@@ -363,13 +363,13 @@ class CommentBriefReport(BaseModel):
         ..., min_length=36, max_length=36, description='The ID of the comment'
     )
     member: Author = Field(..., description='The member of the report')
-    reasons: list[ReportReasonEnum] = Field(..., description='The reasons of the report')
+    reason: ReportReasonEnum = Field(..., description='The reasons of the report')
     content: str = Field(
         ..., min_length=1, max_length=2000, description='The content of the comment'
     )
     report_count: int = Field(..., ge=0, description='The count of the reports')
     likes_count: int = Field(..., ge=0, description='The count of the likes')
-    comments_count: int = Field(..., ge=0, description='The count of the comments')
+    # TODO: Add comments count after
     access_count: int = Field(..., ge=0, description='The count of the accesses')
     published_at: datetime = Field(
         ..., description='The date and time the comment was published'
@@ -387,10 +387,10 @@ class CommentBriefReport(BaseModel):
                         'profile_picture': 'https://example.com/image.jpg',
                         'role': 'admin',
                     },
+                    'reason': ReportReasonEnum.DISCRIMINATION,
                     'content': 'Content of the comment',
                     'report_count': 10,
                     'likes_count': 10,
-                    'comments_count': 10,
                     'access_count': 10,
                     'published_at': '2021-01-01T00:00:00Z',
                 }

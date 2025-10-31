@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.reports.model import (
@@ -10,6 +10,7 @@ from app.api.reports.model import (
     ReportMember,
     ReportPost,
 )
+from app.api.reports.schema import ReportReasonEnum, VoteTypeEnum
 from app.core.repository import BaseRepository
 from app.utils.schema import PaginationSearchParams
 
@@ -36,6 +37,21 @@ class ReportMemberRepository(BaseRepository[ReportMember]):
     def __init__(self, session: Session):
         super().__init__(ReportMember, session)
         self.session = session
+
+    def get_by_id(self, id: UUID) -> ReportMember:
+        report_member = (
+            self.session.query(ReportMember).filter(ReportMember.report_id == id).first()
+        )
+        if report_member:
+            self.logger.debug(
+                f'Model {ReportMember.__qualname__} with id {id} retrieved successfully'
+            )
+            return report_member
+        else:
+            self.logger.warning(
+                f'Model {ReportMember.__qualname__} with id {id} not found'
+            )
+            return None
 
     def save(self, model: ReportMember) -> ReportMember:
         self.session.add(model)
@@ -91,35 +107,68 @@ class ReportMemberRepository(BaseRepository[ReportMember]):
         return reports, total
 
     def list_member_ids_by_community(self, community_id: UUID) -> list[UUID]:
-        member_ids = (
-            select(ReportMember.member_id)
+        # Subquery que conta reportes por member_id e reason
+        subq = (
+            select(
+                ReportMember.member_id,
+                Report.reason,
+                func.count(ReportMember.report_id).label('count'),
+            )
+            .join(Report, ReportMember.report_id == Report.id)
             .where(ReportMember.community_id == community_id)
-            .distinct()
+            .group_by(ReportMember.member_id, Report.reason)
+            .subquery()
+        )
+
+        # Query principal que ordena pelo máximo de reportes por razão
+        member_ids = (
+            select(subq.c.member_id)
+            .group_by(subq.c.member_id)
+            .order_by(func.max(subq.c.count).desc())
         )
         return list(self.session.scalars(member_ids).all())
 
-    def count_reports_by_member(self, member_id: UUID) -> int:
-        return (
-            self.session.query(ReportMember)
-            .filter(ReportMember.member_id == member_id)
-            .count()
+    def list_members_by_reason_and_count(
+        self, community_id: UUID
+    ) -> list[tuple[UUID, ReportReasonEnum, int]]:
+        """
+        Retorna lista de tuplas (member_id, reason, count) ordenadas pela contagem
+        de reportes de forma decrescente.
+        """
+        query = (
+            select(
+                ReportMember.member_id,
+                Report.reason,
+                func.count(ReportMember.report_id).label('count'),
+            )
+            .join(Report, ReportMember.report_id == Report.id)
+            .where(ReportMember.community_id == community_id)
+            .group_by(ReportMember.member_id, Report.reason)
+            .order_by(func.count(ReportMember.report_id).desc())
         )
-
-    def list_reasons_by_member(self, member_id: UUID) -> list[str]:
-        reasons = (
-            select(Report.reason)
-            .join(ReportMember, Report.id == ReportMember.report_id)
-            .where(ReportMember.member_id == member_id)
-            .distinct()
-            .order_by(Report.reason.asc())
-        )
-        return list(self.session.scalars(reasons).all())
+        results = self.session.execute(query).all()
+        return [(row[0], ReportReasonEnum(row[1]), row[2]) for row in results]
 
 
 class ReportPostRepository(BaseRepository[ReportPost]):
     def __init__(self, session: Session):
         super().__init__(ReportPost, session)
         self.session = session
+
+    def get_by_id(self, id: UUID) -> ReportPost:
+        report_post = (
+            self.session.query(ReportPost).filter(ReportPost.report_id == id).first()
+        )
+        if report_post:
+            self.logger.debug(
+                f'Model {ReportPost.__qualname__} with id {id} retrieved successfully'
+            )
+            return report_post
+        else:
+            self.logger.warning(
+                f'Model {ReportPost.__qualname__} with id {id} not found'
+            )
+            return None
 
     def save(self, model: ReportPost) -> ReportPost:
         self.session.add(model)
@@ -189,11 +238,49 @@ class ReportPostRepository(BaseRepository[ReportPost]):
         )
         return list(self.session.scalars(reasons).all())
 
+    def list_posts_by_reason_and_count(
+        self, community_id: UUID
+    ) -> list[tuple[UUID, ReportReasonEnum, int]]:
+        """
+        Retorna lista de tuplas (post_id, reason, count) ordenadas pela contagem
+        de reportes de forma decrescente.
+        """
+        query = (
+            select(
+                ReportPost.post_id,
+                Report.reason,
+                func.count(ReportPost.report_id).label('count'),
+            )
+            .join(Report, ReportPost.report_id == Report.id)
+            .where(ReportPost.community_id == community_id)
+            .group_by(ReportPost.post_id, Report.reason)
+            .order_by(func.count(ReportPost.report_id).desc())
+        )
+        results = self.session.execute(query).all()
+        return [(row[0], ReportReasonEnum(row[1]), row[2]) for row in results]
+
 
 class ReportCommentRepository(BaseRepository[ReportComment]):
     def __init__(self, session: Session):
         super().__init__(ReportComment, session)
         self.session = session
+
+    def get_by_id(self, id: UUID) -> ReportComment:
+        report_comment = (
+            self.session.query(ReportComment)
+            .filter(ReportComment.report_id == id)
+            .first()
+        )
+        if report_comment:
+            self.logger.debug(
+                f'Model {ReportComment.__qualname__} with id {id} retrieved successfully'
+            )
+            return report_comment
+        else:
+            self.logger.warning(
+                f'Model {ReportComment.__qualname__} with id {id} not found'
+            )
+            return None
 
     def save(self, model: ReportComment) -> ReportComment:
         self.session.add(model)
@@ -266,8 +353,95 @@ class ReportCommentRepository(BaseRepository[ReportComment]):
         )
         return list(self.session.scalars(reasons).all())
 
+    def list_comments_by_reason_and_count(
+        self, community_id: UUID
+    ) -> list[tuple[UUID, ReportReasonEnum, int]]:
+        """
+        Retorna lista de tuplas (comment_id, reason, count) ordenadas pela contagem
+        de reportes de forma decrescente.
+        """
+        query = (
+            select(
+                ReportComment.comment_id,
+                Report.reason,
+                func.count(ReportComment.report_id).label('count'),
+            )
+            .join(Report, ReportComment.report_id == Report.id)
+            .where(ReportComment.community_id == community_id)
+            .group_by(ReportComment.comment_id, Report.reason)
+            .order_by(func.count(ReportComment.report_id).desc())
+        )
+        results = self.session.execute(query).all()
+        return [(row[0], ReportReasonEnum(row[1]), row[2]) for row in results]
+
 
 class ModerationVotesRepository(BaseRepository[ModerationVotes]):
     def __init__(self, session: Session):
         super().__init__(ModerationVotes, session)
         self.session = session
+
+    def report_has_suspension_vote(self, report_id: UUID) -> bool:
+        query = self.session.query(ModerationVotes).filter(
+            ModerationVotes.report_id == report_id,
+            ModerationVotes.vote == VoteTypeEnum.SUSPEND,
+        )
+        return query.count() > 0
+
+    def report_has_tolerance_vote(self, report_id: UUID) -> bool:
+        query = self.session.query(ModerationVotes).filter(
+            ModerationVotes.report_id == report_id,
+            ModerationVotes.vote == VoteTypeEnum.TOLERATE,
+        )
+        return query.count() > 0
+
+    def count_votes_by_type(self, report_id: UUID, vote_type: VoteTypeEnum) -> int:
+        """Conta quantos votos de um tipo específico existem para um report."""
+        count = (
+            self.session.query(ModerationVotes)
+            .filter(
+                ModerationVotes.report_id == report_id, ModerationVotes.vote == vote_type
+            )
+            .count()
+        )
+        self.logger.debug(
+            f'Count {count} votes of type {vote_type} for report {report_id}'
+        )
+        return count
+
+    def moderator_has_voted(self, report_id: UUID, moderator_id: UUID) -> bool:
+        """Verifica se um moderador já votou em um report específico."""
+        vote = (
+            self.session.query(ModerationVotes)
+            .filter(
+                ModerationVotes.report_id == report_id,
+                ModerationVotes.moderator_id == moderator_id,
+            )
+            .first()
+        )
+        has_voted = vote is not None
+        self.logger.debug(
+            f'Moderator {moderator_id} has{"" if has_voted else " not"} voted on report {report_id}'
+        )
+        return has_voted
+
+    def delete_votes_by_report(self, report_id: UUID) -> bool:
+        """Deleta todos os votos associados a um report."""
+        votes = (
+            self.session.query(ModerationVotes)
+            .filter(ModerationVotes.report_id == report_id)
+            .all()
+        )
+        for vote in votes:
+            self.session.delete(vote)
+        self.session.flush()
+        self.logger.debug(f'Deleted {len(votes)} votes for report {report_id}')
+        return True
+
+    def get_vote_counts(self, report_id: UUID) -> tuple[int, int]:
+        """Retorna a contagem de votos (suspend_count, tolerate_count)."""
+        suspend_count = self.count_votes_by_type(report_id, VoteTypeEnum.SUSPEND)
+        tolerate_count = self.count_votes_by_type(report_id, VoteTypeEnum.TOLERATE)
+        self.logger.debug(
+            f'Vote counts for report {report_id}: {suspend_count} suspend, {tolerate_count} tolerate'
+        )
+        return suspend_count, tolerate_count

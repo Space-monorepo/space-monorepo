@@ -44,7 +44,26 @@ class PollOptionNotFoundError(Exception):
     pass
 
 
+class ComplaintNotFoundError(Exception):
+    """
+    Exception raised when a complaint is not found.
+    """
+
+    pass
+
+
 def add_post_exception_handler(app: FastAPI):
+    @app.exception_handler(ComplaintNotFoundError)
+    async def complaint_not_found_exception_handler(
+        request: Request, exc: ComplaintNotFoundError
+    ):
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content=ErrorResponse(
+                message=str(exc), error_type='complaint_not_found', details={}
+            ).model_dump(mode='json'),
+        )
+
     @app.exception_handler(PostNotFoundError)
     async def post_not_found_exception_handler(request: Request, exc: PostNotFoundError):
         return JSONResponse(
