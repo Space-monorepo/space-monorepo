@@ -8,13 +8,10 @@ from app.api.communities.schema import (
 )
 from app.api.communities.service import CommunityService
 from app.api.post.exceptions import PostNotFoundError, UnexpectedPostError
-from app.api.post.model import CampaignPost, ComplaintPost, PostFeedback
+from app.api.post.model import CampaignPost, PostFeedback
 from app.api.post.schemas import (
     CampaignResponse,
     CampaignUpdate,
-    ComplaintLevelEnum,
-    ComplaintResponse,
-    ComplaintUpdate,
     PostFeedbackCreate,
     PostFeedbackResponse,
     PostTypeEnum,
@@ -31,9 +28,8 @@ class AdministrationService:
 
     def __init__(self, tm: TransactionManager):
         self.tm = tm
-        self.post_repository = tm.get_post_repository()
+        self.post_repo = tm.get_post_repository()
         self.campaign_repo = tm.get_campaign_post_repository()
-        self.complaint_repo = tm.get_complaint_post_repository()
         self.campaign_participants_repo = tm.get_campaign_participants_repository()
         self.post_feedback_repo = tm.get_post_feedback_repository()
         self.post_service = PostService(tm)
@@ -128,65 +124,6 @@ class AdministrationService:
         ]
         return PaginationResponse(
             items=campaigns_response,
-            total=total,
-            has_more=total > (params.offset or 0) + (params.limit or 10),
-            current_offset=params.offset or 0,
-            current_limit=params.limit or 10,
-        )
-
-    def get_complaint(self, post_id: UUID) -> ComplaintPost:
-        post = self.complaint_repo.get_by_id(post_id)
-        if not post:
-            raise PostNotFoundError('Complaint not found')
-        return post
-
-    def update_complaint(self, post_id: UUID, complaint_update: ComplaintUpdate):
-        try:
-            complaint_post = self.get_complaint(post_id)
-
-            if complaint_update.confirmations_count:
-                complaint_post.confirmations_count += (
-                    complaint_update.confirmations_count
-                )
-                if complaint_post.confirmations_count >= self.COMPLAINT_MEDIUM_THRESHOLD:
-                    complaint_post.level_complaint = ComplaintLevelEnum.HIGH
-                if (
-                    complaint_post.confirmations_count >= self.COMPLAINT_MEDIUM_THRESHOLD
-                    and complaint_post.confirmations_count
-                    < self.COMPLAINT_HIGH_THRESHOLD
-                ):
-                    complaint_post.level_complaint = ComplaintLevelEnum.MEDIUM
-
-            if complaint_update.status_complaint:
-                complaint_post.status_complaint = complaint_update.status_complaint
-
-            complaint_post_saved = self.complaint_repo.save(complaint_post)
-            return ComplaintResponse(
-                post=self.post_service.get_post(post_id),
-                confirmations_count=complaint_post_saved.confirmations_count,
-                status_complaint=complaint_post_saved.status_complaint,
-                level_complaint=complaint_post_saved.level_complaint,
-            )
-        except Exception as e:
-            raise UnexpectedPostError('Unexpected error updating complaint') from e
-
-    def list_all_complaints_from_community(
-        self, community_id: UUID, params: PaginationSearchParams
-    ) -> PaginationResponse[ComplaintResponse]:
-        complaints, total = self.complaint_repo.list_complaints_by_community(
-            community_id, params
-        )
-        complaints_response = [
-            ComplaintResponse(
-                post=self.post_service.get_post(complaint.post_id),
-                confirmations_count=complaint.confirmations_count,
-                status_complaint=complaint.status_complaint,
-                level_complaint=complaint.level_complaint,
-            )
-            for complaint in complaints
-        ]
-        return PaginationResponse(
-            items=complaints_response,
             total=total,
             has_more=total > (params.offset or 0) + (params.limit or 10),
             current_offset=params.offset or 0,

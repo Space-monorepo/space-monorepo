@@ -283,4 +283,3 @@ def test_create_report_comment_with_all_reasons_route(
         response_data = response.json()
         assert response_data['report']['reason'] == reason
         assert response_data['report']['description'] == description
-

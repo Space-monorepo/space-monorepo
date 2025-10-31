@@ -69,14 +69,14 @@ def list_posts_by_community(
 
 
 @router.post(
-    '/{community_id}/create-post',
+    '/{community_id}/create-announcement',
     response_model=PostResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_post(
+def create_announcement(
     post: PostCreate,
     session: Session = Depends(get_db),
-    _: CommunityMember = Depends(require_roles(['member'])),
+    _: CommunityMember = Depends(require_roles(['moderator', 'admin'])),
 ) -> PostResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).create_post(post)
@@ -241,6 +241,20 @@ def create_complaint(
 ) -> ComplaintResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).create_complaint(post)
+
+
+@router.post(
+    '/{community_id}/complaint/{post_id}/confirm',
+    response_model=ComplaintResponse,
+    status_code=status.HTTP_200_OK,
+)
+def confirm_complaint(
+    post_id: str,
+    session: Session = Depends(get_db),
+    _: CommunityMember = Depends(require_roles(['member'])),
+) -> ComplaintResponse:
+    with TransactionManager(session) as tm:
+        return PostService(tm).confirm_complaint(post_id)
 
 
 @router.post(

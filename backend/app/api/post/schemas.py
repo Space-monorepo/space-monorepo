@@ -38,7 +38,7 @@ class CampaignStatusEnum(str, Enum):
 
 class PostStatusEnum(str, Enum):
     ACTIVE = 'active'
-    REPORTED = 'reported'
+    REPORTED = 'reported'  # TODO: Verificar se o REPORTED realmente é necessário
     SUSPENDED = 'suspended'
     REJECTED = 'rejected'
 
