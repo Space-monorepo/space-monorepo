@@ -66,7 +66,9 @@ class CommunityMember(Base):
         UUIDColumn, ForeignKey('communities.id'), nullable=False, index=True
     )
     role = Column(String, nullable=False)
-    reputation = Column(Integer, nullable=False, default=0)
+    reputation = Column(Integer, nullable=False, default=5000)
+    reputation_level = Column(String, nullable=False, default='helper')
+    popularity = Column(Integer, nullable=False, default=0)
     status_participation = Column(String, nullable=False, default='active')
     entered_in = Column(DateTime, nullable=False, default=func.now())
 
