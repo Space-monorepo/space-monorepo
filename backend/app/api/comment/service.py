@@ -19,6 +19,8 @@ from app.api.comment.schema import (
 from app.api.communities.schema import CommunityMemberResponse
 from app.api.communities.service import CommunityService
 from app.api.post.exceptions import PostNotFoundError
+from app.api.reputation.schema import POPULARITY_POINTS, PopularityActionEnum
+from app.api.reputation.service import ReputationService
 from app.core.transaction import TransactionManager
 from app.utils.schema import PaginationResponse, PaginationSearchParams
 
@@ -33,6 +35,7 @@ class CommentService:
         self.post_repo = tm.get_post_repository()
         self.member_repo = tm.get_member_repository()
         self.community_service = CommunityService(tm)
+        self.reputation_service = ReputationService(tm)
 
     def _get_comment(self, comment_id: UUID) -> Comment:
         comment = self.comment_repo.get_by_id(comment_id)
@@ -98,9 +101,26 @@ class CommentService:
         try:
             comment = Comment(**comment_create.model_dump())
             comment_saved = self.comment_repo.save(comment)
-
             post = self._get_post(comment_create.post_id)
             post.comments_count += 1
+
+            commenter_member = self.community_service.get_member_association(
+                comment_saved.user_id,
+                post.community_id
+            )
+            self.reputation_service.add_popularity_points(
+                member_id=commenter_member.id,
+                action=PopularityActionEnum.COMMENT_POST,
+            )
+
+            post_author_member = self.community_service.get_member_association(
+                post.user_id,
+                post.community_id
+            )
+            self.reputation_service.add_popularity_points(
+                member_id=post_author_member.id,
+                action=PopularityActionEnum.RECEIVE_COMMENT,
+            )
             self.post_repo.save(post)
 
             return self._map_comment_to_response(comment_saved)
@@ -256,6 +276,20 @@ class CommentService:
             like = CommentLikes(comment_id=comment_id, member_id=member_id)
             self.comment_likes_repo.save(like)
             comment = self.comment_repo.save(comment)
+            post = self._get_post(comment.post_id)
+
+            comment_author_member = self.community_service.get_member_association(
+                comment.user_id,
+                post.community_id
+            )
+            self.reputation_service.add_popularity_points(
+                member_id=comment_author_member.id,
+                action=PopularityActionEnum.RECEIVE_LIKE
+            )
+            self.reputation_service.add_popularity_points(
+                member_id=member_id,
+                action=PopularityActionEnum.LIKE_POST
+            )
             return self._map_comment_to_response(comment)
         except Exception as e:
             raise UnexpectedCommentError('Unexpected error liking comment') from e
@@ -269,6 +303,20 @@ class CommentService:
                 comment.likes_count -= 1
             self.comment_likes_repo.delete(like)
             comment = self.comment_repo.save(comment)
+            post = self._get_post(comment.post_id)
+
+            comment_author_member = self.community_service.get_member_association(
+                comment.user_id,
+                post.community_id
+            )
+            author = self.community_service.get_member(comment_author_member.id)
+            author.popularity -= POPULARITY_POINTS[PopularityActionEnum.RECEIVE_LIKE]
+            author.popularity = max(0, author.popularity)
+            self.community_service.member_repo.save(author)
+
+            liker = self.community_service.get_member(member_id)
+            liker.popularity -= POPULARITY_POINTS[PopularityActionEnum.LIKE_POST]
+            self.community_service.member_repo.save(liker)
             return self._map_comment_to_response(comment)
         except Exception as e:
             raise UnexpectedCommentError('Unexpected error unliking comment') from e
