@@ -738,7 +738,7 @@ export default function PostList() {
                       </button>
                       <div className="relative">
                         <button
-                          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                          className="p-1 hover:bg-gray-100 rounded-full cursor-pointer transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             setOpenMenuPostId(openMenuPostId === post.id ? null : post.id);
@@ -754,7 +754,7 @@ export default function PostList() {
                             onBlur={() => setOpenMenuPostId(null)}
                           >
                             <button
-                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 rounded"
+                              className="w-full text-left px-4 py-2 text-sm cursor-pointer text-red-600 hover:bg-gray-100 rounded"
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 setOpenMenuPostId(null);
@@ -858,7 +858,7 @@ export default function PostList() {
                     {/* Botão Participar da Campanha */}
                     {post.type === 'Campanha' && (
                       <button
-                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${post.alreadyParticipating || participating[post.id] ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors cursor-pointer ${post.alreadyParticipating || participating[post.id] ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!post.alreadyParticipating && !participating[post.id]) handleParticipateCampaign(post);
