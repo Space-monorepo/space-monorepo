@@ -712,11 +712,12 @@ def test_create_member_service_success():
     # Create properly configured user mock with all required UserResponse fields
     fake_user_model = Mock()
     fake_user_model.id = fake_user_id
+    fake_user_model.username = 'johndoe'
     fake_user_model.email = 'test@example.com'
     fake_user_model.name = 'Test User'
     fake_user_model.hashed_password = 'hashedpassword123456789'
     fake_user_model.profile_image_url = 'https://example.com/profile.jpg'
-    fake_user_model.reputation_level = 5
+    fake_user_model.bio = 'I am a software engineer'
     fake_user_model.status = UserStatusEnum.ACTIVE
     fake_user_model.created_at = datetime.now()
     fake_user_model.updated_at = datetime.now()

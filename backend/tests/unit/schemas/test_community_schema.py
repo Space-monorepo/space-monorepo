@@ -191,11 +191,12 @@ def test_community_member_response_schema():
     # Create user with all required fields including hashed_password
     user = UserResponse(
         id=user_id,
+        username='johndoe',
         email='test@example.com',
         name='Test User',
         hashed_password='securehashedpassword123456',  # This is the missing field
         profile_image_url='https://example.com/image.jpg',
-        reputation_level=5,
+        bio='I am a software engineer',
         status=UserStatusEnum.ACTIVE,
         created_at=created_at,
         updated_at=updated_at,

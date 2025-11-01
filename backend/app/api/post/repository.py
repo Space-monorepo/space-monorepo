@@ -1,7 +1,7 @@
 from typing import List
 from uuid import UUID
 
-from sqlalchemy import case, desc, select
+from sqlalchemy import String, case, desc, select
 from sqlalchemy.orm import Session
 
 from app.api.communities.model import CommunityMember
@@ -240,8 +240,16 @@ class PollPostsRepository(BaseRepository[PollPosts]):
         super().__init__(PollPosts, session)
         self.session = session
 
-    def get_by_id(self, post_id: UUID) -> PollPosts:
-        poll = self.session.query(PollPosts).filter(PollPosts.post_id == post_id).first()
+    def get_by_id(self, post_id: UUID) -> PollPosts | None:
+        post_id_column = PollPosts.post_id
+        is_string_column = isinstance(post_id_column.type, String)
+        post_id_value = str(post_id) if is_string_column else post_id
+
+        poll = (
+            self.session.query(PollPosts)
+            .filter(PollPosts.post_id == post_id_value)
+            .first()
+        )
         if poll:
             self.logger.debug(
                 f'Model {PollPosts.__qualname__} with id {post_id} retrieved successfully'
@@ -251,6 +259,7 @@ class PollPostsRepository(BaseRepository[PollPosts]):
             self.logger.warning(
                 f'Model {PollPosts.__qualname__} with id {post_id} not found'
             )
+            return None
 
     def list_polls_by_community(
         self, community_id: UUID, params: PaginationSearchParams
@@ -279,9 +288,15 @@ class PollOptionsRepository(BaseRepository[PollOptions]):
         super().__init__(PollOptions, session)
         self.session = session
 
-    def list_by_post(self, post_id: UUID) -> PollOptions:
+    def list_by_post(self, post_id: UUID) -> list[PollOptions] | None:
+        post_id_column = PollOptions.post_id
+        is_string_column = isinstance(post_id_column.type, String)
+        post_id_value = str(post_id) if is_string_column else post_id
+
         poll = (
-            self.session.query(PollOptions).filter(PollOptions.post_id == post_id).all()
+            self.session.query(PollOptions)
+            .filter(PollOptions.post_id == post_id_value)
+            .all()
         )
         if poll:
             self.logger.debug(
@@ -292,6 +307,7 @@ class PollOptionsRepository(BaseRepository[PollOptions]):
             self.logger.warning(
                 f'Model {PollOptions.__qualname__} with id {post_id} not found'
             )
+            return None
 
 
 class PostFeedbackRepository(BaseRepository[PostFeedback]):

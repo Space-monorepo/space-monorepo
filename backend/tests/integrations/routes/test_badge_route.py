@@ -45,6 +45,7 @@ def authenticate_client(client, session_sql):
     """Cliente autenticado como administrador"""
     admin_user = User(
         id=uuid4(),
+        username='johndoeadmin',
         email=f'admin-{uuid4()}@test.com',
         name='Test Admin',
         hashed_password='pw',
@@ -66,6 +67,7 @@ def authenticate_member_client(client, session_sql):
     user_id_obj = uuid4()
     user = User(
         id=user_id_obj,
+        username='johndoemember',
         email=f'member-{user_id_obj}@test.com',
         name='Test Member',
         hashed_password='pw',
@@ -174,6 +176,7 @@ def test_admin_can_assign_and_revoke_badge(authenticate_client, session_sql):
     user_id_obj = uuid4()
     user_obj = User(
         id=user_id_obj,
+        username='johndoetarget',
         email=f'user-{user_id_obj}@test.com',
         name='Test User',
         hashed_password='pw',
@@ -300,6 +303,7 @@ def test_member_can_list_badges_for_a_member(authenticate_member_client, session
     user_target_id = uuid4()
     user_target = User(
         id=user_target_id,
+        username='johndoetarget',
         email=f'user-{user_target_id}@test.com',
         name='T. User Target',
         hashed_password='pw',
