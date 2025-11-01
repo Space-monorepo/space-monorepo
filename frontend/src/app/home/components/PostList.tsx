@@ -795,7 +795,9 @@ export default function PostList() {
                             user: {
                               id: post.user.id,
                               profile_picture: post.user.profile_picture
-                            }
+                            },
+                            poll_question: post.poll_question,
+                            poll_options: post.poll_options
                           });
                           setIsPostPreviewOpen(true);
                         }}
@@ -838,7 +840,9 @@ export default function PostList() {
                             user: {
                               id: post.user.id,
                               profile_picture: post.user.profile_picture
-                            }
+                            },
+                            poll_question: post.poll_question,
+                            poll_options: post.poll_options
                           });
                           setIsPostPreviewOpen(true);
                         }}
@@ -853,6 +857,37 @@ export default function PostList() {
                         alt="Post content"
                         className="object-contain mt-4 w-full rounded aspect-[2.26] max-md:max-w-full"
                       />
+                    )}
+
+                    {/* Opções de Enquete */}
+                    {post.type === 'Enquete' && post.poll_options && post.poll_options.length > 0 && (
+                      <div className="mt-6 space-y-3">
+                        {post.poll_question && (
+                          <h3 className="text-base font-semibold text-neutral-800 mb-4">
+                            {post.poll_question}
+                          </h3>
+                        )}
+                        {post.poll_options.map((option) => (
+                          <div
+                            key={option.id}
+                            className="flex items-center justify-between p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                          >
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-neutral-800">
+                                {option.answer}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 ml-4">
+                              <span className="text-sm font-semibold text-neutral-600">
+                                {option.votes_count}
+                              </span>
+                              <span className="text-xs text-neutral-500">
+                                {option.votes_count === 1 ? 'voto' : 'votos'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
 
                     {/* Botão Participar da Campanha */}

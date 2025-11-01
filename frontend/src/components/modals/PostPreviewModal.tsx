@@ -34,8 +34,8 @@ interface PostPreviewModalProps {
         alreadyParticipating?: boolean;
         community?: { id: string };
         // Props específicas para enquetes
-        question?: string;
-        options?: PollOption[];
+        poll_question?: string;
+        poll_options?: PollOption[];
         // Props específicas para denúncias
         confirmations_count?: number;
         status_complaint?: string;
@@ -246,14 +246,14 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                 )}
 
                                 {/* Seção da Enquete */}
-                                {post.type === 'Enquete' && post.question && post.options && (
+                                {post.type === 'Enquete' && post.poll_question && post.poll_options && (
                                     <div className="mt-6 w-full">
                                         <div className="text-lg font-medium text-neutral-800 mb-4">
-                                            {post.question}
+                                            {post.poll_question}
                                         </div>
                                         <div className="space-y-3">
-                                            {post.options.map((option) => {
-                                                const totalVotes = post.options!.reduce((sum, opt) => sum + opt.votes_count, 0);
+                                            {post.poll_options.map((option) => {
+                                                const totalVotes = post.poll_options!.reduce((sum: number, opt: PollOption) => sum + opt.votes_count, 0);
                                                 const percentage = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
 
                                                 return (
@@ -280,7 +280,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                             })}
                                         </div>
                                         <div className="mt-4 text-xs text-neutral-500">
-                                            Total de votos: {post.options.reduce((sum, opt) => sum + opt.votes_count, 0)}
+                                            Total de votos: {post.poll_options.reduce((sum: number, opt: PollOption) => sum + opt.votes_count, 0)}
                                         </div>
                                     </div>
                                 )}
