@@ -54,12 +54,13 @@ def init_community():
 
             # Criar membros comuns
             membros_info = [
-                {"name": "João Membro", "email": "joao@space.com", "role": "member"},
-                {"name": "Maria Membro", "email": "maria@space.com", "role": "member"},
+                {"username": "joao", "name": "João Membro", "email": "joao@space.com", "role": "member"},
+                {"username": "maria", "name": "Maria Membro", "email": "maria@space.com", "role": "member"},
             ]
             membros = []
             for membro in membros_info:
                 membro_user = UserCreate(
+                    username=membro["username"],
                     name=membro["name"],
                     email=membro["email"],
                     hashed_password="memberpassword123",
@@ -78,12 +79,13 @@ def init_community():
 
             # Criar moderadores
             moderadores_info = [
-                {"name": "Carlos Moderador", "email": "carlos@space.com", "role": "moderator"},
-                {"name": "Ana Moderadora", "email": "ana@space.com", "role": "moderator"},
+                {"username": "carlos", "name": "Carlos Moderador", "email": "carlos@space.com", "role": "moderator"},
+                {"username": "ana", "name": "Ana Moderadora", "email": "ana@space.com", "role": "moderator"},
             ]
             moderadores = []
             for mod in moderadores_info:
                 mod_user = UserCreate(
+                    username=mod["username"],
                     name=mod["name"],
                     email=mod["email"],
                     hashed_password="moderatorpassword123",
