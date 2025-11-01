@@ -159,7 +159,7 @@ type Poll = {
     status: "Ativa" | "Encerrada" | "Rascunho";
     votes?: number;
     description?: string;
-    options?: string[];
+    options?: { id: string; answer: string; votes_count: number }[];
     likes?: number;
     comments?: number;
 };
@@ -913,7 +913,11 @@ export default function ModerationPage() {
         status: post.status === "active" ? "Ativa" : "Encerrada",
         votes: post.likes_count || 0, // usando likes_count como proxy para votes por enquanto
         description: post.content,
-        options: [], // TODO: adicionar opções da enquete quando disponível na API
+        options: Array.isArray(post.poll_options) ? post.poll_options.map(opt => ({
+            id: opt.id,
+            answer: opt.answer,
+            votes_count: opt.votes_count
+        })) : [],
         likes: post.likes_count ?? 0,
         comments: post.comments_count ?? 0,
     });
@@ -1753,69 +1757,39 @@ export default function ModerationPage() {
                                         <section className="flex flex-col justify-center p-8 w-full max-md:px-5 max-md:max-w-full">
                                             <div className="w-full max-md:max-w-full">
                                                 <h3 className="text-sm font-semibold leading-none text-neutral-800 max-md:max-w-full">
-                                                    Qual tema você gostaria que fosse o foco principal da Semana de Engenharia deste ano?
+                                                    Opções da enquete
                                                 </h3>
                                                 <div className="mt-6 w-full max-md:max-w-full">
-                                                    <div className="w-full max-md:max-w-full">
-                                                        <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none max-md:max-w-full">
-                                                            <div className="flex gap-2 items-center self-stretch my-auto">
-                                                                <span className="self-stretch my-auto text-neutral-800">
-                                                                    50%
-                                                                </span>
-                                                                <span className="self-stretch my-auto text-neutral-900">
-                                                                    Inovação e Futuro do Trabalho
-                                                                </span>
-                                                            </div>
-                                                            <span className="self-stretch my-auto text-neutral-500">
-                                                                {Math.floor((selectedPoll.votes || 0) * 0.5)} votos
-                                                            </span>
-                                                        </div>
-                                                        <div className="mt-2 w-full rounded-sm max-md:max-w-full">
-                                                            <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300 max-md:pr-5 max-md:max-w-full">
-                                                                <div className="flex shrink-0 max-w-full h-2 rounded-sm bg-neutral-800 w-[332px]" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="overflow-hidden mt-4 w-full max-md:max-w-full">
-                                                        <div className="flex overflow-hidden flex-wrap gap-10 justify-between items-center w-full text-xs leading-none max-md:max-w-full">
-                                                            <div className="flex gap-2 items-center self-stretch my-auto">
-                                                                <span className="self-stretch my-auto text-neutral-800">
-                                                                    30%
-                                                                </span>
-                                                                <span className="self-stretch my-auto text-neutral-900">
-                                                                    Inteligência Artificial e Ética
-                                                                </span>
-                                                            </div>
-                                                            <span className="self-stretch my-auto text-neutral-500">
-                                                                {Math.floor((selectedPoll.votes || 0) * 0.3)} votos
-                                                            </span>
-                                                        </div>
-                                                        <div className="mt-2 w-full rounded-sm max-md:max-w-full">
-                                                            <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300 max-md:pr-5 max-md:max-w-full">
-                                                                <div className="flex shrink-0 h-2 rounded-sm bg-neutral-800 w-[211px]" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-4 w-full max-md:max-w-full">
-                                                        <div className="flex overflow-hidden flex-wrap gap-10 justify-between items-center w-full text-xs leading-none max-md:max-w-full">
-                                                            <div className="flex gap-2 items-center self-stretch my-auto">
-                                                                <span className="self-stretch my-auto text-neutral-800">
-                                                                    20%
-                                                                </span>
-                                                                <span className="self-stretch my-auto text-neutral-900">
-                                                                    Sustentabilidade e Engenharia Social
-                                                                </span>
-                                                            </div>
-                                                            <span className="self-stretch my-auto text-neutral-500">
-                                                                {Math.floor((selectedPoll.votes || 0) * 0.2)} votos
-                                                            </span>
-                                                        </div>
-                                                        <div className="mt-2 w-full rounded-sm max-md:max-w-full">
-                                                            <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300 max-md:pr-5 max-md:max-w-full">
-                                                                <div className="flex shrink-0 h-2 rounded-sm bg-neutral-800 w-[141px]" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                    {selectedPoll.options && selectedPoll.options.length > 0 ? (
+                                                        selectedPoll.options.map(option => {
+                                                            const totalVotes = selectedPoll.options!.reduce((sum, opt) => sum + opt.votes_count, 0);
+                                                            const percent = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
+                                                            return (
+                                                                <div key={option.id} className="mb-4">
+                                                                    <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none max-md:max-w-full">
+                                                                        <div className="flex gap-2 items-center self-stretch my-auto">
+                                                                            <span className="self-stretch my-auto text-neutral-800">
+                                                                                {percent}%
+                                                                            </span>
+                                                                            <span className="self-stretch my-auto text-neutral-900">
+                                                                                {option.answer}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="self-stretch my-auto text-neutral-500">
+                                                                            {option.votes_count} votos
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="mt-2 w-full rounded-sm max-md:max-w-full">
+                                                                        <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300 max-md:pr-5 max-md:max-w-full">
+                                                                            <div className="flex shrink-0 h-2 rounded-sm bg-neutral-800" style={{ width: `${percent}%`, minWidth: '8px' }} />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    ) : (
+                                                        <div className="text-neutral-500">Nenhuma opção cadastrada.</div>
+                                                    )}
                                                 </div>
 
                                                 {/* Botões do footer da enquete */}
