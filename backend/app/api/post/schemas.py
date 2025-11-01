@@ -166,6 +166,66 @@ class PostResponse(BaseModel):
     )
 
 
+class PostFeedResponse(BaseModel):
+    id: uuid.UUID
+    community: CommunityRelated
+    user: PostAuthor
+    type_post: PostTypeEnum
+    title: str
+    content: str
+    image_url: str | None
+    status: PostStatusEnum
+    likes_count: int
+    comments_count: int
+    report_count: int
+    created_at: datetime
+    updated_at: datetime
+    poll_question: str | None = Field(
+        None, description='Question of the poll (only for poll posts)'
+    )
+    poll_options: list['PollOptionResponse'] | None = Field(
+        None, description='Options of the poll (only for poll posts)'
+    )
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            'examples': [
+                {
+                    'id': '123',
+                    'community_id': {
+                        'id': '123',
+                        'name': 'Community 1',
+                    },
+                    'user': {
+                        'id': '456',
+                        'name': 'User 1',
+                        'profile_picture': 'https://example.com/image.jpg',
+                        'role': 'admin',
+                    },
+                    'type_post': 'campaign',
+                    'title': 'Title of the post',
+                    'content': 'Content of the post',
+                    'image_url': 'https://example.com/image.jpg',
+                    'likes_count': 10,
+                    'comments_count': 5,
+                    'report_count': 0,
+                    'created_at': '2021-01-01T00:00:00Z',
+                    'updated_at': '2021-01-01T00:00:00Z',
+                    'poll_question': 'What is your favorite color?',
+                    'poll_options': [
+                        {
+                            'id': '1',
+                            'answer': 'Red',
+                            'votes_count': 10,
+                        },
+                    ],
+                }
+            ]
+        },
+    )
+
+
 class CampaignUpdate(BaseModel):
     target_participants: int | None = Field(
         None, description='Target participants for the campaign'

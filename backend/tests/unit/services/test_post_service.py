@@ -14,8 +14,10 @@ from app.api.post.schemas import (
     ComplaintResponse,
     ComplaintStatusEnum,
     PollCreate,
+    PollOptionResponse,
     PostAuthor,
     PostCreate,
+    PostFeedResponse,
     PostResponse,
     PostStatusEnum,
     PostTypeEnum,
@@ -105,7 +107,7 @@ def test_create_post_service_success():
     )
     mock_post_repo.save.assert_called_once()
     assert result is not None
-    assert isinstance(result, PostResponse)
+    assert isinstance(result, PostFeedResponse)
     assert result.id == fake_post_id
     assert str(result.user.id) == fake_user_id
     assert str(result.community.id) == fake_community_id
@@ -178,7 +180,7 @@ def test_get_post_by_id_service_success():
     # Assert
     mock_post_repo.get_by_id.assert_called_once_with(fake_post_id)
     assert result is not None
-    assert isinstance(result, PostResponse)
+    assert isinstance(result, PostFeedResponse)
     assert str(result.id) == fake_post_id
     assert result.title == fake_title
     assert result.content == fake_content
@@ -404,6 +406,142 @@ def test_get_user_feed_service_success():
 
 
 @pytest.mark.unit
+def test_get_user_feed_service_with_polls():
+    """
+    Tests the `get_user_feed` method of PostService with poll posts.
+
+    Scenario:
+    - Given a valid user ID and pagination parameters with poll posts in feed
+    - When the service gets user feed from repository
+    - Then it should return poll posts with question and options included
+    """
+    # Arrange
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
+    fake_pagination_params = PaginationSearchParams(offset=0, limit=10)
+
+    # Criar posts incluindo um poll
+    fake_posts = []
+    
+    # Post normal
+    fake_post_normal = Mock(spec=Post)
+    fake_post_normal.id = uuid4()
+    fake_post_normal.user_id = fake_user_id
+    fake_post_normal.community_id = fake_community_id
+    fake_post_normal.title = 'Normal Post'
+    fake_post_normal.content = 'Normal content'
+    fake_post_normal.type_post = PostTypeEnum.ANNOUNCEMENT
+    fake_post_normal.image_url = None
+    fake_post_normal.status = PostStatusEnum.ACTIVE
+    fake_post_normal.user_role_in_community = CommunityMemberRoleEnum.MEMBER
+    fake_post_normal.likes_count = 5
+    fake_post_normal.comments_count = 2
+    fake_post_normal.report_count = 0
+    fake_post_normal.created_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    fake_post_normal.updated_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    
+    fake_community_normal = Mock()
+    fake_community_normal.name = 'Normal Community'
+    fake_post_normal.community = fake_community_normal
+    
+    fake_user_normal = Mock()
+    fake_user_normal.name = 'Normal User'
+    fake_user_normal.profile_image_url = 'https://example.com/user.jpg'
+    fake_post_normal.user = fake_user_normal
+    
+    fake_posts.append(fake_post_normal)
+    
+    # Post poll
+    fake_poll_post_id = uuid4()
+    fake_post_poll = Mock(spec=Post)
+    fake_post_poll.id = fake_poll_post_id
+    fake_post_poll.user_id = fake_user_id
+    fake_post_poll.community_id = fake_community_id
+    fake_post_poll.title = 'Poll Post'
+    fake_post_poll.content = 'Poll content'
+    fake_post_poll.type_post = PostTypeEnum.POLL
+    fake_post_poll.image_url = None
+    fake_post_poll.status = PostStatusEnum.ACTIVE
+    fake_post_poll.user_role_in_community = CommunityMemberRoleEnum.MEMBER
+    fake_post_poll.likes_count = 10
+    fake_post_poll.comments_count = 5
+    fake_post_poll.report_count = 0
+    fake_post_poll.created_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    fake_post_poll.updated_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    
+    fake_community_poll = Mock()
+    fake_community_poll.name = 'Poll Community'
+    fake_post_poll.community = fake_community_poll
+    
+    fake_user_poll = Mock()
+    fake_user_poll.name = 'Poll User'
+    fake_user_poll.profile_image_url = 'https://example.com/polluser.jpg'
+    fake_post_poll.user = fake_user_poll
+    
+    fake_posts.append(fake_post_poll)
+
+    # Mock PollPosts e PollOptions
+    fake_poll_posts = Mock(spec=PollPosts)
+    fake_poll_posts.question = 'What is your favorite color?'
+    
+    fake_poll_option1 = Mock(spec=PollOptions)
+    fake_poll_option1.id = uuid4()
+    fake_poll_option1.answer = 'Red'
+    fake_poll_option1.votes_count = 10
+    
+    fake_poll_option2 = Mock(spec=PollOptions)
+    fake_poll_option2.id = uuid4()
+    fake_poll_option2.answer = 'Blue'
+    fake_poll_option2.votes_count = 5
+    
+    fake_poll_options = [fake_poll_option1, fake_poll_option2]
+
+    mock_tm = Mock()
+    mock_post_repo = Mock()
+    mock_poll_posts_repo = Mock()
+    mock_poll_options_repo = Mock()
+    
+    mock_post_repo.get_user_feed.return_value = (fake_posts, 2)
+    mock_poll_posts_repo.get_by_id.return_value = fake_poll_posts
+    mock_poll_options_repo.list_by_post.return_value = fake_poll_options
+
+    service = PostService(mock_tm)
+    service.post_repo = mock_post_repo
+    service.poll_posts_repo = mock_poll_posts_repo
+    service.poll_options_repo = mock_poll_options_repo
+
+    # Act
+    result = service.get_user_feed(fake_user_id, fake_pagination_params)
+
+    # Assert
+    mock_post_repo.get_user_feed.assert_called_once_with(
+        fake_user_id, fake_pagination_params
+    )
+    assert result is not None
+    assert result.items is not None
+    assert len(result.items) == 2
+    
+    # Verificar post normal (sem dados de poll)
+    normal_post = next(p for p in result.items if p.type_post == PostTypeEnum.ANNOUNCEMENT)
+    assert normal_post.poll_question is None
+    assert normal_post.poll_options is None
+    
+    # Verificar post poll (com dados de poll)
+    poll_post = next(p for p in result.items if p.type_post == PostTypeEnum.POLL)
+    assert poll_post.poll_question == 'What is your favorite color?'
+    assert poll_post.poll_options is not None
+    assert len(poll_post.poll_options) == 2
+    assert poll_post.poll_options[0].answer == 'Red'
+    assert poll_post.poll_options[0].votes_count == 10
+    assert poll_post.poll_options[1].answer == 'Blue'
+    assert poll_post.poll_options[1].votes_count == 5
+    
+    # Verificar que os repositórios foram chamados para o poll
+    mock_poll_posts_repo.get_by_id.assert_called_once_with(fake_poll_post_id)
+    mock_poll_options_repo.list_by_post.assert_called_once_with(fake_poll_post_id)
+
+
+@pytest.mark.unit
 def test_update_post_service_success():
     """
     Tests the `update_post` method of PostService.
@@ -486,7 +624,7 @@ def test_update_post_service_success():
         fake_existing_post.content == fake_updated_content
     )  # Conteúdo foi atualizado no objeto
     assert result is not None
-    assert isinstance(result, PostResponse)
+    assert isinstance(result, PostFeedResponse)
     assert result.id == fake_post_id
     assert result.content == fake_updated_content
     assert result.title == 'Test Post Title'
@@ -633,7 +771,7 @@ def test_like_post_service_success():
     mock_post_repo.save.assert_called_once_with(fake_existing_post)
     assert fake_existing_post.likes_count == 1  # Verificar que foi incrementado
     assert result is not None
-    assert isinstance(result, PostResponse)
+    assert isinstance(result, PostFeedResponse)
     assert str(result.id) == fake_post_id
     assert result.likes_count == 1
     assert result.title == 'Post to Like'
@@ -731,7 +869,7 @@ def test_unlike_post_service_success():
     mock_post_repo.save.assert_called_once_with(fake_existing_post)
     assert fake_existing_post.likes_count == 0  # Verificar que foi decrementado
     assert result is not None
-    assert isinstance(result, PostResponse)
+    assert isinstance(result, PostFeedResponse)
     assert str(result.id) == fake_post_id
     assert result.likes_count == 0
     assert result.title == 'Post to Unlike'
@@ -1501,7 +1639,7 @@ def test_report_post_service_success():
     mock_post_repo.save.assert_called_once_with(fake_existing_post)
     assert fake_existing_post.report_count == 1  # Verificar que foi incrementado
     assert result is not None
-    assert isinstance(result, PostResponse)
+    assert isinstance(result, PostFeedResponse)
     assert str(result.id) == str(fake_post_id)
     assert result.report_count == 1
 
@@ -1635,7 +1773,7 @@ def test_report_post_service_reports_threshold():
     assert fake_existing_post.report_count == 30  # Verificar que foi incrementado
     assert fake_existing_post.status == PostStatusEnum.REPORTED  # Status mudou
     assert result is not None
-    assert isinstance(result, PostResponse)
+    assert isinstance(result, PostFeedResponse)
     assert result.report_count == 30
     assert result.status == PostStatusEnum.REPORTED
 
