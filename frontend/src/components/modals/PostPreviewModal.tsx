@@ -6,6 +6,9 @@ import { CheckmarkFilled, ArrowUp, Forum } from "@carbon/icons-react";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import { translatePostType } from "@/lib/postTypeTranslations";
+import { voteOnPoll } from "@/app/api/src/services/post/postService";
+import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
+import { toast } from "react-toastify";
 
 interface PollOption {
     id: string;
@@ -49,8 +52,14 @@ interface PostPreviewModalProps {
 
 const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClose }) => {
     const [openMenu, setOpenMenu] = React.useState(false);
+    const [localPost, setLocalPost] = React.useState(post);
 
-    if (!isOpen || !post || typeof window === 'undefined') return null;
+    // Sincronizar localPost com prop post
+    React.useEffect(() => {
+        setLocalPost(post);
+    }, [post]);
+
+    if (!isOpen || !localPost || typeof window === 'undefined') return null;
 
     const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
         if (e.target === e.currentTarget) {
@@ -78,9 +87,24 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
         // Implementar lógica de participação em campanha aqui se necessário
     };
 
-    const handleVotePoll = (optionId: string) => {
-        // Implementar lógica de votação em enquete aqui se necessário
-        // await voteOnPoll(post.community?.id || 'default-community-id', optionId);
+    const handleVotePoll = async (optionId: string) => {
+        const token = getTokenFromCookies();
+        const communityId = localPost.community?.id || 'default-community-id';
+        try {
+            const response = await voteOnPoll(communityId, optionId, token ?? undefined);
+
+            // A resposta do backend pode conter os dados em response.post.poll_options ou em response.options
+            const updatedOptions = response?.post?.poll_options ?? response?.options ?? [];
+            const updatedQuestion = response?.question ?? response?.post?.poll_question ?? localPost.poll_question;
+
+            // Atualiza estado local do modal
+            setLocalPost(prev => prev ? { ...prev, poll_options: updatedOptions, poll_question: updatedQuestion } : prev);
+
+            toast.success('Voto contabilizado');
+        } catch (err: any) {
+            console.error('Erro ao votar na enquete', err);
+            toast.error(err?.message || 'Erro ao votar na enquete');
+        }
     };
 
     const handleReportPost = async (e: React.MouseEvent) => {
@@ -113,10 +137,10 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                 <div className="flex items-start min-w-60">
                                     <div className="w-11 h-11 rounded-[32px] overflow-hidden shrink-0 flex items-center justify-center bg-neutral-200">
                                         <img
-                                            src={post.user && (post.user.profile_image_url || post.user.profile_picture)
-                                                ? (post.user.profile_image_url || post.user.profile_picture)
-                                                : post.avatar || "/placeholder.svg"}
-                                            alt={`${post.author} avatar`}
+                                            src={localPost.user && (localPost.user.profile_image_url || localPost.user.profile_picture)
+                                                ? (localPost.user.profile_image_url || localPost.user.profile_picture)
+                                                : localPost.avatar || "/placeholder.svg"}
+                                            alt={`${localPost.author} avatar`}
                                             className="object-cover w-full h-full"
                                         />
                                     </div>
@@ -124,38 +148,38 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                         <div className="flex gap-2 items-center w-full h-[23px]">
                                             <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                                                 <Link
-                                                    href={`/profile/${post.username || post.user?.id}`}
+                                                    href={`/profile/${localPost.username || localPost.user?.id}`}
                                                     className="self-stretch my-auto text-sm text-neutral-800 hover:text-blue-600 whitespace-nowrap transition-colors hover:underline"
                                                 >
-                                                    {post.author}
+                                                    {localPost.author}
                                                 </Link>
                                                 <CheckmarkFilled
-                                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(post.role)}`}
+                                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(localPost.role)}`}
                                                     aria-label="Verificado"
                                                 />
                                                 <div className="self-stretch my-auto text-[10px] font-semibold">
                                                     •
                                                 </div>
-                                                <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(post.role)}`}>
+                                                <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(localPost.role)}`}>
                                                     <div className="self-stretch my-auto">
-                                                        {post.role}
+                                                        {localPost.role}
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="self-stretch my-auto text-xs leading-none text-justify whitespace-nowrap text-neutral-800">
-                                                {post.location}
+                                                {localPost.location}
                                             </div>
                                         </div>
                                         <div className="self-start px-3 mt-2 text-xs font-semibold tracking-normal whitespace-nowrap text-neutral-500">
                                             <div className="flex items-center gap-1">
                                                 <div className="self-stretch my-auto text-neutral-500">
-                                                    {post.type || "Tipo não informado"}
+                                                    {localPost.type || "Tipo não informado"}
                                                 </div>
                                                 <div className="self-stretch my-auto text-[10px] text-neutral-500">
                                                     •
                                                 </div>
                                                 <div className="self-stretch my-auto text-neutral-500">
-                                                    {post.time}
+                                                    {localPost.time}
                                                 </div>
                                             </div>
                                         </div>
@@ -208,52 +232,52 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                             className="text-neutral-800 px-0 font-georgia font-bold break-words w-full max-w-full"
                                             style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}
                                         >
-                                            {post.title}
+                                            {localPost.title}
                                         </h2>
                                     </div>
                                     <div className="flex gap-2 items-center px-3 py-1 my-auto text-sm leading-none text-justify whitespace-nowrap rounded-sm flex-shrink-0">
-                                        <div className="self-stretch my-auto text-neutral-800">{(post.likes ?? 0) + (post.comments ?? 0) + (post.shares ?? 0)}</div>
+                                        <div className="self-stretch my-auto text-neutral-800">{(localPost.likes ?? 0) + (localPost.comments ?? 0) + (localPost.shares ?? 0)}</div>
                                         <Activity className="h-4 w-4 text-gray-500" />
                                     </div>
                                 </div>
 
-                                {post.content && (
+                                {localPost.content && (
                                     <div
                                         className="mt-4 text-sm leading-5 text-justify text-neutral-800 max-md:max-w-full whitespace-pre-line font-regular break-words w-full max-w-full"
                                         style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}
                                     >
-                                        {post.content}
+                                        {localPost.content}
                                     </div>
                                 )}
 
-                                {post.imageUrl && (
+                                {localPost.imageUrl && (
                                     <img
-                                        src={post.imageUrl}
+                                        src={localPost.imageUrl}
                                         alt="Post content"
                                         className="object-contain mt-4 w-full rounded aspect-[2.26] max-md:max-w-full"
                                     />
                                 )}
 
                                 {/* Botão Participar da Campanha */}
-                                {post.type === 'Campanha' && (
+                                {localPost.type === 'Campanha' && (
                                     <button
-                                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${post.alreadyParticipating ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${localPost.alreadyParticipating ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
                                         onClick={handleParticipateCampaign}
-                                        disabled={post.alreadyParticipating}
+                                        disabled={localPost.alreadyParticipating}
                                     >
-                                        {post.alreadyParticipating ? 'Já participa da campanha' : 'Participar da Campanha'}
+                                        {localPost.alreadyParticipating ? 'Já participa da campanha' : 'Participar da Campanha'}
                                     </button>
                                 )}
 
                                 {/* Seção da Enquete */}
-                                {post.type === 'Enquete' && post.poll_question && post.poll_options && (
+                                {localPost.type === 'Enquete' && localPost.poll_question && localPost.poll_options && (
                                     <div className="mt-6 w-full">
                                         <div className="text-lg font-medium text-neutral-800 mb-4">
-                                            {post.poll_question}
+                                            {localPost.poll_question}
                                         </div>
                                         <div className="space-y-3">
-                                            {post.poll_options.map((option) => {
-                                                const totalVotes = post.poll_options!.reduce((sum: number, opt: PollOption) => sum + opt.votes_count, 0);
+                                            {localPost.poll_options.map((option) => {
+                                                const totalVotes = localPost.poll_options!.reduce((sum: number, opt: PollOption) => sum + opt.votes_count, 0);
                                                 const percentage = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
 
                                                 return (
@@ -280,13 +304,13 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                             })}
                                         </div>
                                         <div className="mt-4 text-xs text-neutral-500">
-                                            Total de votos: {post.poll_options.reduce((sum: number, opt: PollOption) => sum + opt.votes_count, 0)}
+                                            Total de votos: {localPost.poll_options.reduce((sum: number, opt: PollOption) => sum + opt.votes_count, 0)}
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Seção da Denúncia */}
-                                {post.type === 'Denúncia' && (
+                                {localPost.type === 'Denúncia' && (
                                     <div className="mt-6 w-full p-4 bg-red-50 rounded-lg border border-red-200">
                                         <div className="flex items-center gap-2 mb-3">
                                             <div className="w-2 h-2 rounded-full bg-red-500"></div>
@@ -296,39 +320,39 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                             <div>
                                                 <span className="text-neutral-600">Status:</span>
                                                 <span className="ml-2 text-neutral-800 font-medium">
-                                                    {post.status_complaint === 'pending' && 'Pendente'}
-                                                    {post.status_complaint === 'under_investigation' && 'Sob investigação'}
-                                                    {post.status_complaint === 'resolved' && 'Resolvida'}
-                                                    {!post.status_complaint && 'Pendente'}
+                                                    {localPost.status_complaint === 'pending' && 'Pendente'}
+                                                    {localPost.status_complaint === 'under_investigation' && 'Sob investigação'}
+                                                    {localPost.status_complaint === 'resolved' && 'Resolvida'}
+                                                    {!localPost.status_complaint && 'Pendente'}
                                                 </span>
                                             </div>
                                             <div>
                                                 <span className="text-neutral-600">Nível:</span>
-                                                <span className={`ml-2 font-medium ${post.level_complaint === 'high' ? 'text-red-600' :
-                                                    post.level_complaint === 'medium' ? 'text-yellow-600' :
+                                                <span className={`ml-2 font-medium ${localPost.level_complaint === 'high' ? 'text-red-600' :
+                                                    localPost.level_complaint === 'medium' ? 'text-yellow-600' :
                                                         'text-green-600'
                                                     }`}>
-                                                    {post.level_complaint === 'high' && 'Alto'}
-                                                    {post.level_complaint === 'medium' && 'Médio'}
-                                                    {post.level_complaint === 'low' && 'Baixo'}
-                                                    {!post.level_complaint && 'Baixo'}
+                                                    {localPost.level_complaint === 'high' && 'Alto'}
+                                                    {localPost.level_complaint === 'medium' && 'Médio'}
+                                                    {localPost.level_complaint === 'low' && 'Baixo'}
+                                                    {!localPost.level_complaint && 'Baixo'}
                                                 </span>
                                             </div>
                                         </div>
                                         <div className="mt-3 text-sm">
                                             <span className="text-neutral-600">Confirmações:</span>
                                             <span className="ml-2 text-neutral-800 font-medium">
-                                                {post.confirmations_count ?? 0}
+                                                {localPost.confirmations_count ?? 0}
                                             </span>
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Seção do Anúncio - Tags */}
-                                {post.type === 'Anúncio' && post.tags && post.tags.length > 0 && (
+                                {localPost.type === 'Anúncio' && localPost.tags && localPost.tags.length > 0 && (
                                     <div className="mt-4 w-full">
                                         <div className="flex flex-wrap gap-2">
-                                            {post.tags.map((tag, index) => (
+                                            {localPost.tags.map((tag, index) => (
                                                 <span
                                                     key={index}
                                                     className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
@@ -351,7 +375,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                 >
                                     <ArrowUp className="h-4 w-4 text-gray-500" />
                                     <div className="self-stretch my-auto text-neutral-500">
-                                        {post.likes ?? 0}
+                                        {localPost.likes ?? 0}
                                     </div>
                                 </button>
                                 <button
@@ -361,7 +385,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                 >
                                     <Forum className="h-4 w-4 text-gray-500" />
                                     <div className="self-stretch my-auto text-neutral-500">
-                                        {post.comments ?? 0}
+                                        {localPost.comments ?? 0}
                                     </div>
                                 </button>
                                 <button
@@ -371,7 +395,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                 >
                                     <Activity className="h-4 w-4 text-teal-700" />
                                     <div className="self-stretch my-auto">
-                                        {post.shares ?? 0}
+                                        {localPost.shares ?? 0}
                                     </div>
                                 </button>
                             </div>

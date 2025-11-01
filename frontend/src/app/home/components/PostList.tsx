@@ -10,6 +10,7 @@ import {
   Activity,
 } from "lucide-react";
 import { fetchPostsByCommunity } from "@/app/api/src/services/post/postService";
+import { voteOnPoll } from "@/app/api/src/services/post/postService";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
 import { fetchUserCampaigns } from "@/app/api/src/services/post/fetchUserCampaigns";
 import usePostActions from "@/app/api/src/hooks/post/usePostActions";
@@ -408,6 +409,7 @@ type PostDisplay = PostResponse & {
   liked: boolean;
   username?: string;
   alreadyParticipating?: boolean;
+  userVotedOptionId?: string; // id da opção que o usuário votou
 };
 
 export default function PostList() {
@@ -461,6 +463,12 @@ export default function PostList() {
         if (translatePostType(item.type_post) === 'Campanha') {
           alreadyParticipating = item.user.id === currentUserId || userCampaignPostIds.includes(item.id);
         }
+        // Detecta se o usuário já votou na enquete
+        let userVotedOptionId: string | undefined = undefined;
+        if (item.poll_options && Array.isArray(item.poll_options)) {
+          const votedOption = item.poll_options.find((opt: any) => Array.isArray(opt.votes) && opt.votes.some((v: any) => v.user_id === currentUserId));
+          if (votedOption) userVotedOptionId = votedOption.id;
+        }
         return {
           ...item,
           author: item.user.name,
@@ -476,6 +484,7 @@ export default function PostList() {
           shares: item.report_count,
           liked: false,
           alreadyParticipating,
+          userVotedOptionId,
         };
       });
       return fetchedPosts;
@@ -593,6 +602,45 @@ export default function PostList() {
     // setDisplayedPosts(posts => posts.map((p) =>
     //   p.id === post.id ? { ...p, shares: p.shares + 1 } : p
     // ));
+  };
+
+  // Votar em opção da enquete
+  const handleVotePoll = async (post: PostDisplay, optionId: string) => {
+    if (post.userVotedOptionId) {
+      toast.info('Você já votou nesta enquete.');
+      return;
+    }
+    const token = getTokenFromCookies();
+    const communityId = post.community?.id || 'default-community-id';
+    try {
+      const response = await voteOnPoll(communityId, optionId, token ?? undefined);
+
+      // A resposta do backend pode conter os dados em response.post.poll_options ou em response.options
+      const updatedOptions = response?.post?.poll_options ?? response?.options ?? [];
+      const updatedQuestion = response?.question ?? response?.post?.poll_question ?? post.poll_question;
+
+      // Detecta se o usuário votou após o voto
+      let userVotedOptionId: string | undefined = undefined;
+      if (updatedOptions && Array.isArray(updatedOptions)) {
+        const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).sub : null;
+        const votedOption = updatedOptions.find((opt: any) => Array.isArray(opt.votes) && opt.votes.some((v: any) => v.user_id === currentUserId));
+        if (votedOption) userVotedOptionId = votedOption.id;
+      }
+
+      // Atualiza listas locais (allPosts e displayedPosts)
+      setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: updatedOptions, poll_question: updatedQuestion, userVotedOptionId } as any : p));
+      setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: updatedOptions, poll_question: updatedQuestion, userVotedOptionId } as any : p));
+
+      // Atualiza modal se aberto
+      if (postPreviewData && postPreviewData.id === post.id) {
+        setPostPreviewData((prev: any) => ({ ...prev, poll_options: updatedOptions, poll_question: updatedQuestion, userVotedOptionId }));
+      }
+
+      toast.success('Voto contabilizado');
+    } catch (err: any) {
+      console.error('Erro ao votar na enquete', err);
+      toast.error(err?.message || 'Erro ao votar na enquete');
+    }
   };
 
   // Participar da campanha
@@ -861,32 +909,55 @@ export default function PostList() {
 
                     {/* Opções de Enquete */}
                     {post.type === 'Enquete' && post.poll_options && post.poll_options.length > 0 && (
-                      <div className="mt-6 space-y-3">
+                      <div className="mt-6 w-full">
                         {post.poll_question && (
-                          <h3 className="text-base font-semibold text-neutral-800 mb-4">
+                          <h3 className="text-base font-semibold text-neutral-800 mb-6">
                             {post.poll_question}
                           </h3>
                         )}
-                        {post.poll_options.map((option) => (
-                          <div
-                            key={option.id}
-                            className="flex items-center justify-between p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                          >
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-neutral-800">
-                                {option.answer}
-                              </p>
+                        {post.poll_options.map((option) => {
+                          const totalVotes = post.poll_options!.reduce((sum, opt) => sum + opt.votes_count, 0);
+                          const percent = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
+                          const isUserVote = post.userVotedOptionId === option.id;
+
+                          return (
+                            <div
+                              key={option.id}
+                              className={`mb-4 ${!post.userVotedOptionId ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!post.userVotedOptionId) handleVotePoll(post, option.id);
+                              }}
+                            >
+                              <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none">
+                                <div className="flex gap-2 items-center self-stretch my-auto">
+                                  <span className="self-stretch my-auto text-neutral-800 font-medium">
+                                    {percent}%
+                                  </span>
+                                  <span className="self-stretch my-auto text-neutral-900">
+                                    {option.answer}
+                                  </span>
+                                  {isUserVote && (
+                                    <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">
+                                      Seu voto
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="self-stretch my-auto text-neutral-500">
+                                  {option.votes_count} {option.votes_count === 1 ? 'voto' : 'votos'}
+                                </span>
+                              </div>
+                              <div className="mt-2 w-full rounded-sm">
+                                <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300">
+                                  <div
+                                    className="flex shrink-0 h-2 rounded-sm bg-neutral-800"
+                                    style={{ width: `${percent}%`, minWidth: '8px' }}
+                                  />
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 ml-4">
-                              <span className="text-sm font-semibold text-neutral-600">
-                                {option.votes_count}
-                              </span>
-                              <span className="text-xs text-neutral-500">
-                                {option.votes_count === 1 ? 'voto' : 'votos'}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
 

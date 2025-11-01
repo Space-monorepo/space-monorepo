@@ -111,3 +111,22 @@ export const fetchCampaignDetails = async (token: string, communityId: string, p
 
   return data;
 };
+
+// Função para votar em uma opção da enquete
+export const voteOnPoll = async (communityId: string, pollOptionId: string, token?: string): Promise<any> => {
+  const url = `${API_URL}/posts/${communityId}/post/poll-options/${pollOptionId}/vote`;
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Erro ao votar na enquete' }));
+    throw new Error(errorData.message || 'Erro ao votar na enquete');
+  }
+
+  return response.json();
+};
