@@ -20,20 +20,22 @@ from app.api.users.schema import (
 @pytest.mark.unit
 def test_user_input_schema():
     user = UserCreate(
+        username='johndoe',
         email='johndoe@example.com',
         name='John Doe',
+        bio='I am a software engineer',
         hashed_password='hashed_password',
         profile_image_url=None,
-        reputation_level=1,
         status='pending',
     )
 
     assert user.model_dump() == {
+        'username': 'johndoe',
         'email': 'johndoe@example.com',
         'name': 'John Doe',
         'hashed_password': 'hashed_password',
+        'bio': 'I am a software engineer',
         'profile_image_url': None,
-        'reputation_level': 1,
         'status': 'pending',
     }
 
@@ -62,11 +64,12 @@ def test_user_response_schema():
 
     user_response = UserResponse(
         id=user_id,
+        username='johndoe',
         email='johndoe@example.com',
         name='John Doe',
         hashed_password='hashed_password',
+        bio='I am a software engineer',
         profile_image_url=None,
-        reputation_level=1,
         status='pending',
         created_at=created_at,
         updated_at=updated_at,
@@ -74,11 +77,12 @@ def test_user_response_schema():
 
     assert user_response.model_dump() == {
         'id': user_id,
+        'username': 'johndoe',
         'email': 'johndoe@example.com',
         'name': 'John Doe',
         'hashed_password': 'hashed_password',
         'profile_image_url': None,
-        'reputation_level': 1,
+        'bio': 'I am a software engineer',
         'status': 'pending',
         'created_at': created_at,
         'updated_at': updated_at,

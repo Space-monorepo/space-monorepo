@@ -308,6 +308,33 @@ def test_get_user_feed_route(authenticate_client, community_member_on_db, post_o
 
 
 @pytest.mark.integration
+def test_get_user_feed_route_with_polls(
+    authenticate_client,
+    community_member_on_db,
+    poll_post_on_db,
+    poll_option_on_db,
+):
+
+    # Testar feed
+    response = authenticate_client.get('/posts/feed')
+    assert response.status_code == status.HTTP_200_OK
+    
+    items = response.json()['items']
+    # Encontrar o post poll no feed
+    poll_item = next(
+        (item for item in items if item['type_post'] == PostTypeEnum.POLL), None
+    )
+    
+    assert poll_item is not None
+    assert poll_item['poll_question'] == 'Test Poll'
+    assert poll_item['poll_options'] is not None
+    assert len(poll_item['poll_options']) == 3
+    assert poll_item['poll_options'][0]['answer'] == 'Test Option 0'
+    assert poll_item['poll_options'][1]['answer'] == 'Test Option 1'
+    assert poll_item['poll_options'][2]['answer'] == 'Test Option 2'
+
+
+@pytest.mark.integration
 def test_list_user_campaigns_route(
     authenticate_client,
     community_member_on_db,

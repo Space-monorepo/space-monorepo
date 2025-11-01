@@ -29,8 +29,10 @@ from app.api.post.schemas import (
     PollResponse,
     PostAuthor,
     PostCreate,
+    PostFeedResponse,
     PostResponse,
     PostStatusEnum,
+    PostTypeEnum,
     PostUpdate,
 )
 from app.core.transaction import TransactionManager
@@ -63,8 +65,12 @@ class PostService:
         return post
 
     @staticmethod
-    def _map_post_to_response(post: Post) -> PostResponse:
-        return PostResponse(
+    def __map_post_to_feed_response(
+        post: Post,
+        poll_question: str | None = None,
+        poll_options: list[PollOptionResponse] | None = None,
+    ) -> PostFeedResponse:
+        return PostFeedResponse(
             id=post.id,
             community=CommunityRelated(
                 id=post.community_id,
@@ -87,6 +93,8 @@ class PostService:
             report_count=post.report_count,
             created_at=post.created_at,
             updated_at=post.updated_at,
+            poll_question=poll_question,
+            poll_options=poll_options,
         )
 
     def create_post(self, post: PostCreate) -> PostResponse:
@@ -97,20 +105,20 @@ class PostService:
             post = Post(**post.model_dump())
             post.user_role_in_community = role
             post_saved = self.post_repo.save(post)
-            return self._map_post_to_response(post_saved)
+            return self.__map_post_to_feed_response(post_saved)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error creating post') from e
 
     def get_post(self, post_id: UUID) -> PostResponse:
         post = self._get_post(post_id)
-        return self._map_post_to_response(post)
+        return self.__map_post_to_feed_response(post)
 
     def list_posts_by_community(
         self, community_id: UUID, params: PaginationSearchParams
-    ) -> PaginationResponse[PostResponse]:
+    ) -> PaginationResponse[PostFeedResponse]:
         posts, total = self.post_repo.list_posts_by_community(community_id, params)
         return PaginationResponse(
-            items=[self._map_post_to_response(post) for post in posts],
+            items=[self.__map_post_to_feed_response(post) for post in posts],
             total=total,
             has_more=total > (params.offset or 0) + (params.limit or 10),
             current_offset=params.offset or 0,
@@ -119,17 +127,17 @@ class PostService:
 
     def list_posts_by_user(
         self, user_id: UUID, params: PaginationSearchParams
-    ) -> PaginationResponse[PostResponse]:
+    ) -> PaginationResponse[PostFeedResponse]:
         posts, total = self.post_repo.list_posts_by_user(user_id, params)
         return PaginationResponse(
-            items=[self._map_post_to_response(post) for post in posts],
+            items=[self.__map_post_to_feed_response(post) for post in posts],
             total=total,
             has_more=total > (params.offset or 0) + (params.limit or 10),
             current_offset=params.offset or 0,
             current_limit=params.limit or 10,
         )
 
-    def update_post(self, post_id: UUID, post_update: PostUpdate) -> PostResponse:
+    def update_post(self, post_id: UUID, post_update: PostUpdate) -> PostFeedResponse:
         post = self._get_post(post_id)
         if post_update.content:
             post.content = post_update.content
@@ -138,7 +146,7 @@ class PostService:
         try:
             post = self.post_repo.save(post)
             post_saved = self._get_post(post.id)
-            return self._map_post_to_response(post_saved)
+            return self.__map_post_to_feed_response(post_saved)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error updating post') from e
 
@@ -151,9 +159,47 @@ class PostService:
 
     def get_user_feed(
         self, user_id: UUID, params: PaginationSearchParams
-    ) -> PaginationResponse[PostResponse]:
+    ) -> PaginationResponse[PostFeedResponse]:
         feed, total = self.post_repo.get_user_feed(user_id, params)
-        posts = [self._map_post_to_response(post) for post in feed]
+
+        # Identificar posts do tipo poll e buscar dados em batch
+        poll_post_ids = [
+            str(post.id) for post in feed if post.type_post == PostTypeEnum.POLL
+        ]
+        poll_data_map: dict[str, tuple[str, list[PollOptionResponse]]] = {}
+
+        if poll_post_ids:
+            # Buscar PollPosts em batch
+            for post_id_str in poll_post_ids:
+                poll_post = self.poll_posts_repo.get_by_id(UUID(post_id_str))
+                if poll_post:
+                    # Buscar opções do poll
+                    poll_options = self.poll_options_repo.list_by_post(UUID(post_id_str))
+                    option_responses = []
+                    if poll_options:
+                        option_responses = [
+                            PollOptionResponse(
+                                id=option.id,
+                                answer=option.answer,
+                                votes_count=option.votes_count,
+                            )
+                            for option in poll_options
+                        ]
+                    poll_data_map[post_id_str] = (poll_post.question, option_responses)
+
+        # Mapear posts incluindo dados de poll quando disponíveis
+        posts = []
+        for post in feed:
+            post_id_str = str(post.id)
+            if post.type_post == PostTypeEnum.POLL and post_id_str in poll_data_map:
+                poll_question, poll_options = poll_data_map[post_id_str]
+                posts.append(
+                    self.__map_post_to_feed_response(
+                        post, poll_question=poll_question, poll_options=poll_options
+                    )
+                )
+            else:
+                posts.append(self.__map_post_to_feed_response(post))
 
         return PaginationResponse(
             items=posts,
@@ -169,25 +215,25 @@ class PostService:
             raise PostLikesNotFoundError('Post likes not found')
         return like
 
-    def like_post(self, post_id: UUID, member_id: UUID) -> PostResponse:
+    def like_post(self, post_id: UUID, member_id: UUID) -> PostFeedResponse:
         post = self._get_post(post_id)
         post.likes_count += 1
 
         try:
             self.post_likes_repo.save(PostLikes(post_id=post_id, member_id=member_id))
             post = self.post_repo.save(post)
-            return self._map_post_to_response(post)
+            return self.__map_post_to_feed_response(post)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error liking post') from e
 
-    def unlike_post(self, post_id: UUID, member_id: UUID) -> PostResponse:
+    def unlike_post(self, post_id: UUID, member_id: UUID) -> PostFeedResponse:
         try:
             post = self._get_post(post_id)
             like = self.get_like(post_id, member_id)
             post.likes_count -= 1
             self.post_likes_repo.delete(like)
             post = self.post_repo.save(post)
-            return self._map_post_to_response(post)
+            return self.__map_post_to_feed_response(post)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error unliking post') from e
 
@@ -201,7 +247,7 @@ class PostService:
             )
         return members_response
 
-    def report_post(self, post_id: UUID) -> PostResponse:
+    def report_post(self, post_id: UUID) -> PostFeedResponse:
         post = self._get_post(post_id)
         if post.status == PostStatusEnum.SUSPENDED:
             raise PostSuspendedError('Post is already suspended')
@@ -211,7 +257,7 @@ class PostService:
             post.status = PostStatusEnum.REPORTED
         try:
             post = self.post_repo.save(post)
-            return self._map_post_to_response(post)
+            return self.__map_post_to_feed_response(post)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error reporting post') from e
 

@@ -140,10 +140,11 @@ class CommunityMemberResponse(BaseModel):
                     'id': '123e4567-e89b-12d3-a456-426614174002',
                     'user': {
                         'id': '123e4567-e89b-12d3-a456-426614174002',
+                        'username': 'johndoe',
                         'email': 'member@example.com',
                         'name': 'Member Name',
                         'profile_image_url': 'https://example.com/image.jpg',
-                        'reputation_level': 10,
+                        'bio': 'I am a software engineer',
                         'status': 'active',
                         'created_at': '2025-01-01T00:00:00Z',
                         'updated_at': '2025-01-01T00:00:00Z',

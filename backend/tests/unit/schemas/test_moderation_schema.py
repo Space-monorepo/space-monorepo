@@ -68,6 +68,12 @@ def test_poll_brief_response_schema():
             report_count=0,
             created_at=created_at,
             updated_at=updated_at,
+            poll_question='What is your favorite color?',
+            poll_options=[PollOptionResponse(
+                id=poll_option_id,
+                answer='Red',
+                votes_count=10,
+            )],
         ),
         question='What is your favorite color?',
         options=[

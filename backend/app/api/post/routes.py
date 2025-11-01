@@ -10,6 +10,7 @@ from app.api.post.schemas import (
     PollCreate,
     PollResponse,
     PostCreate,
+    PostFeedResponse,
     PostResponse,
     PostUpdate,
 )
@@ -82,19 +83,19 @@ def create_announcement(
         return PostService(tm).create_post(post)
 
 
-@router.get('/feed', response_model=PaginationResponse[PostResponse])
+@router.get('/feed', response_model=PaginationResponse[PostFeedResponse])
 def get_user_feed(
     session: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user),
     params: PaginationSearchParams = Depends(PaginationSearchParams),
-) -> PaginationResponse[PostResponse]:
+) -> PaginationResponse[PostFeedResponse]:
     with TransactionManager(session) as tm:
         return PostService(tm).get_user_feed(current_user.id, params)
 
 
 @router.patch(
     '/{community_id}/post/{post_id}',
-    response_model=PostResponse,
+    response_model=PostFeedResponse,
     status_code=status.HTTP_200_OK,
 )
 def update_post(
@@ -103,7 +104,7 @@ def update_post(
     post: PostUpdate,
     session: Session = Depends(get_db),
     current_member: CommunityMember = Depends(require_roles(['member'])),
-) -> PostResponse:
+) -> PostFeedResponse:
     if post.content and not require_post_owner(post_id, session, current_member):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
@@ -132,28 +133,28 @@ def delete_post(
 
 @router.post(
     '/{community_id}/post/{post_id}/like',
-    response_model=PostResponse,
+    response_model=PostFeedResponse,
     status_code=status.HTTP_200_OK,
 )
 def like_post(
     post_id: str,
     session: Session = Depends(get_db),
     current_member: CommunityMember = Depends(require_roles(['member'])),
-) -> PostResponse:
+) -> PostFeedResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).like_post(post_id, current_member.id)
 
 
 @router.post(
     '/{community_id}/post/{post_id}/unlike',
-    response_model=PostResponse,
+    response_model=PostFeedResponse,
     status_code=status.HTTP_200_OK,
 )
 def unlike_post(
     post_id: str,
     session: Session = Depends(get_db),
     current_member: CommunityMember = Depends(require_roles(['member'])),
-) -> PostResponse:
+) -> PostFeedResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).unlike_post(post_id, current_member.id)
 
@@ -174,14 +175,14 @@ def list_likes_post(
 
 @router.patch(
     '/{community_id}/post/{post_id}/report',
-    response_model=PostResponse,
+    response_model=PostFeedResponse,
     status_code=status.HTTP_200_OK,
 )
 def report_post(
     post_id: str,
     session: Session = Depends(get_db),
     _: CommunityMember = Depends(require_roles(['member'])),
-) -> PostResponse:
+) -> PostFeedResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).report_post(post_id)
 

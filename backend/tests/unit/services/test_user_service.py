@@ -25,30 +25,33 @@ def test_create_user_service_success():
     - Then it should return the created user with generated ID
     """
     # Arrange
+    fake_username = 'johndoe'
     fake_email = 'johndoe@example.com'
     fake_name = 'John Doe'
+    fake_bio = 'I am a software engineer'
     fake_hashed_password = 'hashed_password'
     fake_profile_image_url = None
-    fake_reputation_level = 1
     fake_status = 'pending'
     fake_user_id = uuid4()
 
     fake_user_create = UserCreate(
+        username=fake_username,
         email=fake_email,
         name=fake_name,
         hashed_password=fake_hashed_password,
+        bio=fake_bio,
         profile_image_url=fake_profile_image_url,
-        reputation_level=fake_reputation_level,
         status=fake_status,
     )
 
     fake_created_user = Mock(spec=User)
     fake_created_user.id = fake_user_id
+    fake_created_user.username = fake_username
     fake_created_user.email = fake_email
     fake_created_user.name = fake_name
     fake_created_user.hashed_password = fake_hashed_password
     fake_created_user.profile_image_url = fake_profile_image_url
-    fake_created_user.reputation_level = fake_reputation_level
+    fake_created_user.bio = fake_bio
     fake_created_user.status = fake_status
 
     mock_tm = Mock()
@@ -68,11 +71,12 @@ def test_create_user_service_success():
     mock_user_repo.save.assert_called_once()
     assert result is not None
     assert result.id == fake_user_id
+    assert result.username == fake_username
     assert result.email == fake_email
     assert result.name == fake_name
     assert result.hashed_password == fake_hashed_password
     assert result.profile_image_url == fake_profile_image_url
-    assert result.reputation_level == fake_reputation_level
+    assert result.bio == fake_bio
     assert result.status == fake_status
 
 

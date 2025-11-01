@@ -20,6 +20,7 @@ def init_community():
     try:
         with TransactionManager(db) as tm:
             user = UserCreate(
+                username='space',
                 name='Space',
                 email='space@space.com',
                 hashed_password='spacepassword123',
