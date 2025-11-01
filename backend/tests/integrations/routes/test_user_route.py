@@ -19,9 +19,10 @@ def test_create_user_route(transaction_manager, client_sql):
     user = UserCreate(
         email='johndoe@example.com',
         name='John Doe',
+        username='johndoe',
         hashed_password='hashed_password',
+        bio='I am a software engineer',
         profile_image_url=None,
-        reputation_level=1,
         status=UserStatusEnum.PENDING,
     )
 

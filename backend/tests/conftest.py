@@ -168,11 +168,12 @@ def transaction_manager(session_sql):
 @pytest.fixture
 def user_on_db(transaction_manager):
     user = UserCreate(
+        username='johndoe',
         email='johndoe@example.com',
         name='John Doe',
         hashed_password='hashed_password',
         profile_image_url=None,
-        reputation_level=1,
+        bio='I am a software engineer',
         status='active',
     )
 
@@ -183,11 +184,12 @@ def user_on_db(transaction_manager):
 @pytest.fixture
 def secondary_user_on_db(transaction_manager):
     user = UserCreate(
+        username='ana',
         email='ana@example.com',
         name='Ana Doe',
         hashed_password='hashed_password',
         profile_image_url=None,
-        reputation_level=1,
+        bio='I am a software engineer',
         status='active',
     )
 
@@ -267,6 +269,24 @@ def post_on_db(session_sql, community_on_db, user_on_db, community_member_on_db)
     session_sql.flush()
     session_sql.refresh(post)
     return post
+
+
+@pytest.fixture
+def post_to_poll_on_db(session_sql, community_on_db, user_on_db, community_member_on_db):
+    poll_post = Post(
+        community_id=community_on_db.id,
+        user_id=user_on_db.id,
+        user_role_in_community=community_member_on_db.role,
+        type_post=PostTypeEnum.POLL,
+        title='Test Poll',
+        content='Test Poll Content',
+        image_url=None,
+    )
+
+    session_sql.add(poll_post)
+    session_sql.flush()
+    session_sql.refresh(poll_post)
+    return poll_post
 
 
 @pytest.fixture
@@ -352,9 +372,9 @@ def complaint_post_on_db(session_sql, post_on_db):
 
 
 @pytest.fixture
-def poll_post_on_db(session_sql, post_on_db):
+def poll_post_on_db(session_sql, post_to_poll_on_db):
     poll_post = PollPosts(
-        post_id=post_on_db.id,
+        post_id=post_to_poll_on_db.id,
         question='Test Poll',
     )
 
