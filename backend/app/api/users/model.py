@@ -5,7 +5,6 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
-    Integer,
     String,
     UniqueConstraint,
     func,
@@ -33,11 +32,12 @@ class User(Base):
     __tablename__ = 'users'
 
     id = Column(UUIDColumn, primary_key=True, default=uuid_default, index=True)
+    username = Column(String, nullable=False, unique=True)
     email = Column(String, nullable=False, unique=True)
     name = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
+    bio = Column(String, nullable=True)
     profile_image_url = Column(String, nullable=True)
-    reputation_level = Column(Integer, nullable=False, default=0)
     status = Column(String, nullable=False, default='pending')
     created_at = Column(DateTime, nullable=False, default=func.now())
     updated_at = Column(

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import and_, or_
@@ -58,7 +58,7 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
 
     def check_rejection_cooldown(self, requester_id: UUID, addressee_id: UUID) -> bool:
         """Check if there's an active rejection cooldown (1 hour)"""
-        one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+        one_hour_ago = datetime.now(UTC) - timedelta(hours=1)
 
         rejected_connection = (
             self.db.query(UserConnection)
@@ -134,7 +134,7 @@ class UserConnectionRepository(BaseRepository[UserConnection]):
             return None
 
         connection.status = 'rejected'
-        connection.rejected_at = datetime.utcnow()
+        connection.rejected_at = datetime.now(UTC)
         self.db.flush()
         self.db.refresh(connection)
         return connection
