@@ -283,7 +283,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                                 return (
                                                     <div key={option.id} className="relative">
                                                         <button
-                                                            className="w-full p-3 text-left border border-gray-200 rounded-lg hover:border-gray-300 transition-colors bg-white"
+                                                            className="w-full p-3 text-left border-gray-200 rounded-lg hover:border-gray-300 transition-colors bg-white"
                                                             onClick={() => handleVotePoll(option.id)}
                                                         >
                                                             <div className="flex justify-between items-center">
@@ -303,9 +303,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                                 );
                                             })}
                                         </div>
-                                        <div className="mt-4 text-xs text-neutral-500">
-                                            Total de votos: {localPost.poll_options.reduce((sum: number, opt: PollOption) => sum + opt.votes_count, 0)}
-                                        </div>
+                                    
                                     </div>
                                 )}
 
