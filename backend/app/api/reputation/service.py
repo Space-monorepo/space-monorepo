@@ -1,7 +1,6 @@
 from uuid import UUID
 
 from app.api.communities.exceptions import CommunityMemberNotFoundError
-from app.api.post.schemas import ComplaintLevelEnum
 from app.api.reports.model import ReportComment, ReportMember, ReportPost
 from app.api.reports.schema import VoteTypeEnum
 from app.api.reputation.schema import (
@@ -197,44 +196,12 @@ class ReputationService:
         self.add_reputation_points(author_id, ReputationActionEnum.CREATE_COMPLAINT)
         self.add_popularity_points(author_id, PopularityActionEnum.CREATE_COMPLAINT)
 
-    def award_complaint_confirmation(
-        self, confirmer_id: UUID, complaint_level: str
-    ) -> None:
-        if complaint_level == ComplaintLevelEnum.LOW.value:
-            self.add_reputation_points(
-                confirmer_id, ReputationActionEnum.CONFIRM_COMPLAINT_LOW
-            )
-        elif complaint_level == ComplaintLevelEnum.MEDIUM.value:
-            self.add_reputation_points(
-                confirmer_id, ReputationActionEnum.CONFIRM_COMPLAINT_MEDIUM
-            )
-        elif complaint_level == ComplaintLevelEnum.HIGH.value:
-            self.add_reputation_points(
-                confirmer_id, ReputationActionEnum.CONFIRM_COMPLAINT_HIGH
-            )
+    def award_complaint_confirmation(self, member_id: UUID) -> None:
+        self.add_reputation_points(member_id, ReputationActionEnum.CONFIRM_COMPLAINT)
 
-    def award_complaint_resolution(self, author_id: UUID, complaint_level: str) -> None:
-        if complaint_level == ComplaintLevelEnum.LOW.value:
-            self.add_reputation_points(
-                author_id, ReputationActionEnum.COMPLAINT_RESOLVED_LOW
-            )
-            self.add_popularity_points(
-                author_id, PopularityActionEnum.COMPLAINT_RESOLVED_LOW
-            )
-        elif complaint_level == ComplaintLevelEnum.MEDIUM.value:
-            self.add_reputation_points(
-                author_id, ReputationActionEnum.COMPLAINT_RESOLVED_MEDIUM
-            )
-            self.add_popularity_points(
-                author_id, PopularityActionEnum.COMPLAINT_RESOLVED_MEDIUM
-            )
-        elif complaint_level == ComplaintLevelEnum.HIGH.value:
-            self.add_reputation_points(
-                author_id, ReputationActionEnum.COMPLAINT_RESOLVED_HIGH
-            )
-            self.add_popularity_points(
-                author_id, PopularityActionEnum.COMPLAINT_RESOLVED_HIGH
-            )
+    def award_complaint_resolution(self, author_id: UUID) -> None:
+        self.add_reputation_points(author_id, ReputationActionEnum.COMPLAINT_RESOLVED)
+        self.add_popularity_points(author_id, PopularityActionEnum.COMPLAINT_RESOLVED)
 
     def award_complaint_resolution_by_moderator(self, moderator_id: UUID) -> None:
         self.add_reputation_points(
