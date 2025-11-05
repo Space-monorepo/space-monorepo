@@ -105,19 +105,13 @@ class AdministrationService:
 
             post = self.post_service._get_post(post_id)
             member = self.community_service.get_member_association(
-                post.user_id,
-                post.community_id
+                post.user_id, post.community_id
             )
-            if (old_status != 'approved' and campaign_saved.status_campaign == 'approved'):
-                self.reputation_service.add_reputation_points(
-                    member_id=member.id,
-                    action=ReputationActionEnum.CAMPAIGN_ACCEPTED
-                )
-            elif (old_status != 'rejected' and campaign_saved.status_campaign == 'rejected'):
-                self.reputation_service.add_reputation_points(
-                    member_id=member.id,
-                    action=ReputationActionEnum.CAMPAIGN_REJECTED
-                )
+            self.reputation_service.award_campaign_status_change(
+                author_id=member.id,
+                old_status=old_status,
+                new_status=campaign_saved.status_campaign,
+            )
             return CampaignResponse(
                 post=self.post_service.get_post(post_id),
                 target_participants=campaign_saved.target_participants,
