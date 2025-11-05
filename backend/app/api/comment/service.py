@@ -105,21 +105,13 @@ class CommentService:
             post.comments_count += 1
 
             commenter_member = self.community_service.get_member_association(
-                comment_saved.user_id,
-                post.community_id
+                comment_saved.user_id, post.community_id
             )
-            self.reputation_service.add_popularity_points(
-                member_id=commenter_member.id,
-                action=PopularityActionEnum.COMMENT_POST,
-            )
-
             post_author_member = self.community_service.get_member_association(
-                post.user_id,
-                post.community_id
+                post.user_id, post.community_id
             )
-            self.reputation_service.add_popularity_points(
-                member_id=post_author_member.id,
-                action=PopularityActionEnum.RECEIVE_COMMENT,
+            self.reputation_service.award_comment_creation(
+                commenter_member.id, post_author_member.id
             )
             self.post_repo.save(post)
 
@@ -279,16 +271,10 @@ class CommentService:
             post = self._get_post(comment.post_id)
 
             comment_author_member = self.community_service.get_member_association(
-                comment.user_id,
-                post.community_id
+                comment.user_id, post.community_id
             )
-            self.reputation_service.add_popularity_points(
-                member_id=comment_author_member.id,
-                action=PopularityActionEnum.RECEIVE_LIKE
-            )
-            self.reputation_service.add_popularity_points(
-                member_id=member_id,
-                action=PopularityActionEnum.LIKE_POST
+            self.reputation_service.award_comment_like(
+                member_id, comment_author_member.id
             )
             return self._map_comment_to_response(comment)
         except Exception as e:
@@ -306,8 +292,7 @@ class CommentService:
             post = self._get_post(comment.post_id)
 
             comment_author_member = self.community_service.get_member_association(
-                comment.user_id,
-                post.community_id
+                comment.user_id, post.community_id
             )
             author = self.community_service.get_member(comment_author_member.id)
             author.popularity -= POPULARITY_POINTS[PopularityActionEnum.RECEIVE_LIKE]
