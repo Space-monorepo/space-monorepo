@@ -26,6 +26,7 @@ from app.api.reports.schema import (
     VoteTypeEnum,
 )
 from app.api.reports.service import ReportService
+from app.api.reputation.service import ReputationService
 from app.api.users.service import UserService
 from app.core.transaction import TransactionManager
 from app.utils.schema import PaginationResponse, PaginationSearchParams
@@ -45,6 +46,7 @@ class ModerationService:
         self.user_service = UserService(tm)
         self.comment_service = CommentService(tm)
         self.community_service = CommunityService(tm)
+        self.reputation_service = ReputationService(tm)
 
     def moderate_post(
         self, post_id: str, new_status: PostStatusEnum
@@ -103,27 +105,51 @@ class ModerationService:
     def __take_action(self, report: ReportResponse, action: VoteTypeEnum) -> str:
         if report.type == ReportTypeEnum.POST_REPORT:
             report_post = self.report_service.report_post_repo.get_by_id(report.id)
+            post = self.post_service.get_post(str(report_post.post_id))
+            author_post_id = post.user.id
             if action == VoteTypeEnum.SUSPEND:
+                self.reputation_service.handle_post_report_suspended(
+                    report_post.post_id,
+                    author_post_id,
+                )
                 self.__suspend_post(report_post.post_id)
                 message = 'Post suspenso com sucesso'
             else:
+                self.reputation_service.handle_post_report_tolerated(
+                    report_post.post_id
+                )
                 self.__tolerate_post(report_post.post_id)
                 message = 'Post tolerado e mantido ativo'
 
         elif report.type == ReportTypeEnum.MEMBER_REPORT:
             report_member = self.report_service.report_member_repo.get_by_id(report.id)
+            reported_member_id = report_member.member_id
             if action == VoteTypeEnum.SUSPEND:
+                self.reputation_service.handle_member_report_suspended(
+                    reported_member_id
+                )
                 self.__suspend_member(report_member.member_id)
                 message = 'Membro suspenso com sucesso'
             else:
+                self.reputation_service.handle_member_report_tolerated(
+                    reported_member_id
+                )
                 message = 'Membro tolerado e mantido ativo'
 
         elif report.type == ReportTypeEnum.COMMENT_REPORT:
             report_comment = self.report_service.report_comment_repo.get_by_id(report.id)
+            comment = self.comment_service.get_comment(str(report_comment.comment_id))
+            author_comment_id = comment.user.id
             if action == VoteTypeEnum.SUSPEND:
+                self.reputation_service.handle_comment_report_suspended(
+                    report_comment.comment_id, author_comment_id
+                )
                 self.__delete_comment(report_comment.comment_id)
                 message = 'Comentário deletado com sucesso'
             else:
+                self.reputation_service.handle_comment_report_tolerated(
+                    report_comment.comment_id
+                )
                 message = 'Comentário tolerado e mantido ativo'
         return message
 
@@ -155,12 +181,16 @@ class ModerationService:
         return complaint
 
     def udpate_status_complaint(
-        self, post_id: UUID, status: ComplaintStatusEnum
+        self, post_id: UUID, status: ComplaintStatusEnum, moderator_id: UUID
     ) -> ComplaintResponse:
         try:
             complaint_post = self.get_complaint(post_id)
             complaint_post.status_complaint = status
             complaint_post_saved = self.complaint_repo.save(complaint_post)
+            if status == ComplaintStatusEnum.RESOLVED:
+                post = self.post_service.get_post(post_id)
+                self.reputation_service.award_complaint_resolution(post.user.id, complaint_post_saved.level_complaint)
+                self.reputation_service.award_complaint_resolution_by_moderator(moderator_id)
             return ComplaintResponse(
                 post=self.post_service.get_post(post_id),
                 confirmations_count=complaint_post_saved.confirmations_count,
