@@ -391,9 +391,7 @@ class PostService:
         else:
             complaint.level_complaint = ComplaintLevelEnum.LOW
         complaint_saved = self.complaint_repo.save(complaint)
-        self.reputation_service.award_complaint_confirmation(
-            member_id, complaint_saved.level_complaint
-        )
+        self.reputation_service.award_complaint_confirmation(member_id)
         return ComplaintResponse(
             post=self.get_post(post_id),
             confirmations_count=complaint_saved.confirmations_count,
