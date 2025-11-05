@@ -308,7 +308,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                 )}
 
                                 {/* Seção da Denúncia */}
-                                {localPost.type === 'Denúncia' && (
+                                {/* {localPost.type === 'Denúncia' && (
                                     <div className="mt-6 w-full p-4 bg-red-50 rounded-lg border border-red-200">
                                         <div className="flex items-center gap-2 mb-3">
                                             <div className="w-2 h-2 rounded-full bg-red-500"></div>
@@ -344,7 +344,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                             </span>
                                         </div>
                                     </div>
-                                )}
+                                )} */}
 
                                 {/* Seção do Anúncio - Tags */}
                                 {localPost.type === 'Anúncio' && localPost.tags && localPost.tags.length > 0 && (
