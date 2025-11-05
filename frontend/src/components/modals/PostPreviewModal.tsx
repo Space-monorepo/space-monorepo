@@ -7,6 +7,7 @@ import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import { translatePostType } from "@/lib/postTypeTranslations";
 import { voteOnPoll } from "@/app/api/src/services/post/postService";
+import { confirmComplaint } from "@/app/api/src/services/post/postService";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
 import { toast } from "react-toastify";
 
@@ -51,6 +52,19 @@ interface PostPreviewModalProps {
 }
 
 const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClose }) => {
+    // Confirmação de denúncia
+    const handleConfirmComplaint = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!localPost) return;
+        try {
+            const token = getTokenFromCookies();
+            await confirmComplaint(localPost.community?.id || "default-community-id", localPost.id, token ?? undefined);
+            setLocalPost(prev => prev ? { ...prev, confirmations_count: (prev.confirmations_count ?? 0) + 1 } : prev);
+            toast.success('Confirmação registrada!');
+        } catch (err) {
+            toast.error('Erro ao confirmar problema');
+        }
+    };
     const [openMenu, setOpenMenu] = React.useState(false);
     const [localPost, setLocalPost] = React.useState(post);
 
@@ -269,6 +283,17 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                     </button>
                                 )}
 
+                                {/* Botão Confirmar problema para Denúncia */}
+                                {localPost.type === 'Denúncia' && (
+                                    <button
+                                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${localPost.confirmations_count && localPost.confirmations_count > 0 ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                                        onClick={handleConfirmComplaint}
+                                        disabled={Boolean(localPost.confirmations_count)}
+                                    >
+                                        {localPost.confirmations_count && localPost.confirmations_count > 0 ? 'Problema confirmado' : 'Confirmar problema'}
+                                    </button>
+                                )}
+
                                 {/* Seção da Enquete */}
                                 {localPost.type === 'Enquete' && localPost.poll_question && localPost.poll_options && (
                                     <div className="mt-6 w-full">
@@ -303,7 +328,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                                 );
                                             })}
                                         </div>
-                                    
+
                                     </div>
                                 )}
 

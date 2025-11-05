@@ -130,3 +130,15 @@ export const voteOnPoll = async (communityId: string, pollOptionId: string, toke
 
   return response.json();
 };
+
+export async function confirmComplaint(communityId: string, postId: string, token?: string) {
+  const res = await fetch(`${API_URL}/posts/${communityId}/complaint/${postId}/confirm`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!res.ok) throw new Error('Erro ao confirmar problema');
+  return await res.json();
+}

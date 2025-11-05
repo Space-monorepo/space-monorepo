@@ -24,6 +24,7 @@ import { API_URL } from "@/config";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import PostPreviewModal from "@/components/modals/PostPreviewModal";
+import { confirmComplaint } from "@/app/api/src/services/post/postService";
 
 // CommentsSection como componente interno
 interface Comment {
@@ -410,6 +411,7 @@ type PostDisplay = PostResponse & {
   username?: string;
   alreadyParticipating?: boolean;
   userVotedOptionId?: string; // id da opção que o usuário votou
+  confirmations_count?: number;
 };
 
 export default function PostList() {
@@ -485,6 +487,7 @@ export default function PostList() {
           liked: false,
           alreadyParticipating,
           userVotedOptionId,
+          confirmations_count: translatePostType(item.type_post) === 'Denúncia' && typeof (item as any).confirmations_count === 'number' ? (item as any).confirmations_count : 0,
         };
       });
       return fetchedPosts;
@@ -602,6 +605,18 @@ export default function PostList() {
     // setDisplayedPosts(posts => posts.map((p) =>
     //   p.id === post.id ? { ...p, shares: p.shares + 1 } : p
     // ));
+  };
+
+  // Confirmar problema em denúncia
+  const handleConfirmComplaint = async (post: PostDisplay) => {
+    try {
+      const token = getTokenFromCookies();
+      await confirmComplaint(post.community?.id || "default-community-id", post.id, token ?? undefined);
+      setDisplayedPosts((prev: PostDisplay[]) => prev.map((p: PostDisplay) => p.id === post.id ? { ...p, confirmations_count: (p.confirmations_count ?? 0) + 1 } : p));
+      toast.success('Confirmação registrada!');
+    } catch (err) {
+      toast.error('Erro ao confirmar problema');
+    }
   };
 
   // Votar em opção da enquete
@@ -972,6 +987,24 @@ export default function PostList() {
                         disabled={post.alreadyParticipating || participating[post.id]}
                       >
                         {post.alreadyParticipating || participating[post.id] ? 'Já participa da campanha' : 'Participar da Campanha'}
+                      </button>
+                    )}
+
+                    {/* Botão Confirmar problema para Denúncia */}
+                    {post.type === 'Denúncia' && (
+                      <button
+                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${(post.confirmations_count ?? 0) > 0 ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleConfirmComplaint(post);
+                        }}
+                        disabled={(post.confirmations_count ?? 0) > 0}
+                      >
+                        {(post.confirmations_count ?? 0) > 0 ? (
+                          'Problema confirmado'
+                        ) : (
+                          'Confirmar problema'
+                        )}
                       </button>
                     )}
                   </div>
