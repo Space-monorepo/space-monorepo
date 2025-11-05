@@ -166,7 +166,8 @@ def init_community():
                     content=texto,
                     image_url=None,
                 )
-                post = post_service.create_post(post_data)
+                complaint_response = post_service.create_complaint(post_data)
+                post = complaint_response.post
                 print(f"Denúncia '{post.title}' criada com sucesso! ID: {post.id}")
                 posts.append(post)
 
