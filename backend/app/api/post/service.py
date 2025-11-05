@@ -38,7 +38,6 @@ from app.api.post.schemas import (
 from app.api.reputation.schema import (
     POPULARITY_POINTS,
     PopularityActionEnum,
-    ReputationActionEnum,
 )
 from app.api.reputation.service import ReputationService
 from app.core.transaction import TransactionManager
@@ -112,11 +111,7 @@ class PostService:
             member = self.community_service.get_member_association(
                 post_saved.user_id, post_saved.community_id
             )
-            self.reputation_service.add_popularity_points(
-                member_id=member.id,
-                action=PopularityActionEnum.CREATE_POST,
-            )
-
+            self.reputation_service.award_post_creation(member.id)
             return self._map_post_to_response(post_saved)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error creating post') from e
@@ -238,14 +233,7 @@ class PostService:
             author_post = self.community_service.get_member_association(
                 post.user_id, post.community_id
             )
-            self.reputation_service.add_popularity_points(
-                member_id=author_post.id,
-                action=PopularityActionEnum.RECEIVE_LIKE
-            )
-            self.reputation_service.add_popularity_points(
-                member_id=member_id,
-                action=PopularityActionEnum.LIKE_POST
-            )
+            self.reputation_service.award_post_like(member_id, author_post.id)
             return self._map_post_to_response(post)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error liking post') from e
@@ -259,8 +247,7 @@ class PostService:
             post = self.post_repo.save(post)
 
             author_post = self.community_service.get_member_association(
-                post.user_id,
-                post.community_id
+                post.user_id, post.community_id
             )
             author = self.community_service.get_member(author_post)
             author.popularity -= POPULARITY_POINTS[PopularityActionEnum.RECEIVE_LIKE]
@@ -307,13 +294,9 @@ class PostService:
             campaign_saved = self.campaign_repo.save(campaign)
 
             member = self.community_service.get_member_association(
-                post.user_id,
-                post.community_id
+                post.user_id, post.community_id
             )
-            self.reputation_service.add_reputation_points(
-                member_id=member.id,
-                action=ReputationActionEnum.CREATE_CAMPAIGN
-            )
+            self.reputation_service.award_campaign_creation(member.id)
             return CampaignResponse(
                 post=self.get_post(post.id),
                 target_participants=campaign_saved.target_participants,
@@ -362,11 +345,7 @@ class PostService:
             participant_saved = self.campaign_participants_repo.save(
                 campaign_participants
             )
-
-            self.reputation_service.add_reputation_points(
-                member_id=member_id,
-                action=ReputationActionEnum.CAMPAIGN_SUPPORT
-            )
+            self.reputation_service.award_campaign_support(member_id)
             return participant_saved
         except Exception as e:
             raise UnexpectedPostError(
@@ -392,6 +371,7 @@ class PostService:
             post = self.create_post(post)
             complaint = ComplaintPost(post_id=str(post.id))
             complaint_saved = self.complaint_repo.save(complaint)
+            self.reputation_service.award_complaint_creation(post.user_id)
             return ComplaintResponse(
                 post=self.get_post(post.id),
                 confirmations_count=complaint_saved.confirmations_count,
@@ -401,7 +381,7 @@ class PostService:
         except Exception as e:
             raise UnexpectedPostError('Unexpected error creating complaint') from e
 
-    def confirm_complaint(self, post_id: UUID) -> ComplaintResponse:
+    def confirm_complaint(self, post_id: UUID, member_id: UUID) -> ComplaintResponse:
         complaint = self.get_complaint(post_id)
         complaint.confirmations_count += 1
         if complaint.confirmations_count >= self.COMPLAINT_HIGH_THRESHOLD:
@@ -411,6 +391,9 @@ class PostService:
         else:
             complaint.level_complaint = ComplaintLevelEnum.LOW
         complaint_saved = self.complaint_repo.save(complaint)
+        self.reputation_service.award_complaint_confirmation(
+            member_id, complaint_saved.level_complaint
+        )
         return ComplaintResponse(
             post=self.get_post(post_id),
             confirmations_count=complaint_saved.confirmations_count,

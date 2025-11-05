@@ -252,10 +252,10 @@ def create_complaint(
 def confirm_complaint(
     post_id: str,
     session: Session = Depends(get_db),
-    _: CommunityMember = Depends(require_roles(['member'])),
+    member: CommunityMember = Depends(require_roles(['member'])),
 ) -> ComplaintResponse:
     with TransactionManager(session) as tm:
-        return PostService(tm).confirm_complaint(post_id)
+        return PostService(tm).confirm_complaint(post_id, member.id)
 
 
 @router.post(
