@@ -13,10 +13,17 @@ class ReputationActionEnum(str, Enum):
     CAMPAIGN_ACCEPTED = 'campaign_accepted'
     CAMPAIGN_REJECTED = 'campaign_rejected'
     CAMPAIGN_SUPPORT = 'campaign_support'
-    REPORT_APPROVED = 'report_approved'
-    REPORT_REJECTED = 'report_rejected'
-    RECEIVED_VALID_SELF_REPORT = 'received_valid_self_report'
-    RECEIVED_VALID_SELF_COMPLAINT = 'received_valid_self_complaint'
+    REPORT_SUSPENDED = 'report_suspended'
+    REPORT_TOLERATED = 'report_tolerated'
+    RECEIVED_VALID_REPORT_TO_USER = 'received_valid_report_to_user'
+    CREATE_COMPLAINT = 'create_complaint'
+    CONFIRM_COMPLAINT_LOW = 'confirm_complaint_low'
+    CONFIRM_COMPLAINT_MEDIUM = 'confirm_complaint_medium'
+    CONFIRM_COMPLAINT_HIGH = 'confirm_complaint_high'
+    COMPLAINT_RESOLVED_LOW = 'complaint_resolved_low'
+    COMPLAINT_RESOLVED_MEDIUM = 'complaint_resolved_medium'
+    COMPLAINT_RESOLVED_HIGH = 'complaint_resolved_high'
+    RESOLVE_COMPLAINT_MODERATOR = 'resolve_complaint_moderator'
 
 
 REPUTATION_POINTS = {
@@ -24,37 +31,46 @@ REPUTATION_POINTS = {
     ReputationActionEnum.CAMPAIGN_ACCEPTED: 400,
     ReputationActionEnum.CAMPAIGN_REJECTED: -50,
     ReputationActionEnum.CAMPAIGN_SUPPORT: 50,
-    ReputationActionEnum.REPORT_APPROVED: 200,
-    ReputationActionEnum.REPORT_REJECTED: -100,
-    ReputationActionEnum.RECEIVED_VALID_SELF_REPORT: -250,
-    ReputationActionEnum.RECEIVED_VALID_SELF_COMPLAINT: -400,
+    ReputationActionEnum.REPORT_SUSPENDED: 200,
+    ReputationActionEnum.REPORT_TOLERATED: -100,
+    ReputationActionEnum.RECEIVED_VALID_REPORT_TO_USER: -250,
+    ReputationActionEnum.CREATE_COMPLAINT: 100,
+    ReputationActionEnum.CONFIRM_COMPLAINT_LOW: 25,
+    ReputationActionEnum.CONFIRM_COMPLAINT_MEDIUM: 50,
+    ReputationActionEnum.CONFIRM_COMPLAINT_HIGH: 100,
+    ReputationActionEnum.COMPLAINT_RESOLVED_LOW: 100,
+    ReputationActionEnum.COMPLAINT_RESOLVED_MEDIUM: 200,
+    ReputationActionEnum.COMPLAINT_RESOLVED_HIGH: 400,
+    ReputationActionEnum.RESOLVE_COMPLAINT_MODERATOR: 500,
 }
 
 
 class PopularityActionEnum(str, Enum):
-    LIKE_POST = 'like_post'
+    LIKE = 'like'
     RECEIVE_LIKE = 'receive_like'
     COMMENT_POST = 'comment_post'
     RECEIVE_COMMENT = 'receive_comment'
-    POST_REACH_100_VIEWS = 'post_reach_100_views'
     CREATE_POST = 'create_post'
-    STREAK_7_DAYS_ACTIVE = 'streak_7_days_active'
-    REPORT_APPROVED = 'report_approved'
-    REPORT_REJECTED = 'report_rejected'
-    RECEIVED_VALID_REPORT = 'received_valid_report'
-    RECEIVED_VALID_COMPLAINT = 'received_valid_complaint'
+    REPORT_SUSPENDED = 'report_suspended'
+    REPORT_TOLERATED = 'report_tolerated'
+    RECEIVED_VALID_REPORT_TO_USER = 'received_valid_report_to_user'
+    CREATE_COMPLAINT = 'create_complaint'
+    COMPLAINT_RESOLVED_LOW = 'complaint_resolved_low'
+    COMPLAINT_RESOLVED_MEDIUM = 'complaint_resolved_medium'
+    COMPLAINT_RESOLVED_HIGH = 'complaint_resolved_high'
 
 
 POPULARITY_POINTS = {
-    PopularityActionEnum.LIKE_POST: 10,
+    PopularityActionEnum.LIKE: 10,
     PopularityActionEnum.RECEIVE_LIKE: 20,
     PopularityActionEnum.COMMENT_POST: 25,
     PopularityActionEnum.RECEIVE_COMMENT: 40,
-    PopularityActionEnum.POST_REACH_100_VIEWS: 50,
     PopularityActionEnum.CREATE_POST: 100,
-    PopularityActionEnum.STREAK_7_DAYS_ACTIVE: 200,
-    PopularityActionEnum.REPORT_APPROVED: 200,
-    PopularityActionEnum.REPORT_REJECTED: -100,
-    PopularityActionEnum.RECEIVED_VALID_REPORT: -250,
-    PopularityActionEnum.RECEIVED_VALID_COMPLAINT: -400,
+    PopularityActionEnum.REPORT_SUSPENDED: 200,
+    PopularityActionEnum.REPORT_TOLERATED: -100,
+    PopularityActionEnum.RECEIVED_VALID_REPORT_TO_USER: -250,
+    PopularityActionEnum.CREATE_COMPLAINT: 100,
+    PopularityActionEnum.COMPLAINT_RESOLVED_LOW: 100,
+    PopularityActionEnum.COMPLAINT_RESOLVED_MEDIUM: 200,
+    PopularityActionEnum.COMPLAINT_RESOLVED_HIGH: 400,
 }
