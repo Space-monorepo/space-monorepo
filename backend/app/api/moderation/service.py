@@ -115,9 +115,7 @@ class ModerationService:
                 self.__suspend_post(report_post.post_id)
                 message = 'Post suspenso com sucesso'
             else:
-                self.reputation_service.handle_post_report_tolerated(
-                    report_post.post_id
-                )
+                self.reputation_service.handle_post_report_tolerated(report_post.post_id)
                 self.__tolerate_post(report_post.post_id)
                 message = 'Post tolerado e mantido ativo'
 
@@ -189,8 +187,10 @@ class ModerationService:
             complaint_post_saved = self.complaint_repo.save(complaint_post)
             if status == ComplaintStatusEnum.RESOLVED:
                 post = self.post_service.get_post(post_id)
-                self.reputation_service.award_complaint_resolution(post.user.id, complaint_post_saved.level_complaint)
-                self.reputation_service.award_complaint_resolution_by_moderator(moderator_id)
+                self.reputation_service.award_complaint_resolution(post.user.id)
+                self.reputation_service.award_complaint_resolution_by_moderator(
+                    moderator_id
+                )
             return ComplaintResponse(
                 post=self.post_service.get_post(post_id),
                 confirmations_count=complaint_post_saved.confirmations_count,
