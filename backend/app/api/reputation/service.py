@@ -3,6 +3,10 @@ from uuid import UUID
 from app.api.communities.exceptions import CommunityMemberNotFoundError
 from app.api.reports.model import ReportComment, ReportMember, ReportPost
 from app.api.reports.schema import VoteTypeEnum
+from app.api.reputation.exceptions import (
+    PopularityUpdateError,
+    ReputationUpdateError,
+)
 from app.api.reputation.schema import (
     POPULARITY_POINTS,
     REPUTATION_POINTS,
@@ -42,7 +46,7 @@ class ReputationService:
         else:
             return ReputationLevelEnum.UNDER_OBSERVATION.value
 
-    def add_reputation_points(
+    def _add_reputation_points(
         self, member_id: UUID, action: ReputationActionEnum
     ) -> None:
         member = self.member_repo.get_by_id(member_id)
@@ -58,11 +62,11 @@ class ReputationService:
             member.reputation_level = self._calculate_level(member.reputation)
             self.member_repo.save(member)
         except Exception as e:
-            raise Exception(
-                f'Error calculating reputation level for member {member_id}: {e}'
+            raise ReputationUpdateError(
+                f'Error updating reputation for member {member_id}: {e}'
             ) from e
 
-    def add_popularity_points(
+    def _add_popularity_points(
         self, member_id: UUID, action: PopularityActionEnum
     ) -> None:
         member = self.member_repo.get_by_id(member_id)
@@ -77,38 +81,54 @@ class ReputationService:
         try:
             self.member_repo.save(member)
         except Exception as e:
-            raise Exception(f'Error saving member {member_id}: {e}') from e
+            raise PopularityUpdateError(
+                f'Error updating popularity for member {member_id}: {e}'
+            ) from e
+
+    def get_member_stats(self, member_id: UUID) -> dict:
+        member = self.member_repo.get_by_id(member_id)
+        if not member:
+            raise CommunityMemberNotFoundError(f'Member with ID {member_id} not found')
+        return {
+            'reputation': member.reputation,
+            'reputation_level': member.reputation_level,
+            'popularity': member.popularity,
+        }
 
     def award_campaign_creation(self, author_id: UUID) -> None:
-        self.add_reputation_points(author_id, ReputationActionEnum.CREATE_CAMPAIGN)
+        self._add_reputation_points(author_id, ReputationActionEnum.CREATE_CAMPAIGN)
 
     def award_campaign_status_change(
         self, author_id: UUID, old_status: str, new_status: str
     ) -> None:
         if old_status != 'approved' and new_status == 'approved':
-            self.add_reputation_points(author_id, ReputationActionEnum.CAMPAIGN_ACCEPTED)
+            self._add_reputation_points(
+                author_id, ReputationActionEnum.CAMPAIGN_ACCEPTED
+            )
         elif old_status != 'rejected' and new_status == 'rejected':
-            self.add_reputation_points(author_id, ReputationActionEnum.CAMPAIGN_REJECTED)
+            self._add_reputation_points(
+                author_id, ReputationActionEnum.CAMPAIGN_REJECTED
+            )
 
     def award_campaign_support(self, supporter_id: UUID) -> None:
-        self.add_reputation_points(supporter_id, ReputationActionEnum.CAMPAIGN_SUPPORT)
+        self._add_reputation_points(supporter_id, ReputationActionEnum.CAMPAIGN_SUPPORT)
 
     def award_post_creation(self, author_id: UUID) -> None:
-        self.add_popularity_points(author_id, PopularityActionEnum.CREATE_POST)
+        self._add_popularity_points(author_id, PopularityActionEnum.CREATE_POST)
 
     def award_post_like(self, liker_id: UUID, post_author_id: UUID) -> None:
-        self.add_popularity_points(liker_id, PopularityActionEnum.LIKE)
-        self.add_popularity_points(post_author_id, PopularityActionEnum.RECEIVE_LIKE)
+        self._add_popularity_points(liker_id, PopularityActionEnum.LIKE)
+        self._add_popularity_points(post_author_id, PopularityActionEnum.RECEIVE_LIKE)
 
     def award_comment_creation(self, commenter_id: UUID, post_author_id: UUID) -> None:
-        self.add_popularity_points(commenter_id, PopularityActionEnum.COMMENT_POST)
-        self.add_popularity_points(post_author_id, PopularityActionEnum.RECEIVE_COMMENT)
+        self._add_popularity_points(commenter_id, PopularityActionEnum.COMMENT_POST)
+        self._add_popularity_points(post_author_id, PopularityActionEnum.RECEIVE_COMMENT)
 
     def award_comment_like(self, liker_id: UUID, comment_author_id: UUID) -> None:
-        self.add_popularity_points(liker_id, PopularityActionEnum.LIKE)
-        self.add_popularity_points(comment_author_id, PopularityActionEnum.RECEIVE_LIKE)
+        self._add_popularity_points(liker_id, PopularityActionEnum.LIKE)
+        self._add_popularity_points(comment_author_id, PopularityActionEnum.RECEIVE_LIKE)
 
-    def __apply_points_to_all_reporters(
+    def _apply_points_to_all_reporters(
         self,
         report_list: list[ReportPost | ReportMember | ReportComment],
         action: VoteTypeEnum,
@@ -127,19 +147,19 @@ class ReputationService:
             report = self.report_repo.get_by_id(report_item.report_id)
             if report:
                 reporter_id = report.reporter_id
-                self.add_reputation_points(reporter_id, reputation_action)
-                self.add_popularity_points(reporter_id, popularity_action)
+                self._add_reputation_points(reporter_id, reputation_action)
+                self._add_popularity_points(reporter_id, popularity_action)
 
     def handle_post_report_suspended(self, post_id: UUID, author_post_id: UUID) -> None:
         all_params = PaginationSearchParams(limit=9999, offset=0)
         all_report_posts, _ = self.report_post_repo.list_reports_by_post(
             post_id, all_params
         )
-        self.__apply_points_to_all_reporters(all_report_posts, VoteTypeEnum.SUSPEND)
-        self.add_reputation_points(
+        self._apply_points_to_all_reporters(all_report_posts, VoteTypeEnum.SUSPEND)
+        self._add_reputation_points(
             author_post_id, ReputationActionEnum.RECEIVED_VALID_REPORT_TO_USER
         )
-        self.add_popularity_points(
+        self._add_popularity_points(
             author_post_id, PopularityActionEnum.RECEIVED_VALID_REPORT_TO_USER
         )
 
@@ -148,18 +168,18 @@ class ReputationService:
         all_report_posts, _ = self.report_post_repo.list_reports_by_post(
             post_id, all_params
         )
-        self.__apply_points_to_all_reporters(all_report_posts, VoteTypeEnum.TOLERATE)
+        self._apply_points_to_all_reporters(all_report_posts, VoteTypeEnum.TOLERATE)
 
     def handle_member_report_suspended(self, member_id: UUID) -> None:
         all_params = PaginationSearchParams(limit=9999, offset=0)
         all_report_members, _ = self.report_member_repo.list_reports_by_member(
             member_id, all_params
         )
-        self.__apply_points_to_all_reporters(all_report_members, VoteTypeEnum.SUSPEND)
-        self.add_reputation_points(
+        self._apply_points_to_all_reporters(all_report_members, VoteTypeEnum.SUSPEND)
+        self._add_reputation_points(
             member_id, ReputationActionEnum.RECEIVED_VALID_REPORT_TO_USER
         )
-        self.add_popularity_points(
+        self._add_popularity_points(
             member_id, PopularityActionEnum.RECEIVED_VALID_REPORT_TO_USER
         )
 
@@ -168,7 +188,7 @@ class ReputationService:
         all_report_members, _ = self.report_member_repo.list_reports_by_member(
             member_id, all_params
         )
-        self.__apply_points_to_all_reporters(all_report_members, VoteTypeEnum.TOLERATE)
+        self._apply_points_to_all_reporters(all_report_members, VoteTypeEnum.TOLERATE)
 
     def handle_comment_report_suspended(
         self, comment_id: UUID, author_comment_id: UUID
@@ -177,11 +197,11 @@ class ReputationService:
         all_report_comments, _ = self.report_comment_repo.list_reports_by_comment(
             comment_id, all_params
         )
-        self.__apply_points_to_all_reporters(all_report_comments, VoteTypeEnum.SUSPEND)
-        self.add_reputation_points(
+        self._apply_points_to_all_reporters(all_report_comments, VoteTypeEnum.SUSPEND)
+        self._add_reputation_points(
             author_comment_id, ReputationActionEnum.RECEIVED_VALID_REPORT_TO_USER
         )
-        self.add_popularity_points(
+        self._add_popularity_points(
             author_comment_id, PopularityActionEnum.RECEIVED_VALID_REPORT_TO_USER
         )
 
@@ -190,20 +210,20 @@ class ReputationService:
         all_report_comments, _ = self.report_comment_repo.list_reports_by_comment(
             comment_id, all_params
         )
-        self.__apply_points_to_all_reporters(all_report_comments, VoteTypeEnum.TOLERATE)
+        self._apply_points_to_all_reporters(all_report_comments, VoteTypeEnum.TOLERATE)
 
     def award_complaint_creation(self, author_id: UUID) -> None:
-        self.add_reputation_points(author_id, ReputationActionEnum.CREATE_COMPLAINT)
-        self.add_popularity_points(author_id, PopularityActionEnum.CREATE_COMPLAINT)
+        self._add_reputation_points(author_id, ReputationActionEnum.CREATE_COMPLAINT)
+        self._add_popularity_points(author_id, PopularityActionEnum.CREATE_COMPLAINT)
 
     def award_complaint_confirmation(self, member_id: UUID) -> None:
-        self.add_reputation_points(member_id, ReputationActionEnum.CONFIRM_COMPLAINT)
+        self._add_reputation_points(member_id, ReputationActionEnum.CONFIRM_COMPLAINT)
 
     def award_complaint_resolution(self, author_id: UUID) -> None:
-        self.add_reputation_points(author_id, ReputationActionEnum.COMPLAINT_RESOLVED)
-        self.add_popularity_points(author_id, PopularityActionEnum.COMPLAINT_RESOLVED)
+        self._add_reputation_points(author_id, ReputationActionEnum.COMPLAINT_RESOLVED)
+        self._add_popularity_points(author_id, PopularityActionEnum.COMPLAINT_RESOLVED)
 
     def award_complaint_resolution_by_moderator(self, moderator_id: UUID) -> None:
-        self.add_reputation_points(
+        self._add_reputation_points(
             moderator_id, ReputationActionEnum.RESOLVE_COMPLAINT_MODERATOR
         )

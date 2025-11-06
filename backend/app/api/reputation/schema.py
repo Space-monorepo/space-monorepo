@@ -1,5 +1,7 @@
 from enum import Enum
 
+from pydantic import BaseModel
+
 
 class ReputationLevelEnum(str, Enum):
     UNDER_OBSERVATION = 'under_observation'
@@ -62,3 +64,15 @@ POPULARITY_POINTS = {
     PopularityActionEnum.CREATE_COMPLAINT: 100,
     PopularityActionEnum.COMPLAINT_RESOLVED: 200,
 }
+
+
+class ReputationScoreResponse(BaseModel):
+    reputation: int
+
+
+class ReputationLevelResponse(BaseModel):
+    reputation_level: str
+
+
+class PopularityScoreResponse(BaseModel):
+    popularity: int
