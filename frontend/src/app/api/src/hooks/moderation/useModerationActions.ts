@@ -2,6 +2,7 @@ import Cookies from 'js-cookie';
 import { API_URL } from '@/config';
 
 export interface ModerateReportPayload {
+    report_id: string;
     moderator_id: string;
     vote: 'tolerate' | 'suspend';
 }

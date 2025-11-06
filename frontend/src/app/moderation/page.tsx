@@ -1,5 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import { API_URL } from "@/config";
+import { useReportersList, ReportListItem } from "@/app/api/src/hooks/moderation/useReportersList";
+import ReportersModal from "@/components/modals/ReportersModal";
 import { ArrowLeft, Filter, Heart, MessageSquare } from "lucide-react";
 import { View } from "@carbon/icons-react";
 import Link from "next/link";
@@ -166,6 +169,47 @@ type Poll = {
 };
 
 export default function ModerationPage() {
+    // --- Estados para exibir lista de reportes ---
+    // Modal states
+    const [userReportersOpen, setUserReportersOpen] = useState<string | null>(null);
+    const [postReportersOpen, setPostReportersOpen] = useState<string | null>(null);
+    const [commentReportersOpen, setCommentReportersOpen] = useState<string | null>(null);
+
+    // Hooks para buscar reportes
+    const userReportersHook = useReportersList();
+    const postReportersHook = useReportersList();
+    const commentReportersHook = useReportersList();
+
+    // --- Handlers para buscar e abrir lista de reportes ---
+    const handleShowUserReporters = async (report: UserReport) => {
+        if (!selectedCommunity) return;
+        if (userReportersOpen === report.id) {
+            setUserReportersOpen(null);
+            return;
+        }
+        setUserReportersOpen(report.id);
+        userReportersHook.fetchReporters("user", selectedCommunity.id, report.reportedUser.id);
+    };
+
+    const handleShowPostReporters = async (report: PostReport) => {
+        if (!selectedCommunity) return;
+        if (postReportersOpen === report.id) {
+            setPostReportersOpen(null);
+            return;
+        }
+        setPostReportersOpen(report.id);
+        postReportersHook.fetchReporters("post", selectedCommunity.id, report.reportedPost.id);
+    };
+
+    const handleShowCommentReporters = async (report: CommentReport) => {
+        if (!selectedCommunity) return;
+        if (commentReportersOpen === report.id) {
+            setCommentReportersOpen(null);
+            return;
+        }
+        setCommentReportersOpen(report.id);
+        commentReportersHook.fetchReporters("comment", selectedCommunity.id, report.reportedComment.id);
+    };
     // ===================================
     // INÍCIO: TRECHO DE USUÁRIOS REPORTADOS
     // ===================================
@@ -220,9 +264,18 @@ export default function ModerationPage() {
                                         <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
                                             Investigar usuário
                                         </button>
-                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
+                                        <button
+                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                            onClick={() => handleShowUserReporters(report)}
+                                        >
                                             Ver reportes
                                         </button>
+                                        <ReportersModal
+                                            isOpen={userReportersOpen === report.id}
+                                            onClose={() => setUserReportersOpen(null)}
+                                            reporters={userReportersHook.reporters}
+                                            loading={userReportersHook.loading}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -364,9 +417,18 @@ export default function ModerationPage() {
                                         <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
                                             Investigar publicação
                                         </button>
-                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
+                                        <button
+                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                            onClick={() => handleShowPostReporters(report)}
+                                        >
                                             Ver reportes
                                         </button>
+                                        <ReportersModal
+                                            isOpen={postReportersOpen === report.id}
+                                            onClose={() => setPostReportersOpen(null)}
+                                            reporters={postReportersHook.reporters}
+                                            loading={postReportersHook.loading}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -508,9 +570,18 @@ export default function ModerationPage() {
                                         <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
                                             Investigar comentário
                                         </button>
-                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
+                                        <button
+                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                            onClick={() => handleShowCommentReporters(report)}
+                                        >
                                             Ver reportes
                                         </button>
+                                        <ReportersModal
+                                            isOpen={commentReportersOpen === report.id}
+                                            onClose={() => setCommentReportersOpen(null)}
+                                            reporters={commentReportersHook.reporters}
+                                            loading={commentReportersHook.loading}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -1128,6 +1199,7 @@ export default function ModerationPage() {
         const reportId = report.id;
         try {
             await moderateReport(selectedCommunity.id, reportId, {
+                report_id: reportId,
                 moderator_id: user.id,
                 vote: 'tolerate',
             });
@@ -1145,6 +1217,7 @@ export default function ModerationPage() {
         const reportId = report.id;
         try {
             await moderateReport(selectedCommunity.id, reportId, {
+                report_id: reportId,
                 moderator_id: user.id,
                 vote: 'suspend',
             });
