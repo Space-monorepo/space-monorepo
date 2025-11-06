@@ -4,6 +4,7 @@ import { ArrowLeft, Filter, Heart, MessageSquare } from "lucide-react";
 import { View } from "@carbon/icons-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
+import { useModerationActions } from "@/app/api/src/hooks/moderation/useModerationActions";
 import Sidebar from "@/components/ui/sidebar";
 import { CheckmarkFilled, Search } from "@carbon/icons-react";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
@@ -269,9 +270,9 @@ export default function ModerationPage() {
                             </div>
                             <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedUserReport(report);
-                                        setIsDissolveModalOpen(true);
+                                        await handleActuallyTolerate(report);
                                     }}
                                     className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
                                 >
@@ -280,9 +281,9 @@ export default function ModerationPage() {
                                     </span>
                                 </button>
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedUserReport(report);
-                                        setIsResolveModalOpen(true);
+                                        await handleActuallyResolve(report);
                                     }}
                                     className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
                                 >
@@ -413,9 +414,9 @@ export default function ModerationPage() {
                             </div>
                             <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedPostReport(report);
-                                        setIsDissolveModalOpen(true);
+                                        await handleActuallyTolerate(report);
                                     }}
                                     className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
                                 >
@@ -424,9 +425,9 @@ export default function ModerationPage() {
                                     </span>
                                 </button>
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedPostReport(report);
-                                        setIsResolveModalOpen(true);
+                                        await handleActuallyResolve(report);
                                     }}
                                     className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
                                 >
@@ -557,9 +558,9 @@ export default function ModerationPage() {
                             </div>
                             <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedCommentReport(report);
-                                        setIsDissolveModalOpen(true);
+                                        await handleActuallyTolerate(report);
                                     }}
                                     className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
                                 >
@@ -568,9 +569,9 @@ export default function ModerationPage() {
                                     </span>
                                 </button>
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedCommentReport(report);
-                                        setIsResolveModalOpen(true);
+                                        await handleActuallyResolve(report);
                                     }}
                                     className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
                                 >
@@ -1121,61 +1122,38 @@ export default function ModerationPage() {
     };
 
     // Handlers reais para ações de moderação
-    const handleActuallyTolerate = async (subject: string, reason: string) => {
-        if (!selectedCommunity) return;
-
+    const { moderateReport } = useModerationActions();
+    const handleActuallyTolerate = async (report: UserReport | PostReport | CommentReport) => {
+        if (!selectedCommunity || !user) return;
+        const reportId = report.id;
         try {
-            let type: 'user' | 'post' | 'comment' = 'user';
-            let id = '';
-
-            if (selectedUserReport) {
-                type = 'user';
-                id = selectedUserReport.reportedUser.id;
-            } else if (selectedPostReport) {
-                type = 'post';
-                id = selectedPostReport.reportedPost.id;
-            } else if (selectedCommentReport) {
-                type = 'comment';
-                id = selectedCommentReport.reportedComment.id;
-            }
-
-            await tolerateReport(selectedCommunity.id, type, id);
+            await moderateReport(selectedCommunity.id, reportId, {
+                moderator_id: user.id,
+                vote: 'tolerate',
+            });
             toast.success("Reporte tolerado com sucesso!");
-
-            // Limpar seleções
             setSelectedUserReport(null);
             setSelectedPostReport(null);
             setSelectedCommentReport(null);
         } catch (error: any) {
             toast.error(error.message || "Erro ao tolerar reporte");
-        } finally {
-            setIsDissolveModalOpen(false);
         }
     };
 
-    const handleActuallyResolve = async (subject: string, message: string) => {
-        if (!selectedCommunity) return;
-
+    const handleActuallyResolve = async (report: UserReport | PostReport | CommentReport) => {
+        if (!selectedCommunity || !user) return;
+        const reportId = report.id;
         try {
-            if (selectedUserReport) {
-                await suspendUser(selectedCommunity.id, selectedUserReport.reportedUser.id);
-                toast.success("Usuário suspenso com sucesso!");
-            } else if (selectedPostReport) {
-                await removePost(selectedCommunity.id, selectedPostReport.reportedPost.id);
-                toast.success("Publicação removida com sucesso!");
-            } else if (selectedCommentReport) {
-                await removeComment(selectedCommunity.id, selectedCommentReport.reportedComment.id);
-                toast.success("Comentário removido com sucesso!");
-            }
-
-            // Limpar seleções
+            await moderateReport(selectedCommunity.id, reportId, {
+                moderator_id: user.id,
+                vote: 'suspend',
+            });
+            toast.success("Reporte suspenso com sucesso!");
             setSelectedUserReport(null);
             setSelectedPostReport(null);
             setSelectedCommentReport(null);
         } catch (error: any) {
-            toast.error(error.message || "Erro ao resolver reporte");
-        } finally {
-            setIsResolveModalOpen(false);
+            toast.error(error.message || "Erro ao suspender reporte");
         }
     };
 
@@ -1986,35 +1964,7 @@ export default function ModerationPage() {
                 />
             )}
 
-            {isDissolveModalOpen && (
-                <RejectComplaintModal
-                    isOpen={isDissolveModalOpen}
-                    onClose={() => setIsDissolveModalOpen(false)}
-                    onReject={handleActuallyTolerate}
-                    complaintTitle={
-                        selectedUserReport?.reportedUser.name ||
-                        selectedPostReport?.reportedPost.title ||
-                        selectedCommentReport?.reportedComment.author.name ||
-                        selectedReport?.title ||
-                        "Item"
-                    }
-                />
-            )}
 
-            {isResolveModalOpen && (
-                <ApproveComplaintModal
-                    isOpen={isResolveModalOpen}
-                    onClose={() => setIsResolveModalOpen(false)}
-                    onApprove={handleActuallyResolve}
-                    complaintTitle={
-                        selectedUserReport?.reportedUser.name ||
-                        selectedPostReport?.reportedPost.title ||
-                        selectedCommentReport?.reportedComment.author.name ||
-                        selectedReport?.title ||
-                        "Item"
-                    }
-                />
-            )}
 
         </div>
     );
