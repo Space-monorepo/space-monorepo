@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware import cors
 
-from app.core.exceptions import add_exception_handlers
-
 from app.api.administration.routes import router as admin_router
 from app.api.badges.routes import (
-    router as badges_router,
     admin_router as badges_admin_router,
+)
+from app.api.badges.routes import (
+    router as badges_router,
 )
 from app.api.chat.routes import router as chat_router
 from app.api.chat.websocket.routes import router as chat_websocket_router
@@ -16,8 +16,10 @@ from app.api.moderation.routes import router as moderation_router
 from app.api.post.routes import router as post_router
 from app.api.rating.routes import router as rating_router
 from app.api.reports.routes import router as reports_router
-from app.api.users.routes import router as users_router
+from app.api.reputation.routes import router as reputation_router
 from app.api.search.routes import router as search_router
+from app.api.users.routes import router as users_router
+from app.core.exceptions import add_exception_handlers
 
 app = FastAPI(
     title='Space API',
@@ -47,6 +49,7 @@ routes = [
     badges_admin_router,
     rating_router,
     search_router,
+    reputation_router,
 ]
 
 for route in routes:
