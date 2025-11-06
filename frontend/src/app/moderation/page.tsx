@@ -1561,8 +1561,10 @@ export default function ModerationPage() {
                                                             {selectedReport.category}
                                                         </span>
                                                     </div>
-                                                    <div className="mt-2 w-full font-medium text-yellow-600 max-md:max-w-full">
-                                                        <p>Investigar denúncia</p>
+                                                    <div className="mt-2 w-full max-md:max-w-full">
+                                                        <span className="self-stretch my-auto text-neutral-800 leading-6">
+                                                            {selectedReport.description || "Investigar denúncia"}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
