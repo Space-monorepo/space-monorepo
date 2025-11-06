@@ -56,6 +56,7 @@ export interface PostResponse {
   report_count: number;
   created_at: string; // ou Date, se você for converter
   updated_at: string; // ou Date
+  level_complaint?: string; // Nível de denúncia vindo do backend
   poll_question?: string | null; // Apenas para posts do tipo poll
   poll_options?: PollOption[] | null; // Apenas para posts do tipo poll
 }

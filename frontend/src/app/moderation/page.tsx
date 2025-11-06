@@ -789,7 +789,7 @@ export default function ModerationPage() {
             description: apiUser.description || `Usuário reportado por comportamento inadequado. Status atual: ${apiUser.status}`,
             date: new Date(apiUser.created_at || apiUser.date).toLocaleDateString("pt-BR"),
             status: apiUser.status === "suspended" ? "Resolvido" : "Em análise",
-            severity: apiUser.report_count > 10 ? "Crítica" : apiUser.report_count > 5 ? "Moderada" : "Leve",
+            severity: apiUser.level_complaint || "Leve",
             confirmations: apiUser.report_count || 0,
             category: apiUser.category || "Comportamento",
         };
@@ -822,7 +822,7 @@ export default function ModerationPage() {
         description: "Publicação foi reportada pela comunidade por violar as diretrizes de conteúdo.",
         date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
         status: "Em análise",
-        severity: apiPost.report_count > 15 ? "Crítica" : apiPost.report_count > 8 ? "Moderada" : "Leve",
+        severity: apiPost.level_complaint || "Leve",
         confirmations: apiPost.report_count || 0,
         category: "Conteúdo",
     });
@@ -852,7 +852,7 @@ export default function ModerationPage() {
         description: "Comentário foi reportado pela comunidade por conter linguagem inadequada ou ofensiva.",
         date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
         status: "Em análise",
-        severity: apiComment.report_count > 5 ? "Crítica" : apiComment.report_count > 2 ? "Moderada" : "Leve",
+        severity: apiComment.level_complaint || "Leve",
         confirmations: apiComment.report_count || 0,
         category: "Comportamento",
     });
@@ -872,7 +872,9 @@ export default function ModerationPage() {
         status: post.status === "active" ? "Em análise" : "Resolvido",
         description: post.content,
         category: "Comportamento",
-        severity: "Moderada" as const,
+        severity: ["Crítica", "Moderada", "Leve"].includes(post.level_complaint as string)
+            ? (post.level_complaint as "Crítica" | "Moderada" | "Leve")
+            : "Leve",
         confirmations: post.report_count || 0,
         image: post.image_url || undefined,
         likes: post.likes_count || 0,
