@@ -19,6 +19,7 @@ from app.api.post.repository import (
     PostFeedbackRepository,
     PostLikesRepository,
     PostRepository,
+    PollVotesRepository,
 )
 from app.api.rating.repository import RatingRepository
 from app.api.reports.repository import (
@@ -137,3 +138,6 @@ class TransactionManager:
 
     def get_message_attachment_repository(self):
         return MessageAttachmentRepository(self._session)
+    
+    def get_poll_votes_repository(self):
+        return PollVotesRepository(self._session)
