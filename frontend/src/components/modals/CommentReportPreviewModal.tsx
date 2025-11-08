@@ -5,6 +5,7 @@ import { CommentReport } from "@/app/moderation/page";
 import { CheckmarkFilled } from "@carbon/icons-react";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
+import { translateUserRole } from "@/lib/roleTranslations";
 
 interface CommentReportPreviewModalProps {
     report: CommentReport;
@@ -48,9 +49,9 @@ const CommentReportPreviewModal: React.FC<CommentReportPreviewModalProps> = ({ r
                                                 <div className="self-stretch my-auto text-[10px] font-semibold">
                                                     •
                                                 </div>
-                                                <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedComment.author.role)}`}>
+                                                <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedComment.author.role)}`}> 
                                                     <div className="self-stretch my-auto">
-                                                        {report.reportedComment.author.role}
+                                                        {translateUserRole(report.reportedComment.author.role || "")}
                                                     </div>
                                                 </div>
                                             </div>

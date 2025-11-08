@@ -5,6 +5,7 @@ import { Bookmark, Activity, EllipsisVerticalIcon as OverflowMenuVertical } from
 import { CheckmarkFilled, ArrowUp, Forum } from "@carbon/icons-react";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
+import { translateUserRole } from "@/lib/roleTranslations";
 import { translatePostType } from "@/lib/postTypeTranslations";
 import { voteOnPoll } from "@/app/api/src/services/post/postService";
 import { confirmComplaint } from "@/app/api/src/services/post/postService";
@@ -176,7 +177,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                                 </div>
                                                 <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(localPost.role)}`}>
                                                     <div className="self-stretch my-auto">
-                                                        {localPost.role}
+                                                        {translateUserRole(localPost.role || "")}
                                                     </div>
                                                 </div>
                                             </div>

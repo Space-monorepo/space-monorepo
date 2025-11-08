@@ -1,5 +1,7 @@
 
 import React from "react";
+import { translateUserRole } from "@/lib/roleTranslations";
+import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import { createPortal } from "react-dom";
 import { PostReport } from "@/app/moderation/page";
 
@@ -39,9 +41,9 @@ const PostReportPreviewModal: React.FC<PostReportPreviewModalProps> = ({ report,
                                                     {report.reportedPost.author.name}
                                                 </span>
                                                 <div className="self-stretch my-auto text-[10px] font-semibold">•</div>
-                                                <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-zinc-100">
+                                                <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedPost.author.role)}`}> 
                                                     <div className="self-stretch my-auto">
-                                                        {report.reportedPost.author.role}
+                                                        {translateUserRole(report.reportedPost.author.role || "")}
                                                     </div>
                                                 </div>
                                             </div>
