@@ -1,20 +1,20 @@
 import uuid
-import pytest
-
 from datetime import datetime
+
+import pytest
 from pydantic import ValidationError
 
 from app.api.communities.schema import (
-    CommunityRelated,
     CommunityCreate,
-    CommunityResponse,
-    CommunityUpdate,
-    CommunityTypeEnum,
+    CommunityMemberCreate,
+    CommunityMemberResponse,
     CommunityMemberRoleEnum,
     CommunityMemberStatusEnum,
-    CommunityMemberCreate,
     CommunityMemberUpdate,
-    CommunityMemberResponse,
+    CommunityRelated,
+    CommunityResponse,
+    CommunityTypeEnum,
+    CommunityUpdate,
 )
 from app.api.users.schema import UserResponse, UserStatusEnum
 
@@ -127,7 +127,6 @@ def test_community_member_create_schema():
         user_id=user_id,
         community_id=community_id,
         role=CommunityMemberRoleEnum.ADMIN,
-        reputation=10,
         status_participation=CommunityMemberStatusEnum.ACTIVE,
     )
 
@@ -135,7 +134,6 @@ def test_community_member_create_schema():
         'user_id': user_id,
         'community_id': community_id,
         'role': CommunityMemberRoleEnum.ADMIN,
-        'reputation': 10,
         'status_participation': CommunityMemberStatusEnum.ACTIVE,
     }
 
@@ -148,7 +146,6 @@ def test_community_member_create_schema():
         'user_id': user_id,
         'community_id': community_id,
         'role': 'member',
-        'reputation': 0,
         'status_participation': 'active',
     }
 
@@ -158,13 +155,11 @@ def test_community_member_update_schema():
     # Test with all fields
     member_update = CommunityMemberUpdate(
         role=CommunityMemberRoleEnum.MODERATOR,
-        reputation=20,
         status_participation=CommunityMemberStatusEnum.SUSPENDED,
     )
 
     assert member_update.model_dump() == {
         'role': 'moderator',
-        'reputation': 20,
         'status_participation': 'suspended',
     }
 
@@ -174,7 +169,6 @@ def test_community_member_update_schema():
     )
     assert partial_update.model_dump() == {
         'role': 'moderator',
-        'reputation': None,
         'status_participation': None,
     }
 
@@ -211,6 +205,8 @@ def test_community_member_response_schema():
         role=CommunityMemberRoleEnum.ADMIN,
         status_participation=CommunityMemberStatusEnum.ACTIVE,
         reputation=10,
+        reputation_level='helper',
+        popularity=0,
         entered_in=entered_in,
     )
 
@@ -221,6 +217,8 @@ def test_community_member_response_schema():
         'role': 'admin',
         'status_participation': 'active',
         'reputation': 10,
+        'reputation_level': 'helper',
+        'popularity': 0,
         'entered_in': entered_in,
     }
 
