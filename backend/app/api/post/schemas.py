@@ -534,3 +534,24 @@ class PollResponse(BaseModel):
             ]
         },
     )
+
+
+class PollVoteResponse(BaseModel):
+    id: uuid.UUID = Field(..., description='Id of the poll vote')
+    poll_option_id: uuid.UUID = Field(..., description='Id of the poll option')
+    member_id: uuid.UUID = Field(..., description='Id of the member')
+    created_at: datetime = Field(..., description='Created at of the poll vote')
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            'examples': [
+                {
+                    'id': '123',
+                    'poll_option_id': '123',
+                    'member_id': '456',
+                    'created_at': '2021-01-01T00:00:00Z',
+                }
+            ]
+        },
+    )

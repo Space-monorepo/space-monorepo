@@ -52,6 +52,14 @@ class ComplaintNotFoundError(Exception):
     pass
 
 
+class PollVoteAlreadyExistsError(Exception):
+    """
+    Exception raised when a poll vote already exists.
+    """
+
+    pass
+
+
 def add_post_exception_handler(app: FastAPI):
     @app.exception_handler(ComplaintNotFoundError)
     async def complaint_not_found_exception_handler(
@@ -114,5 +122,16 @@ def add_post_exception_handler(app: FastAPI):
             status_code=status.HTTP_404_NOT_FOUND,
             content=ErrorResponse(
                 message=str(exc), error_type='poll_option_not_found', details={}
+            ).model_dump(mode='json'),
+        )
+
+    @app.exception_handler(PollVoteAlreadyExistsError)
+    async def poll_vote_already_exists_exception_handler(
+        request: Request, exc: PollVoteAlreadyExistsError
+    ):
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content=ErrorResponse(
+                message=str(exc), error_type='poll_vote_already_exists', details={}
             ).model_dump(mode='json'),
         )
