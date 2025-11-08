@@ -292,12 +292,93 @@ def test_create_poll_route(authenticate_client, community_member_on_db):
 
 @pytest.mark.integration
 def test_vote_poll_route(authenticate_client, community_member_on_db, poll_option_on_db):
+    """
+    Tests the vote_poll route for first vote.
+
+    Scenario:
+    - Given a valid poll option and authenticated member
+    - When the member votes on the poll option for the first time
+    - Then it should return 200 OK and increment votes_count
+    """
     poll_option = poll_option_on_db[0]
     response = authenticate_client.patch(
         f'/posts/{community_member_on_db.community_id}/post/poll-options/{poll_option.id}/vote',
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()['options'][0]['votes_count'] == 1
+    response_data = response.json()
+    assert response_data['poll_option_id'] == str(poll_option.id)
+    assert response_data['member_id'] == str(community_member_on_db.id)
+
+
+@pytest.mark.integration
+def test_vote_poll_same_option_twice_route(
+    authenticate_client, community_member_on_db, poll_option_on_db
+):
+    """
+    Tests the vote_poll route when voting same option twice.
+
+    Scenario:
+    - Given a member who already voted on a poll option
+    - When the member tries to vote on the same option again
+    - Then it should return 409 Conflict
+    """
+    poll_option = poll_option_on_db[0]
+    
+    # Primeiro voto
+    response = authenticate_client.patch(
+        f'/posts/{community_member_on_db.community_id}/post/poll-options/{poll_option.id}/vote',
+    )
+    assert response.status_code == status.HTTP_200_OK
+    
+    # Segundo voto na mesma opção
+    response = authenticate_client.patch(
+        f'/posts/{community_member_on_db.community_id}/post/poll-options/{poll_option.id}/vote',
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+
+@pytest.mark.integration
+def test_vote_poll_change_vote_route(
+    session_sql, authenticate_client, community_member_on_db, poll_option_on_db
+):
+    """
+    Tests the vote_poll route when changing vote between options.
+
+    Scenario:
+    - Given a member who voted on option A
+    - When the member votes on option B (different option)
+    - Then it should return 200 OK with updated vote, option A should have 0 votes and option B should have 1 vote
+    """
+    from app.api.post.model import PollOptions
+    
+    option_a = poll_option_on_db[0]
+    option_b = poll_option_on_db[1]
+    
+    # Votar na opção A
+    response = authenticate_client.patch(
+        f'/posts/{community_member_on_db.community_id}/post/poll-options/{option_a.id}/vote',
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['poll_option_id'] == str(option_a.id)
+    
+    # Verificar que opção A tem 1 voto
+    option_a_db = session_sql.query(PollOptions).filter(PollOptions.id == option_a.id).first()
+    assert option_a_db.votes_count == 1
+    
+    # Votar na opção B (mudar voto)
+    response = authenticate_client.patch(
+        f'/posts/{community_member_on_db.community_id}/post/poll-options/{option_b.id}/vote',
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['poll_option_id'] == str(option_b.id)
+    
+    # Verificar que opção A agora tem 0 votos (decrementou)
+    session_sql.refresh(option_a_db)
+    assert option_a_db.votes_count == 0
+    
+    # Verificar que opção B tem 1 voto
+    option_b_db = session_sql.query(PollOptions).filter(PollOptions.id == option_b.id).first()
+    assert option_b_db.votes_count == 1
 
 
 @pytest.mark.integration

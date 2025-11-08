@@ -11,6 +11,7 @@ from app.api.post.model import (
     ComplaintPost,
     PollOptions,
     PollPosts,
+    PollVotes,
     Post,
     PostFeedback,
     PostLikes,
@@ -308,6 +309,32 @@ class PollOptionsRepository(BaseRepository[PollOptions]):
                 f'Model {PollOptions.__qualname__} with id {post_id} not found'
             )
             return None
+
+
+class PollVotesRepository(BaseRepository[PollVotes]):
+    def __init__(self, session: Session):
+        super().__init__(PollVotes, session)
+        self.session = session
+
+    def get_vote_member(self, poll_post_id: UUID, member_id: UUID) -> PollVotes | None:
+        vote = (
+            self.session.query(PollVotes)
+            .filter(
+                PollVotes.poll_post_id == poll_post_id, PollVotes.member_id == member_id
+            )
+            .first()
+        )
+        return vote
+
+    def member_has_voted(self, member_id: UUID, poll_post_id: UUID) -> PollVotes | None:
+        vote = (
+            self.session.query(PollVotes)
+            .filter(
+                PollVotes.member_id == member_id, PollVotes.poll_post_id == poll_post_id
+            )
+            .first()
+        )
+        return vote
 
 
 class PostFeedbackRepository(BaseRepository[PostFeedback]):

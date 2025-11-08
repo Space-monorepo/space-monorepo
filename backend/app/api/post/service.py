@@ -5,6 +5,7 @@ from app.api.communities.service import CommunityService
 from app.api.post.exceptions import (
     ComplaintNotFoundError,
     PollOptionNotFoundError,
+    PollVoteAlreadyExistsError,
     PostLikesNotFoundError,
     PostNotFoundError,
     PostSuspendedError,
@@ -16,6 +17,7 @@ from app.api.post.model import (
     ComplaintPost,
     PollOptions,
     PollPosts,
+    PollVotes,
     Post,
     PostLikes,
 )
@@ -27,6 +29,7 @@ from app.api.post.schemas import (
     PollCreate,
     PollOptionResponse,
     PollResponse,
+    PollVoteResponse,
     PostAuthor,
     PostCreate,
     PostFeedResponse,
@@ -56,6 +59,7 @@ class PostService:
         self.poll_posts_repo = tm.get_poll_posts_repository()
         self.poll_options_repo = tm.get_poll_options_repository()
         self.post_likes_repo = tm.get_post_likes_repository()
+        self.poll_votes_repo = tm.get_poll_votes_repository()
         self.community_service = CommunityService(tm)
 
     def _get_post(self, post_id: UUID) -> Post:
@@ -407,33 +411,45 @@ class PostService:
         except Exception as e:
             raise UnexpectedPostError('Unexpected error creating poll') from e
 
-    def vote_poll(self, poll_option_id: UUID) -> PollResponse:
+    def vote_poll(self, poll_option_id: UUID, member_id: UUID) -> PollVoteResponse:
         try:
             poll_option = self.poll_options_repo.get_by_id(poll_option_id)
             if not poll_option:
                 raise PollOptionNotFoundError('Poll option not found')
 
+            vote = self.poll_votes_repo.member_has_voted(member_id, poll_option.post_id)
+
+            # Se já votou, verificar se é na mesma opção
+            if vote:
+                if str(vote.poll_option_id) == str(poll_option_id):
+                    raise PollVoteAlreadyExistsError('Poll vote already exists')
+
+                # Decrementar contagem da opção ANTIGA
+                old_option = self.poll_options_repo.get_by_id(vote.poll_option_id)
+                if old_option:
+                    old_option.votes_count -= 1
+                    self.poll_options_repo.save(old_option)
+
+                # Deletar voto antigo
+                self.poll_votes_repo.delete(vote)
+
+            # Incrementar contagem da nova opção e criar novo voto
             poll_option.votes_count += 1
             self.poll_options_repo.save(poll_option)
-
-            poll_post = self.get_poll(poll_option.post_id)
-
-            sorted_options = sorted(poll_post.options, key=lambda x: x.answer)
-
-            option_responses = []
-            for option in sorted_options:
-                option_responses.append(
-                    PollOptionResponse(
-                        id=option.id,
-                        answer=option.answer,
-                        votes_count=option.votes_count,
-                    )
+            vote_saved = self.poll_votes_repo.save(
+                PollVotes(
+                    poll_post_id=poll_option.post_id,
+                    poll_option_id=poll_option_id,
+                    member_id=member_id,
                 )
-
-            return PollResponse(
-                post=self.get_post(poll_post.post_id),
-                question=poll_post.question,
-                options=option_responses,
             )
+            return PollVoteResponse(
+                id=vote_saved.id,
+                poll_option_id=poll_option_id,
+                member_id=member_id,
+                created_at=vote_saved.created_at,
+            )
+        except (PollVoteAlreadyExistsError, PollOptionNotFoundError):
+            raise
         except Exception as e:
             raise UnexpectedPostError('Unexpected error voting poll') from e

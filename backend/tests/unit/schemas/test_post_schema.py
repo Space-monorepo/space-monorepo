@@ -26,6 +26,7 @@ from app.api.post.schemas import (
     PostStatusEnum,
     PostTypeEnum,
     PostUpdate,
+    PollVoteResponse,
 )
 
 
@@ -544,4 +545,25 @@ def test_poll_response_schema():
                 'votes_count': 0,
             },
         ],
+    }
+
+
+@pytest.mark.unit
+def test_poll_vote_response_schema():
+    id = uuid.uuid4()
+    poll_option_id = uuid.uuid4()
+    member_id = uuid.uuid4()
+    created_at = datetime.now()
+
+    poll_vote_response = PollVoteResponse(
+        id=id,
+        poll_option_id=poll_option_id,
+        member_id=member_id,
+        created_at=created_at,
+    )
+    assert poll_vote_response.model_dump() == {
+        'id': id,
+        'poll_option_id': poll_option_id,
+        'member_id': member_id,
+        'created_at': created_at,
     }

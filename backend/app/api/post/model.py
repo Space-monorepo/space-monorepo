@@ -114,6 +114,16 @@ class PollOptions(Base):
     poll = relationship('PollPosts', back_populates='options')
 
 
+class PollVotes(Base):
+    __tablename__ = 'poll_votes'
+
+    id = Column(UUIDColumn, primary_key=True, default=uuid_default, index=True)
+    poll_post_id = Column(UUIDColumn, ForeignKey('poll_posts.post_id'), nullable=False)
+    poll_option_id = Column(UUIDColumn, ForeignKey('poll_options.id'), nullable=False)
+    member_id = Column(UUIDColumn, ForeignKey('community_members.id'), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=func.now())
+
+
 class PostFeedback(Base):
     __tablename__ = 'post_feedbacks'
 

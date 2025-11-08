@@ -9,6 +9,7 @@ from app.api.post.schemas import (
     ComplaintResponse,
     PollCreate,
     PollResponse,
+    PollVoteResponse,
     PostCreate,
     PostFeedResponse,
     PostResponse,
@@ -274,13 +275,13 @@ def create_poll(
 
 @router.patch(
     '/{community_id}/post/poll-options/{poll_option_id}/vote',
-    response_model=PollResponse,
+    response_model=PollVoteResponse,
     status_code=status.HTTP_200_OK,
 )
 def vote_poll(
     poll_option_id: str,
     session: Session = Depends(get_db),
-    _: CommunityMember = Depends(require_roles(['member'])),
-) -> PollResponse:
+    member: CommunityMember = Depends(require_roles(['member'])),
+) -> PollVoteResponse:
     with TransactionManager(session) as tm:
-        return PostService(tm).vote_poll(poll_option_id)
+        return PostService(tm).vote_poll(poll_option_id, member.id)

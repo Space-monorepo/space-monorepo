@@ -5,7 +5,8 @@ from uuid import uuid4
 import pytest
 
 from app.api.communities.schema import CommunityMemberRoleEnum
-from app.api.post.exceptions import ComplaintNotFoundError, PostSuspendedError
+from app.api.post.exceptions import PollVoteAlreadyExistsError, PostSuspendedError
+
 from app.api.post.model import CampaignPost, ComplaintPost, PollOptions, PollPosts, Post
 from app.api.post.schemas import (
     CampaignStatusEnum,
@@ -22,6 +23,7 @@ from app.api.post.schemas import (
     PostStatusEnum,
     PostTypeEnum,
     PostUpdate,
+    PollVoteResponse,
 )
 from app.api.post.service import PostService
 from app.utils.schema import PaginationSearchParams
@@ -1466,14 +1468,15 @@ def test_vote_poll_service_success():
     Tests the `vote_poll` method of PostService.
 
     Scenario:
-    - Given a valid poll option ID
-    - When the service votes on the poll option
-    - Then it should increment votes count and return updated poll response
+    - Given a valid poll option ID and member who hasn't voted yet
+    - When the service votes on the poll option for the first time
+    - Then it should increment votes count and return vote response
     """
     # Arrange
     fake_post_id = uuid4()
     fake_poll_option_id = uuid4()
-    fake_question = 'What is your favorite programming language?'
+    fake_member_id = uuid4()
+    fake_vote_id = uuid4()
 
     # Mock da opção que será votada
     fake_voted_option = Mock(spec=PollOptions)
@@ -1482,87 +1485,191 @@ def test_vote_poll_service_success():
     fake_voted_option.answer = 'Python'
     fake_voted_option.votes_count = 0  # Antes do voto
 
-    # Mock das outras opções
-    fake_other_options = []
-    other_languages = ['JavaScript', 'Java']
-    for i, lang in enumerate(other_languages):
-        fake_option = Mock(spec=PollOptions)
-        fake_option.id = uuid4()
-        fake_option.post_id = fake_post_id
-        fake_option.answer = lang
-        fake_option.votes_count = 0
-        fake_other_options.append(fake_option)
-
-    # Todas as opções (incluindo a votada)
-    all_options = [fake_voted_option] + fake_other_options
-
-    # Mock da enquete
-    fake_poll = Mock(spec=PollPosts)
-    fake_poll.post_id = fake_post_id
-    fake_poll.question = fake_question
-    fake_poll.options = all_options
-
-    # Mock do PostResponse
-    fake_community = Mock(spec=CommunityRelated)
-    fake_community.id = uuid4()
-    fake_community.name = 'Tech Community'
-
-    fake_user = Mock(spec=PostAuthor)
-    fake_user.id = uuid4()
-    fake_user.name = 'Poll Creator'
-    fake_user.profile_picture = 'https://example.com/profile.jpg'
-    fake_user.role = CommunityMemberRoleEnum.ADMIN
-
-    fake_post_response = Mock(spec=PostResponse)
-    fake_post_response.id = fake_post_id
-    fake_post_response.community = fake_community
-    fake_post_response.user = fake_user
-    fake_post_response.type_post = PostTypeEnum.POLL
-    fake_post_response.title = 'Programming Languages Poll'
-    fake_post_response.content = 'Vote for your favorite language'
-    fake_post_response.image_url = None
-    fake_post_response.status = PostStatusEnum.ACTIVE
-    fake_post_response.likes_count = 5
-    fake_post_response.comments_count = 3
-    fake_post_response.report_count = 0
-    fake_post_response.created_at = datetime.now(timezone.utc)
-    fake_post_response.updated_at = datetime.now(timezone.utc)
+    # Mock do voto salvo
+    fake_vote_saved = Mock()
+    fake_vote_saved.id = fake_vote_id
+    fake_vote_saved.poll_post_id = fake_post_id
+    fake_vote_saved.poll_option_id = fake_poll_option_id
+    fake_vote_saved.member_id = fake_member_id
+    fake_vote_saved.created_at = datetime.now(timezone.utc)
 
     mock_tm = Mock()
     mock_poll_options_repo = Mock()
     mock_poll_options_repo.get_by_id.return_value = fake_voted_option
     mock_poll_options_repo.save.return_value = fake_voted_option
 
+    mock_poll_votes_repo = Mock()
+    mock_poll_votes_repo.member_has_voted.return_value = None  # Primeiro voto
+    mock_poll_votes_repo.save.return_value = fake_vote_saved
+
     service = PostService(mock_tm)
     service.poll_options_repo = mock_poll_options_repo
-    service.get_poll = Mock(return_value=fake_poll)
-    service.get_post = Mock(return_value=fake_post_response)
+    service.poll_votes_repo = mock_poll_votes_repo
 
     # Act
-    result = service.vote_poll(fake_poll_option_id)
+    result = service.vote_poll(fake_poll_option_id, fake_member_id)
 
     # Assert
     mock_poll_options_repo.get_by_id.assert_called_once_with(fake_poll_option_id)
+    mock_poll_votes_repo.member_has_voted.assert_called_once_with(
+        fake_member_id, fake_post_id
+    )
     mock_poll_options_repo.save.assert_called_once_with(fake_voted_option)
-    service.get_poll.assert_called_once_with(fake_post_id)
-    service.get_post.assert_called_once_with(fake_post_id)
+    mock_poll_votes_repo.save.assert_called_once()
 
     # Verificar que o voto foi incrementado
     assert fake_voted_option.votes_count == 1
 
     # Verificar o resultado
     assert result is not None
-    assert result.post.id == fake_post_id
-    assert result.question == fake_question
-    assert len(result.options) == 3
+    assert isinstance(result, PollVoteResponse)
+    assert result.id == fake_vote_id
+    assert result.poll_option_id == fake_poll_option_id
+    assert result.member_id == fake_member_id
+    assert result.created_at == fake_vote_saved.created_at
 
-    # As opções devem estar ordenadas por answer (alfabética)
-    assert result.options[0].answer == 'Java'  # Alfabeticamente primeiro
-    assert result.options[0].votes_count == 0
-    assert result.options[1].answer == 'JavaScript'
-    assert result.options[1].votes_count == 0
-    assert result.options[2].answer == 'Python'  # A que foi votada
-    assert result.options[2].votes_count == 1
+
+@pytest.mark.unit
+def test_vote_poll_service_already_voted_same_option():
+    """
+    Tests the `vote_poll` method of PostService when voting same option twice.
+
+    Scenario:
+    - Given a member who already voted on a specific poll option
+    - When the member tries to vote on the same option again
+    - Then it should raise PollVoteAlreadyExistsError
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_poll_option_id = uuid4()
+    fake_member_id = uuid4()
+
+    # Mock da opção
+    fake_poll_option = Mock(spec=PollOptions)
+    fake_poll_option.id = fake_poll_option_id
+    fake_poll_option.post_id = fake_post_id
+    fake_poll_option.answer = 'Python'
+    fake_poll_option.votes_count = 5
+
+    # Mock do voto existente (mesmo poll_option_id)
+    fake_existing_vote = Mock()
+    fake_existing_vote.id = uuid4()
+    fake_existing_vote.poll_post_id = fake_post_id
+    fake_existing_vote.poll_option_id = fake_poll_option_id  # Mesma opção
+    fake_existing_vote.member_id = fake_member_id
+
+    mock_tm = Mock()
+    mock_poll_options_repo = Mock()
+    mock_poll_options_repo.get_by_id.return_value = fake_poll_option
+
+    mock_poll_votes_repo = Mock()
+    mock_poll_votes_repo.member_has_voted.return_value = fake_existing_vote
+
+    service = PostService(mock_tm)
+    service.poll_options_repo = mock_poll_options_repo
+    service.poll_votes_repo = mock_poll_votes_repo
+
+    # Act & Assert
+    with pytest.raises(PollVoteAlreadyExistsError) as exc_info:
+        service.vote_poll(fake_poll_option_id, fake_member_id)
+    
+    assert 'Poll vote already exists' in str(exc_info.value)
+    mock_poll_options_repo.get_by_id.assert_called_once_with(fake_poll_option_id)
+    mock_poll_votes_repo.member_has_voted.assert_called_once_with(
+        fake_member_id, fake_post_id
+    )
+    # Verificar que nenhum save foi chamado
+    mock_poll_options_repo.save.assert_not_called()
+    mock_poll_votes_repo.save.assert_not_called()
+
+
+@pytest.mark.unit
+def test_vote_poll_service_change_vote():
+    """
+    Tests the `vote_poll` method of PostService when changing vote.
+
+    Scenario:
+    - Given a member who already voted on option A
+    - When the member votes on option B (different option)
+    - Then it should decrement option A votes, increment option B votes, and update vote
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_old_option_id = uuid4()
+    fake_new_option_id = uuid4()
+    fake_member_id = uuid4()
+    fake_vote_id = uuid4()
+
+    # Mock da opção ANTIGA (onde já tinha votado)
+    fake_old_option = Mock(spec=PollOptions)
+    fake_old_option.id = fake_old_option_id
+    fake_old_option.post_id = fake_post_id
+    fake_old_option.answer = 'JavaScript'
+    fake_old_option.votes_count = 5  # Já tem votos
+
+    # Mock da opção NOVA (onde vai votar agora)
+    fake_new_option = Mock(spec=PollOptions)
+    fake_new_option.id = fake_new_option_id
+    fake_new_option.post_id = fake_post_id
+    fake_new_option.answer = 'Python'
+    fake_new_option.votes_count = 3  # Já tem votos
+
+    # Mock do voto existente
+    fake_existing_vote = Mock()
+    fake_existing_vote.id = uuid4()
+    fake_existing_vote.poll_post_id = fake_post_id
+    fake_existing_vote.poll_option_id = fake_old_option_id  # Votou na opção antiga
+    fake_existing_vote.member_id = fake_member_id
+
+    # Mock do novo voto salvo
+    fake_new_vote_saved = Mock()
+    fake_new_vote_saved.id = fake_vote_id
+    fake_new_vote_saved.poll_post_id = fake_post_id
+    fake_new_vote_saved.poll_option_id = fake_new_option_id
+    fake_new_vote_saved.member_id = fake_member_id
+    fake_new_vote_saved.created_at = datetime.now(timezone.utc)
+
+    mock_tm = Mock()
+    mock_poll_options_repo = Mock()
+    # Retornar opção correta baseada no ID
+    mock_poll_options_repo.get_by_id.side_effect = lambda opt_id: (
+        fake_new_option if opt_id == fake_new_option_id else fake_old_option
+    )
+
+    mock_poll_votes_repo = Mock()
+    mock_poll_votes_repo.member_has_voted.return_value = fake_existing_vote
+    mock_poll_votes_repo.save.return_value = fake_new_vote_saved
+
+    service = PostService(mock_tm)
+    service.poll_options_repo = mock_poll_options_repo
+    service.poll_votes_repo = mock_poll_votes_repo
+
+    # Act
+    result = service.vote_poll(fake_new_option_id, fake_member_id)
+
+    # Assert
+    # Verificar chamadas aos repositórios
+    assert mock_poll_options_repo.get_by_id.call_count == 2  # Busca nova e antiga opção
+    mock_poll_votes_repo.member_has_voted.assert_called_once_with(
+        fake_member_id, fake_post_id
+    )
+    mock_poll_votes_repo.delete.assert_called_once_with(fake_existing_vote)
+    assert mock_poll_options_repo.save.call_count == 2  # Salva ambas opções
+    mock_poll_votes_repo.save.assert_called_once()
+
+    # Verificar que a contagem da opção antiga foi decrementada
+    assert fake_old_option.votes_count == 4  # Era 5, decrementou para 4
+
+    # Verificar que a contagem da nova opção foi incrementada
+    assert fake_new_option.votes_count == 4  # Era 3, incrementou para 4
+
+    # Verificar o resultado
+    assert result is not None
+    assert isinstance(result, PollVoteResponse)
+    assert result.id == fake_vote_id
+    assert result.poll_option_id == fake_new_option_id
+    assert result.member_id == fake_member_id
+    assert result.created_at == fake_new_vote_saved.created_at
 
 
 @pytest.mark.unit
