@@ -56,12 +56,12 @@ def test_moderate_post_with_rejection_success():
     # Mock do PostResponse
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = uuid4()
-    fake_community.name = "Test Community"
+    fake_community.name = 'Test Community'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = uuid4()
-    fake_user.name = "Test User"
-    fake_user.profile_picture = "https://example.com/profile.jpg"
+    fake_user.name = 'Test User'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
     fake_user.role = CommunityMemberRoleEnum.MEMBER
 
     fake_post_response = Mock(spec=PostResponse)
@@ -69,8 +69,8 @@ def test_moderate_post_with_rejection_success():
     fake_post_response.community = fake_community
     fake_post_response.user = fake_user
     fake_post_response.type_post = PostTypeEnum.ANNOUNCEMENT
-    fake_post_response.title = "Test Post"
-    fake_post_response.content = "Test content"
+    fake_post_response.title = 'Test Post'
+    fake_post_response.content = 'Test content'
     fake_post_response.status = PostStatusEnum.ACTIVE
     fake_post_response.likes_count = 5
     fake_post_response.comments_count = 2
@@ -110,12 +110,12 @@ def test_moderate_post_with_status_update_success():
     # Mock do PostResponse original
     fake_community = Mock(spec=CommunityRelated)
     fake_community.id = uuid4()
-    fake_community.name = "Test Community"
+    fake_community.name = 'Test Community'
 
     fake_user = Mock(spec=PostAuthor)
     fake_user.id = uuid4()
-    fake_user.name = "Test User"
-    fake_user.profile_picture = "https://example.com/profile.jpg"
+    fake_user.name = 'Test User'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
     fake_user.role = CommunityMemberRoleEnum.MEMBER
 
     fake_post_response = Mock(spec=PostResponse)
@@ -123,8 +123,8 @@ def test_moderate_post_with_status_update_success():
     fake_post_response.community = fake_community
     fake_post_response.user = fake_user
     fake_post_response.type_post = PostTypeEnum.ANNOUNCEMENT
-    fake_post_response.title = "Test Post"
-    fake_post_response.content = "Test content"
+    fake_post_response.title = 'Test Post'
+    fake_post_response.content = 'Test content'
     fake_post_response.status = PostStatusEnum.ACTIVE
     fake_post_response.likes_count = 5
     fake_post_response.comments_count = 2
@@ -136,8 +136,8 @@ def test_moderate_post_with_status_update_success():
     fake_updated_post_response.community = fake_community
     fake_updated_post_response.user = fake_user
     fake_updated_post_response.type_post = PostTypeEnum.ANNOUNCEMENT
-    fake_updated_post_response.title = "Test Post"
-    fake_updated_post_response.content = "Test content"
+    fake_updated_post_response.title = 'Test Post'
+    fake_updated_post_response.content = 'Test content'
     fake_updated_post_response.status = PostStatusEnum.SUSPENDED
     fake_updated_post_response.likes_count = 5
     fake_updated_post_response.comments_count = 2
@@ -156,7 +156,9 @@ def test_moderate_post_with_status_update_success():
 
     # Assert
     mock_post_service.get_post.assert_called_once_with(fake_post_id)
-    mock_post_service.update_post.assert_called_once_with(fake_post_id, fake_post_response)
+    mock_post_service.update_post.assert_called_once_with(
+        fake_post_id, fake_post_response
+    )
     assert result is not None
     assert isinstance(result, Mock)
     assert result.status == PostStatusEnum.SUSPENDED
@@ -260,7 +262,10 @@ def test_moderate_report_first_vote_waits_for_more_votes():
     mock_moderation_votes_repo = Mock()
     mock_moderation_votes_repo.moderator_has_voted.return_value = False
     mock_moderation_votes_repo.save.return_value = fake_saved_vote
-    mock_moderation_votes_repo.get_vote_counts.return_value = (1, 0)  # 1 suspend, 0 tolerate
+    mock_moderation_votes_repo.get_vote_counts.return_value = (
+        1,
+        0,
+    )  # 1 suspend, 0 tolerate
 
     service = ModerationService(mock_tm)
     service.moderation_votes_repo = mock_moderation_votes_repo
@@ -309,7 +314,7 @@ def test_moderate_report_suspend_post_with_majority_votes():
 
     fake_reporter = Author(
         id=str(uuid4()),
-        name="Reporter User",
+        name='Reporter User',
         profile_picture=None,
         role=CommunityMemberRoleEnum.MEMBER,
     )
@@ -319,7 +324,7 @@ def test_moderate_report_suspend_post_with_majority_votes():
         reporter=fake_reporter,
         type=ReportTypeEnum.POST_REPORT,
         reason=ReportReasonEnum.SPAM,
-        description="Spam post",
+        description='Spam post',
         created_at=fake_created_at,
     )
 
@@ -331,7 +336,10 @@ def test_moderate_report_suspend_post_with_majority_votes():
     mock_moderation_votes_repo = Mock()
     mock_moderation_votes_repo.moderator_has_voted.return_value = False
     mock_moderation_votes_repo.save.return_value = fake_saved_vote
-    mock_moderation_votes_repo.get_vote_counts.return_value = (2, 0)  # 2 suspend, 0 tolerate
+    mock_moderation_votes_repo.get_vote_counts.return_value = (
+        2,
+        0,
+    )  # 2 suspend, 0 tolerate
     mock_moderation_votes_repo.delete_votes_by_report.return_value = True
 
     mock_report_service = Mock()
@@ -342,10 +350,14 @@ def test_moderate_report_suspend_post_with_majority_votes():
     mock_post_service = Mock()
     mock_post_service.update_post.return_value = Mock()
 
+    mock_reputation_service = Mock()
+    mock_reputation_service.handle_post_report_suspended.return_value = None
+
     service = ModerationService(mock_tm)
     service.moderation_votes_repo = mock_moderation_votes_repo
     service.report_service = mock_report_service
     service.post_service = mock_post_service
+    service.reputation_service = mock_reputation_service
 
     # Act
     result = service.moderate_report(fake_report_id, fake_vote)
@@ -354,9 +366,11 @@ def test_moderate_report_suspend_post_with_majority_votes():
     assert isinstance(result, ModerationActionResponse)
     assert result.action == VoteTypeEnum.SUSPEND
     assert result.report_type == ReportTypeEnum.POST_REPORT
-    assert "Post suspenso com sucesso" in result.message
+    assert 'Post suspenso com sucesso' in result.message
     mock_post_service.update_post.assert_called_once()
-    mock_moderation_votes_repo.delete_votes_by_report.assert_called_once_with(fake_report_id)
+    mock_moderation_votes_repo.delete_votes_by_report.assert_called_once_with(
+        fake_report_id
+    )
     mock_report_service.delete_report.assert_called_once_with(fake_report_id)
 
 
@@ -392,7 +406,7 @@ def test_moderate_report_tolerate_post_with_majority_votes():
 
     fake_reporter = Author(
         id=str(uuid4()),
-        name="Reporter User",
+        name='Reporter User',
         profile_picture=None,
         role=CommunityMemberRoleEnum.MEMBER,
     )
@@ -402,7 +416,7 @@ def test_moderate_report_tolerate_post_with_majority_votes():
         reporter=fake_reporter,
         type=ReportTypeEnum.POST_REPORT,
         reason=ReportReasonEnum.SPAM,
-        description="Spam post",
+        description='Spam post',
         created_at=fake_created_at,
     )
 
@@ -414,7 +428,10 @@ def test_moderate_report_tolerate_post_with_majority_votes():
     mock_moderation_votes_repo = Mock()
     mock_moderation_votes_repo.moderator_has_voted.return_value = False
     mock_moderation_votes_repo.save.return_value = fake_saved_vote
-    mock_moderation_votes_repo.get_vote_counts.return_value = (0, 2)  # 0 suspend, 2 tolerate
+    mock_moderation_votes_repo.get_vote_counts.return_value = (
+        0,
+        2,
+    )  # 0 suspend, 2 tolerate
     mock_moderation_votes_repo.delete_votes_by_report.return_value = True
 
     mock_report_service = Mock()
@@ -425,10 +442,14 @@ def test_moderate_report_tolerate_post_with_majority_votes():
     mock_post_service = Mock()
     mock_post_service.update_post.return_value = Mock()
 
+    mock_reputation_service = Mock()
+    mock_reputation_service.handle_post_report_tolerated.return_value = None
+
     service = ModerationService(mock_tm)
     service.moderation_votes_repo = mock_moderation_votes_repo
     service.report_service = mock_report_service
     service.post_service = mock_post_service
+    service.reputation_service = mock_reputation_service
 
     # Act
     result = service.moderate_report(fake_report_id, fake_vote)
@@ -437,9 +458,11 @@ def test_moderate_report_tolerate_post_with_majority_votes():
     assert isinstance(result, ModerationActionResponse)
     assert result.action == VoteTypeEnum.TOLERATE
     assert result.report_type == ReportTypeEnum.POST_REPORT
-    assert "Post tolerado e mantido ativo" in result.message
+    assert 'Post tolerado e mantido ativo' in result.message
     mock_post_service.update_post.assert_called_once()
-    mock_moderation_votes_repo.delete_votes_by_report.assert_called_once_with(fake_report_id)
+    mock_moderation_votes_repo.delete_votes_by_report.assert_called_once_with(
+        fake_report_id
+    )
     mock_report_service.delete_report.assert_called_once_with(fake_report_id)
 
 
@@ -475,7 +498,7 @@ def test_moderate_report_suspend_member_with_majority_votes():
 
     fake_reporter = Author(
         id=str(uuid4()),
-        name="Reporter User",
+        name='Reporter User',
         profile_picture=None,
         role=CommunityMemberRoleEnum.MEMBER,
     )
@@ -485,7 +508,7 @@ def test_moderate_report_suspend_member_with_majority_votes():
         reporter=fake_reporter,
         type=ReportTypeEnum.MEMBER_REPORT,
         reason=ReportReasonEnum.HARASSMENT,
-        description="Harassment behavior",
+        description='Harassment behavior',
         created_at=fake_created_at,
     )
 
@@ -497,7 +520,10 @@ def test_moderate_report_suspend_member_with_majority_votes():
     mock_moderation_votes_repo = Mock()
     mock_moderation_votes_repo.moderator_has_voted.return_value = False
     mock_moderation_votes_repo.save.return_value = fake_saved_vote
-    mock_moderation_votes_repo.get_vote_counts.return_value = (2, 0)  # 2 suspend, 0 tolerate
+    mock_moderation_votes_repo.get_vote_counts.return_value = (
+        2,
+        0,
+    )  # 2 suspend, 0 tolerate
     mock_moderation_votes_repo.delete_votes_by_report.return_value = True
 
     mock_report_service = Mock()
@@ -508,10 +534,14 @@ def test_moderate_report_suspend_member_with_majority_votes():
     mock_community_service = Mock()
     mock_community_service.update_member_status.return_value = Mock()
 
+    mock_reputation_service = Mock()
+    mock_reputation_service.handle_member_report_suspended.return_value = None
+
     service = ModerationService(mock_tm)
     service.moderation_votes_repo = mock_moderation_votes_repo
     service.report_service = mock_report_service
     service.community_service = mock_community_service
+    service.reputation_service = mock_reputation_service
 
     # Act
     result = service.moderate_report(fake_report_id, fake_vote)
@@ -520,11 +550,13 @@ def test_moderate_report_suspend_member_with_majority_votes():
     assert isinstance(result, ModerationActionResponse)
     assert result.action == VoteTypeEnum.SUSPEND
     assert result.report_type == ReportTypeEnum.MEMBER_REPORT
-    assert "Membro suspenso com sucesso" in result.message
+    assert 'Membro suspenso com sucesso' in result.message
     mock_community_service.update_member_status.assert_called_once_with(
         fake_member_id, CommunityMemberStatusEnum.SUSPENDED
     )
-    mock_moderation_votes_repo.delete_votes_by_report.assert_called_once_with(fake_report_id)
+    mock_moderation_votes_repo.delete_votes_by_report.assert_called_once_with(
+        fake_report_id
+    )
     mock_report_service.delete_report.assert_called_once_with(fake_report_id)
 
 
@@ -560,7 +592,7 @@ def test_moderate_report_delete_comment_with_majority_votes():
 
     fake_reporter = Author(
         id=str(uuid4()),
-        name="Reporter User",
+        name='Reporter User',
         profile_picture=None,
         role=CommunityMemberRoleEnum.MEMBER,
     )
@@ -570,7 +602,7 @@ def test_moderate_report_delete_comment_with_majority_votes():
         reporter=fake_reporter,
         type=ReportTypeEnum.COMMENT_REPORT,
         reason=ReportReasonEnum.HATE_SPEECH,
-        description="Hate speech comment",
+        description='Hate speech comment',
         created_at=fake_created_at,
     )
 
@@ -582,7 +614,10 @@ def test_moderate_report_delete_comment_with_majority_votes():
     mock_moderation_votes_repo = Mock()
     mock_moderation_votes_repo.moderator_has_voted.return_value = False
     mock_moderation_votes_repo.save.return_value = fake_saved_vote
-    mock_moderation_votes_repo.get_vote_counts.return_value = (2, 0)  # 2 suspend, 0 tolerate
+    mock_moderation_votes_repo.get_vote_counts.return_value = (
+        2,
+        0,
+    )  # 2 suspend, 0 tolerate
     mock_moderation_votes_repo.delete_votes_by_report.return_value = True
 
     mock_report_service = Mock()
@@ -593,10 +628,14 @@ def test_moderate_report_delete_comment_with_majority_votes():
     mock_comment_service = Mock()
     mock_comment_service.delete_comment.return_value = True
 
+    mock_reputation_service = Mock()
+    mock_reputation_service.handle_comment_report_suspended.return_value = None
+
     service = ModerationService(mock_tm)
     service.moderation_votes_repo = mock_moderation_votes_repo
     service.report_service = mock_report_service
     service.comment_service = mock_comment_service
+    service.reputation_service = mock_reputation_service
 
     # Act
     result = service.moderate_report(fake_report_id, fake_vote)
@@ -605,9 +644,11 @@ def test_moderate_report_delete_comment_with_majority_votes():
     assert isinstance(result, ModerationActionResponse)
     assert result.action == VoteTypeEnum.SUSPEND
     assert result.report_type == ReportTypeEnum.COMMENT_REPORT
-    assert "Comentário deletado com sucesso" in result.message
+    assert 'Comentário deletado com sucesso' in result.message
     mock_comment_service.delete_comment.assert_called_once_with(fake_comment_id)
-    mock_moderation_votes_repo.delete_votes_by_report.assert_called_once_with(fake_report_id)
+    mock_moderation_votes_repo.delete_votes_by_report.assert_called_once_with(
+        fake_report_id
+    )
     mock_report_service.delete_report.assert_called_once_with(fake_report_id)
 
 
@@ -643,7 +684,7 @@ def test_moderate_report_majority_wins_suspend_over_tolerate():
 
     fake_reporter = Author(
         id=str(uuid4()),
-        name="Reporter User",
+        name='Reporter User',
         profile_picture=None,
         role=CommunityMemberRoleEnum.MEMBER,
     )
@@ -653,7 +694,7 @@ def test_moderate_report_majority_wins_suspend_over_tolerate():
         reporter=fake_reporter,
         type=ReportTypeEnum.POST_REPORT,
         reason=ReportReasonEnum.MISINFORMATION,
-        description="Misinformation post",
+        description='Misinformation post',
         created_at=fake_created_at,
     )
 
@@ -665,7 +706,10 @@ def test_moderate_report_majority_wins_suspend_over_tolerate():
     mock_moderation_votes_repo = Mock()
     mock_moderation_votes_repo.moderator_has_voted.return_value = False
     mock_moderation_votes_repo.save.return_value = fake_saved_vote
-    mock_moderation_votes_repo.get_vote_counts.return_value = (2, 1)  # 2 suspend, 1 tolerate
+    mock_moderation_votes_repo.get_vote_counts.return_value = (
+        2,
+        1,
+    )  # 2 suspend, 1 tolerate
     mock_moderation_votes_repo.delete_votes_by_report.return_value = True
 
     mock_report_service = Mock()
@@ -676,10 +720,14 @@ def test_moderate_report_majority_wins_suspend_over_tolerate():
     mock_post_service = Mock()
     mock_post_service.update_post.return_value = Mock()
 
+    mock_reputation_service = Mock()
+    mock_reputation_service.handle_post_report_suspended.return_value = None
+
     service = ModerationService(mock_tm)
     service.moderation_votes_repo = mock_moderation_votes_repo
     service.report_service = mock_report_service
     service.post_service = mock_post_service
+    service.reputation_service = mock_reputation_service
 
     # Act
     result = service.moderate_report(fake_report_id, fake_vote)
@@ -688,12 +736,14 @@ def test_moderate_report_majority_wins_suspend_over_tolerate():
     assert isinstance(result, ModerationActionResponse)
     assert result.action == VoteTypeEnum.SUSPEND
     assert result.report_type == ReportTypeEnum.POST_REPORT
-    assert "Post suspenso com sucesso" in result.message
+    assert 'Post suspenso com sucesso' in result.message
     # Verify that suspend action was taken (post was suspended, not tolerated)
     calls = mock_post_service.update_post.call_args_list
     assert len(calls) == 1
     # The update should be for suspending the post
-    mock_moderation_votes_repo.delete_votes_by_report.assert_called_once_with(fake_report_id)
+    mock_moderation_votes_repo.delete_votes_by_report.assert_called_once_with(
+        fake_report_id
+    )
     mock_report_service.delete_report.assert_called_once_with(fake_report_id)
 
 
@@ -737,7 +787,6 @@ def test_get_complaint_service_success():
 
 @pytest.mark.unit
 def test_update_complaint_status_service_success():
-
     """
     Tests the `udpate_status_complaint` method of ModerationService.
 
@@ -748,6 +797,7 @@ def test_update_complaint_status_service_success():
     """
     # Arrange
     fake_post_id = uuid4()
+    fake_moderator_id = uuid4()
     fake_old_status = ComplaintStatusEnum.PENDING
     fake_new_status = ComplaintStatusEnum.RESOLVED
 
@@ -765,8 +815,13 @@ def test_update_complaint_status_service_success():
     fake_saved_complaint_post.level_complaint = ComplaintLevelEnum.LOW
 
     # Mock do PostResponse
+    fake_user = Mock(spec=PostAuthor)
+    fake_user.id = uuid4()
+    fake_user.name = 'Test User'
+
     fake_post = Mock(spec=PostResponse)
     fake_post.id = fake_post_id
+    fake_post.user = fake_user
 
     mock_tm = Mock()
     mock_complaint_repo = Mock()
@@ -776,12 +831,19 @@ def test_update_complaint_status_service_success():
     mock_post_service = Mock()
     mock_post_service.get_post.return_value = fake_post
 
+    mock_reputation_service = Mock()
+    mock_reputation_service.award_complaint_resolution.return_value = None
+    mock_reputation_service.award_complaint_resolution_by_moderator.return_value = None
+
     service = ModerationService(mock_tm)
     service.complaint_repo = mock_complaint_repo
     service.post_service = mock_post_service
+    service.reputation_service = mock_reputation_service
 
     # Act
-    result = service.udpate_status_complaint(fake_post_id, fake_new_status)
+    result = service.udpate_status_complaint(
+        fake_post_id, fake_new_status, fake_moderator_id
+    )
 
     # Assert
     mock_complaint_repo.get_by_id.assert_called_once_with(fake_post_id)
@@ -958,19 +1020,11 @@ def test_list_all_polls_from_community_service_success():
     fake_poll = Mock()
     fake_poll.id = fake_poll_id
     fake_poll.post_id = fake_poll_id
-    fake_poll.question = "What is your favorite color?"
+    fake_poll.question = 'What is your favorite color?'
 
-    fake_option1 = PollOptionResponse(
-        id=uuid4(),
-        answer="Blue",
-        votes_count=5
-    )
+    fake_option1 = PollOptionResponse(id=uuid4(), answer='Blue', votes_count=5)
 
-    fake_option2 = PollOptionResponse(
-        id=uuid4(),
-        answer="Red",
-        votes_count=3
-    )
+    fake_option2 = PollOptionResponse(id=uuid4(), answer='Red', votes_count=3)
 
     fake_post = Mock(spec=PostResponse)
     fake_post.id = fake_poll_id
@@ -1003,7 +1057,7 @@ def test_list_all_polls_from_community_service_success():
     assert result.items is not None
     assert len(result.items) == 1
     assert result.items[0].post.id == fake_poll_id
-    assert result.items[0].question == "What is your favorite color?"
+    assert result.items[0].question == 'What is your favorite color?'
     assert result.items[0].total_votes == 8
     assert result.total == 1
     assert result.has_more == False
