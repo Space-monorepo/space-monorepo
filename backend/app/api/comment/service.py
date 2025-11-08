@@ -300,7 +300,7 @@ class CommentService:
             self.community_service.member_repo.save(author)
 
             liker = self.community_service.get_member(member_id)
-            liker.popularity -= POPULARITY_POINTS[PopularityActionEnum.LIKE_POST]
+            liker.popularity -= POPULARITY_POINTS[PopularityActionEnum.LIKE]
             self.community_service.member_repo.save(liker)
             return self._map_comment_to_response(comment)
         except Exception as e:
