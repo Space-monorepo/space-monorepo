@@ -116,7 +116,7 @@ class PostService:
                 post_saved.user_id, post_saved.community_id
             )
             self.reputation_service.award_post_creation(member.id)
-            return self._map_post_to_response(post_saved)
+            return self.__map_post_to_feed_response(post_saved)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error creating post') from e
 
@@ -238,7 +238,7 @@ class PostService:
                 post.user_id, post.community_id
             )
             self.reputation_service.award_post_like(member_id, author_post.id)
-            return self._map_post_to_response(post)
+            return self.__map_post_to_feed_response(post)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error liking post') from e
 
@@ -253,17 +253,17 @@ class PostService:
             author_post = self.community_service.get_member_association(
                 post.user_id, post.community_id
             )
-            author = self.community_service.get_member(author_post)
+            author = self.community_service.get_member(author_post.id)
             author.popularity -= POPULARITY_POINTS[PopularityActionEnum.RECEIVE_LIKE]
             author.popularity = max(0, author.popularity)
             self.community_service.member_repo.save(author)
 
             liker = self.community_service.get_member(member_id)
-            liker.popularity -= POPULARITY_POINTS[PopularityActionEnum.LIKE_POST]
+            liker.popularity -= POPULARITY_POINTS[PopularityActionEnum.LIKE]
             liker.popularity = max(0, liker.popularity)
             self.community_service.member_repo.save(liker)
 
-            return self._map_post_to_response(post)
+            return self.__map_post_to_feed_response(post)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error unliking post') from e
 
@@ -293,16 +293,16 @@ class PostService:
 
     def create_campaign(self, post: PostCreate) -> CampaignResponse:
         try:
-            post = self.create_post(post)
-            campaign = CampaignPost(post_id=str(post.id))
+            created_post = self.create_post(post)
+            campaign = CampaignPost(post_id=str(created_post.id))
             campaign_saved = self.campaign_repo.save(campaign)
 
             member = self.community_service.get_member_association(
-                post.user_id, post.community_id
+                created_post.user.id, created_post.community.id
             )
             self.reputation_service.award_campaign_creation(member.id)
             return CampaignResponse(
-                post=self.get_post(post.id),
+                post=self.get_post(created_post.id),
                 target_participants=campaign_saved.target_participants,
                 current_participants=campaign_saved.current_participants,
                 status_campaign=campaign_saved.status_campaign,
@@ -372,12 +372,16 @@ class PostService:
 
     def create_complaint(self, post: PostCreate) -> ComplaintResponse:
         try:
-            post = self.create_post(post)
-            complaint = ComplaintPost(post_id=str(post.id))
+            created_post = self.create_post(post)
+            complaint = ComplaintPost(post_id=str(created_post.id))
             complaint_saved = self.complaint_repo.save(complaint)
-            self.reputation_service.award_complaint_creation(post.user_id)
+
+            member = self.community_service.get_member_association(
+                created_post.user.id, created_post.community.id
+            )
+            self.reputation_service.award_complaint_creation(member.id)
             return ComplaintResponse(
-                post=self.get_post(post.id),
+                post=self.get_post(created_post.id),
                 confirmations_count=complaint_saved.confirmations_count,
                 status_complaint=complaint_saved.status_complaint,
                 level_complaint=complaint_saved.level_complaint,
