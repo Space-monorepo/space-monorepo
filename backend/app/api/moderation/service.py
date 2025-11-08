@@ -185,14 +185,14 @@ class ModerationService:
             complaint_post = self.get_complaint(post_id)
             complaint_post.status_complaint = status
             complaint_post_saved = self.complaint_repo.save(complaint_post)
+            post = self.post_service.get_post(post_id)
             if status == ComplaintStatusEnum.RESOLVED:
-                post = self.post_service.get_post(post_id)
                 self.reputation_service.award_complaint_resolution(post.user.id)
                 self.reputation_service.award_complaint_resolution_by_moderator(
                     moderator_id
                 )
             return ComplaintResponse(
-                post=self.post_service.get_post(post_id),
+                post=post,
                 confirmations_count=complaint_post_saved.confirmations_count,
                 status_complaint=complaint_post_saved.status_complaint,
                 level_complaint=complaint_post_saved.level_complaint,
