@@ -125,6 +125,9 @@ export const voteOnPoll = async (communityId: string, pollOptionId: string, toke
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Erro ao votar na enquete' }));
+    if (errorData.message === 'Poll vote already exists') {
+      return { alreadyVoted: true };
+    }
     throw new Error(errorData.message || 'Erro ao votar na enquete');
   }
 
