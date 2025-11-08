@@ -1,29 +1,29 @@
-import pytest
+from datetime import datetime, timezone
 from unittest.mock import Mock
 from uuid import uuid4
-from datetime import datetime, timezone
 
+import pytest
+
+from app.api.comment.exceptions import (
+    CommentLikesNotFoundError,
+    CommentNotFoundError,
+    CommentSuspendedError,
+    UnexpectedCommentError,
+)
 from app.api.comment.model import Comment, CommentLikes
 from app.api.comment.schema import (
     CommentCreate,
+    CommentResponse,
     CommentStatusEnum,
     CommentUpdate,
-    CommentResponse,
 )
 from app.api.comment.service import CommentService
-from app.api.comment.exceptions import (
-    CommentSuspendedError,
-    CommentNotFoundError,
-    CommentLikesNotFoundError,
-    UnexpectedCommentError,
-)
-from app.api.post.exceptions import PostNotFoundError
-from app.api.users.model import User
-from app.api.post.model import Post
 from app.api.communities.model import CommunityMember
 from app.api.communities.schema import CommunityMemberResponse, CommunityMemberRoleEnum
+from app.api.post.exceptions import PostNotFoundError
+from app.api.post.model import Post
+from app.api.users.model import User
 from app.utils.schema import PaginationSearchParams
-
 
 # =============================================================================
 # CONSTANTS
@@ -124,6 +124,7 @@ def mock_services():
     """Fixture que retorna mocks dos serviços."""
     return {
         'community_service': Mock(),
+        'reputation_service': Mock(),
     }
 
 
@@ -136,6 +137,7 @@ def comment_service(mock_repositories, mock_services):
     service.member_repo = mock_repositories['member_repo']
     service.comment_likes_repo = mock_repositories['comment_likes_repo']
     service.community_service = mock_services['community_service']
+    service.reputation_service = mock_services['reputation_service']
     return service
 
 
@@ -154,7 +156,13 @@ def pagination_params():
 
 @pytest.mark.unit
 def test_create_comment_service_success(
-    comment_service, mock_repositories, fake_ids, fake_post, fake_user, fake_comment
+    comment_service,
+    mock_repositories,
+    fake_ids,
+    fake_post,
+    fake_user,
+    fake_comment,
+    mock_services,
 ):
     """
     Tests the `create_comment` method of CommentService.
@@ -175,9 +183,14 @@ def test_create_comment_service_success(
         status=CommentStatusEnum.ACTIVE,
     )
 
+    fake_member = Mock(spec=CommunityMember)
+    fake_member.id = fake_ids['member_id']
+    fake_member.role = fake_member_role
+
     mock_repositories['comment_repo'].save.return_value = fake_comment
     mock_repositories['post_repo'].get_by_id.return_value = fake_post
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
+    mock_services['community_service'].get_member_association.return_value = fake_member
 
     # Act
     result = comment_service.create_comment(fake_comment_create)
@@ -188,6 +201,10 @@ def test_create_comment_service_success(
     mock_repositories['post_repo'].save.assert_called_once_with(fake_post)
     mock_repositories['member_repo'].get_member_role.assert_called_once_with(
         fake_ids['user_id'], fake_ids['community_id']
+    )
+    assert mock_services['community_service'].get_member_association.call_count == 2
+    mock_services['reputation_service'].award_comment_creation.assert_called_once_with(
+        fake_member.id, fake_member.id
     )
     assert fake_post.comments_count == 1
     assert result is not None
@@ -205,7 +222,7 @@ def test_create_comment_service_success(
 
 @pytest.mark.unit
 def test_create_comment_reply_service_success(
-    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user, mock_services
 ):
     """
     Tests the `create_comment` method of CommentService for creating replies.
@@ -244,10 +261,15 @@ def test_create_comment_reply_service_success(
     fake_created_reply.post = fake_post
     fake_created_reply.user = fake_user
 
+    fake_member = Mock(spec=CommunityMember)
+    fake_member.id = fake_ids['member_id']
+    fake_member.role = fake_member_role
+
     mock_repositories['comment_repo'].get_by_id.return_value = fake_parent_comment
     mock_repositories['comment_repo'].save.return_value = fake_created_reply
     mock_repositories['post_repo'].get_by_id.return_value = fake_post
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
+    mock_services['community_service'].get_member_association.return_value = fake_member
 
     # Act
     result = comment_service.create_comment(fake_comment_create)
@@ -258,6 +280,10 @@ def test_create_comment_reply_service_success(
         fake_ids['parent_id']
     )
     mock_repositories['comment_repo'].save.assert_called_once()
+    assert mock_services['community_service'].get_member_association.call_count == 2
+    mock_services['reputation_service'].award_comment_creation.assert_called_once_with(
+        fake_member.id, fake_member.id
+    )
     assert result is not None
     assert isinstance(result, CommentResponse)
     assert str(result.id) == str(fake_ids['comment_id'])
@@ -628,7 +654,7 @@ def test_delete_comment_service_success(comment_service, mock_repositories, fake
 
 @pytest.mark.unit
 def test_like_comment_service_success(
-    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user, mock_services
 ):
     """
     Tests the `like_comment` method of CommentService.
@@ -675,6 +701,13 @@ def test_like_comment_service_success(
     mock_repositories['comment_repo'].save.return_value = fake_saved_comment
     mock_repositories['comment_likes_repo'].save.return_value = fake_comment_like
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+
+    fake_member = Mock(spec=CommunityMember)
+    fake_member.id = fake_ids['member_id']
+    fake_member.popularity = 10
+
+    mock_services['community_service'].get_member_association.return_value = fake_member
 
     # Act
     result = comment_service.like_comment(fake_ids['comment_id'], fake_ids['member_id'])
@@ -695,7 +728,7 @@ def test_like_comment_service_success(
 
 @pytest.mark.unit
 def test_unlike_comment_service_success(
-    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user, mock_services
 ):
     """
     Tests the `unlike_comment` method of CommentService.
@@ -745,6 +778,14 @@ def test_unlike_comment_service_success(
     ].get_by_comment_and_member.return_value = fake_existing_like
     mock_repositories['comment_likes_repo'].delete.return_value = True
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+
+    fake_member = Mock(spec=CommunityMember)
+    fake_member.id = fake_ids['member_id']
+    fake_member.popularity = 10
+
+    mock_services['community_service'].get_member_association.return_value = fake_member
+    mock_services['community_service'].get_member.return_value = fake_member
 
     # Act
     result = comment_service.unlike_comment(
@@ -1127,7 +1168,7 @@ def test_delete_comment_with_zero_comments_count_service_success(
 
 @pytest.mark.unit
 def test_unlike_comment_with_zero_likes_service_success(
-    comment_service, mock_repositories, fake_ids, fake_post, fake_user
+    comment_service, mock_repositories, fake_ids, fake_post, fake_user, mock_services
 ):
     """
     Tests the `unlike_comment` method when comment has zero likes.
@@ -1177,6 +1218,14 @@ def test_unlike_comment_with_zero_likes_service_success(
     ].get_by_comment_and_member.return_value = fake_existing_like
     mock_repositories['comment_likes_repo'].delete.return_value = True
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
+    mock_repositories['post_repo'].get_by_id.return_value = fake_post
+
+    fake_member = Mock(spec=CommunityMember)
+    fake_member.id = fake_ids['member_id']
+    fake_member.popularity = 10
+
+    mock_services['community_service'].get_member_association.return_value = fake_member
+    mock_services['community_service'].get_member.return_value = fake_member
 
     # Act
     result = comment_service.unlike_comment(
