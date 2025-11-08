@@ -3,6 +3,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { API_URL } from "@/config";
 import { useReportersList, ReportListItem } from "@/app/api/src/hooks/moderation/useReportersList";
 import ReportersModal from "@/components/modals/ReportersModal";
+import UserReportPreviewModal from "@/components/modals/UserReportPreviewModal";
+import PostReportPreviewModal from "@/components/modals/PostReportPreviewModal";
+import CommentReportPreviewModal from "@/components/modals/CommentReportPreviewModal";
 import { ArrowLeft, Filter, Heart, MessageSquare } from "lucide-react";
 import { View } from "@carbon/icons-react";
 import Link from "next/link";
@@ -85,7 +88,7 @@ type Report = {
     accesses?: number;
 };
 
-type UserReport = {
+export type UserReport = {
     id: string;
     reportedUser: UserInfo;
     reporter: UserInfo;
@@ -98,7 +101,7 @@ type UserReport = {
     category: string;
 };
 
-type PostReport = {
+export type PostReport = {
     id: string;
     reportedPost: {
         id: string;
@@ -120,7 +123,7 @@ type PostReport = {
     category: string;
 };
 
-type CommentReport = {
+export type CommentReport = {
     id: string;
     reportedComment: {
         id: string;
@@ -174,6 +177,14 @@ export default function ModerationPage() {
     const [userReportersOpen, setUserReportersOpen] = useState<string | null>(null);
     const [postReportersOpen, setPostReportersOpen] = useState<string | null>(null);
     const [commentReportersOpen, setCommentReportersOpen] = useState<string | null>(null);
+
+    // Estados para modais de preview de reportes
+    const [isUserReportPreviewOpen, setIsUserReportPreviewOpen] = useState(false);
+    const [isPostReportPreviewOpen, setIsPostReportPreviewOpen] = useState(false);
+    const [isCommentReportPreviewOpen, setIsCommentReportPreviewOpen] = useState(false);
+    const [previewUserReport, setPreviewUserReport] = useState<UserReport | null>(null);
+    const [previewPostReport, setPreviewPostReport] = useState<PostReport | null>(null);
+    const [previewCommentReport, setPreviewCommentReport] = useState<CommentReport | null>(null);
 
     // Hooks para buscar reportes
     const userReportersHook = useReportersList();
@@ -261,7 +272,13 @@ export default function ModerationPage() {
                                         </span>
                                     </div>
                                     <div className="mt-4 w-full flex flex-col items-start gap-2">
-                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
+                                        <button
+                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                            onClick={() => {
+                                                setPreviewUserReport(report);
+                                                setIsUserReportPreviewOpen(true);
+                                            }}
+                                        >
                                             Investigar usuário
                                         </button>
                                         <button
@@ -414,7 +431,13 @@ export default function ModerationPage() {
                                         </span>
                                     </div>
                                     <div className="mt-4 w-full flex flex-col items-start gap-2">
-                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
+                                        <button
+                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                            onClick={() => {
+                                                setPreviewPostReport(report);
+                                                setIsPostReportPreviewOpen(true);
+                                            }}
+                                        >
                                             Investigar publicação
                                         </button>
                                         <button
@@ -567,7 +590,13 @@ export default function ModerationPage() {
                                         </span>
                                     </div>
                                     <div className="mt-4 w-full flex flex-col items-start gap-2">
-                                        <button className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer">
+                                        <button
+                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                            onClick={() => {
+                                                setPreviewCommentReport(report);
+                                                setIsCommentReportPreviewOpen(true);
+                                            }}
+                                        >
                                             Investigar comentário
                                         </button>
                                         <button
@@ -2037,7 +2066,36 @@ export default function ModerationPage() {
                 />
             )}
 
-
+            {/* Modal de preview de usuário reportado */}
+            {isUserReportPreviewOpen && previewUserReport && (
+                <UserReportPreviewModal
+                    report={previewUserReport}
+                    onClose={() => {
+                        setIsUserReportPreviewOpen(false);
+                        setPreviewUserReport(null);
+                    }}
+                />
+            )}
+            {/* Modal de preview de publicação reportada */}
+            {isPostReportPreviewOpen && previewPostReport && (
+                <PostReportPreviewModal
+                    report={previewPostReport}
+                    onClose={() => {
+                        setIsPostReportPreviewOpen(false);
+                        setPreviewPostReport(null);
+                    }}
+                />
+            )}
+            {/* Modal de preview de comentário reportado */}
+            {isCommentReportPreviewOpen && previewCommentReport && (
+                <CommentReportPreviewModal
+                    report={previewCommentReport}
+                    onClose={() => {
+                        setIsCommentReportPreviewOpen(false);
+                        setPreviewCommentReport(null);
+                    }}
+                />
+            )}
 
         </div>
     );
