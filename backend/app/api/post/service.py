@@ -418,18 +418,18 @@ class PostService:
                 raise PollOptionNotFoundError('Poll option not found')
 
             vote = self.poll_votes_repo.member_has_voted(member_id, poll_option.post_id)
-            
+
             # Se já votou, verificar se é na mesma opção
             if vote:
                 if str(vote.poll_option_id) == str(poll_option_id):
                     raise PollVoteAlreadyExistsError('Poll vote already exists')
-                
+
                 # Decrementar contagem da opção ANTIGA
                 old_option = self.poll_options_repo.get_by_id(vote.poll_option_id)
                 if old_option:
                     old_option.votes_count -= 1
                     self.poll_options_repo.save(old_option)
-                
+
                 # Deletar voto antigo
                 self.poll_votes_repo.delete(vote)
 
