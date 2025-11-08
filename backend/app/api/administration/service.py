@@ -17,7 +17,6 @@ from app.api.post.schemas import (
     PostTypeEnum,
 )
 from app.api.post.service import PostService
-from app.api.reputation.schema import ReputationActionEnum
 from app.api.reputation.service import ReputationService
 from app.api.users.service import UserService
 from app.core.transaction import TransactionManager
