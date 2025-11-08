@@ -1,5 +1,6 @@
-import pytest
 import uuid
+
+import pytest
 from fastapi import status
 
 from app.api.comment.model import Comment, CommentLikes
@@ -13,8 +14,8 @@ from app.api.comment.schema import (
 @pytest.mark.integration
 def test_create_comment_route(authenticate_client, community_member_on_db, post_on_db):
     comment = CommentCreate(
-        post_id=post_on_db.id,
-        user_id=community_member_on_db.user_id,
+        post_id=str(post_on_db.id),
+        user_id=str(community_member_on_db.user_id),
         content='Este é um comentário de teste via rota',
         parent_id=None,
         status=CommentStatusEnum.ACTIVE,
@@ -40,10 +41,10 @@ def test_create_comment_reply_route(
     authenticate_client, community_member_on_db, comment_on_db
 ):
     reply = CommentCreate(
-        post_id=comment_on_db.post_id,
-        user_id=community_member_on_db.user_id,
+        post_id=str(comment_on_db.post_id),
+        user_id=str(community_member_on_db.user_id),
         content='Esta é uma resposta via rota',
-        parent_id=comment_on_db.id,
+        parent_id=str(comment_on_db.id),
         status=CommentStatusEnum.ACTIVE,
     )
 
@@ -280,8 +281,8 @@ def test_create_comment_increments_post_comments_count_route(
     original_comments_count = post_on_db.comments_count
 
     comment = CommentCreate(
-        post_id=post_on_db.id,
-        user_id=community_member_on_db.user_id,
+        post_id=str(post_on_db.id),
+        user_id=str(community_member_on_db.user_id),
         content='Comentário que deve incrementar contador via rota',
         parent_id=None,
         status=CommentStatusEnum.ACTIVE,
@@ -409,7 +410,7 @@ def test_create_comment_with_nonexistent_post_route(
 ):
     comment = CommentCreate(
         post_id=str(uuid.uuid4()),
-        user_id=community_member_on_db.user_id,
+        user_id=str(community_member_on_db.user_id),
         content='Comentário em post inexistente',
         parent_id=None,
         status=CommentStatusEnum.ACTIVE,
@@ -427,8 +428,8 @@ def test_create_comment_reply_with_nonexistent_parent_route(
     authenticate_client, community_member_on_db, post_on_db
 ):
     reply = CommentCreate(
-        post_id=post_on_db.id,
-        user_id=community_member_on_db.user_id,
+        post_id=str(post_on_db.id),
+        user_id=str(community_member_on_db.user_id),
         content='Resposta a comentário inexistente',
         parent_id=str(uuid.uuid4()),
         status=CommentStatusEnum.ACTIVE,
@@ -446,8 +447,8 @@ def test_create_comment_reply_with_invalid_parent_route(
     authenticate_client, community_member_on_db, post_on_db
 ):
     reply = CommentCreate(
-        post_id=post_on_db.id,
-        user_id=community_member_on_db.user_id,
+        post_id=str(post_on_db.id),
+        user_id=str(community_member_on_db.user_id),
         content='Resposta a comentário inválido',
         parent_id=str(uuid.uuid4()),
         status=CommentStatusEnum.ACTIVE,
@@ -465,8 +466,8 @@ def test_comment_includes_member_role(
     authenticate_client, community_member_on_db, post_on_db
 ):
     comment = CommentCreate(
-        post_id=post_on_db.id,
-        user_id=community_member_on_db.user_id,
+        post_id=str(post_on_db.id),
+        user_id=str(community_member_on_db.user_id),
         content='Este é um comentário para testar o member_role',
         parent_id=None,
         status=CommentStatusEnum.ACTIVE,

@@ -1,4 +1,5 @@
 import uuid
+
 import pytest
 from fastapi import status
 
@@ -9,8 +10,8 @@ from app.api.rating.schema import RatingCreate, RatingUpdate
 @pytest.mark.integration
 def test_create_rating_route(authenticate_client, community_member_on_db):
     rating_create = RatingCreate(
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
+        user_id=str(community_member_on_db.user_id),
+        community_id=str(community_member_on_db.community_id),
         rating=5,
         title='Excellent Community!',
         description='Great experience with this community',
@@ -39,8 +40,8 @@ def test_create_rating_without_description_route(
     authenticate_client, community_member_on_db
 ):
     rating_create = RatingCreate(
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
+        user_id=str(community_member_on_db.user_id),
+        community_id=str(community_member_on_db.community_id),
         rating=3,
         title='Average Community',
         description=None,
@@ -64,8 +65,8 @@ def test_create_rating_without_description_route(
 @pytest.mark.integration
 def test_create_rating_minimum_rating_route(authenticate_client, community_member_on_db):
     rating_create = RatingCreate(
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
+        user_id=str(community_member_on_db.user_id),
+        community_id=str(community_member_on_db.community_id),
         rating=1,  # Minimum allowed rating
         title='Poor Community',
         description='Not a good experience',
@@ -86,8 +87,8 @@ def test_create_rating_minimum_rating_route(authenticate_client, community_membe
 @pytest.mark.integration
 def test_create_rating_maximum_rating_route(authenticate_client, community_member_on_db):
     rating_create = RatingCreate(
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
+        user_id=str(community_member_on_db.user_id),
+        community_id=str(community_member_on_db.community_id),
         rating=5,  # Maximum allowed rating
         title='Perfect Community',
         description='Excellent experience',
@@ -108,8 +109,8 @@ def test_create_rating_maximum_rating_route(authenticate_client, community_membe
 @pytest.mark.integration
 def test_create_rating_duplicate_returns_conflict(authenticate_client, rating_on_db):
     rating_create = RatingCreate(
-        user_id=rating_on_db.user_id,
-        community_id=rating_on_db.community_id,
+        user_id=str(rating_on_db.user_id),
+        community_id=str(rating_on_db.community_id),
         rating=4,
         title='Another Rating',
         description='This should fail',
@@ -355,8 +356,8 @@ def test_delete_rating_not_found_route(authenticate_client, community_member_on_
 @pytest.mark.integration
 def test_create_rating_unauthorized_returns_401(client_sql, community_member_on_db):
     rating_create = RatingCreate(
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
+        user_id=str(community_member_on_db.user_id),
+        community_id=str(community_member_on_db.community_id),
         rating=5,
         title='Unauthorized Rating',
         description='This should fail',
