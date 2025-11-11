@@ -53,7 +53,14 @@ type UserInfo = {
     name: string;
     profile_picture?: string | null;
     role?: string;
+    // Data de entrada/associação na comunidade
+    joined_date?: string;
+    // Reputação pode ser um número (pontos) ou uma string (Nível)
+    reputation?: number | string;
+    // Popularidade como número de visualizações ou um valor numérico qualquer
+    popularity?: number;
 };
+
 
 type Campaign = {
     id: string;
@@ -314,7 +321,9 @@ export default function ModerationPage() {
                                                 Data de entrada:
                                             </span>
                                             <time className="self-stretch my-auto text-neutral-500">
-                                                18/04/2025
+                                                {report.reportedUser.joined_date
+                                                    ? new Date(report.reportedUser.joined_date).toLocaleDateString("pt-BR")
+                                                    : (report.date || "-")}
                                             </time>
                                         </div>
                                     </div>
@@ -324,7 +333,9 @@ export default function ModerationPage() {
                                                 Reputação:
                                             </span>
                                             <span className="self-stretch my-auto text-neutral-500">
-                                                Sob Observação
+                                                {typeof report.reportedUser.reputation !== "undefined" && report.reportedUser.reputation !== null
+                                                    ? report.reportedUser.reputation
+                                                    : (report.status === "Resolvido" ? "Suspenso" : "Sob Observação")}
                                             </span>
                                         </div>
                                         <div className="flex gap-2 items-center mt-4 w-full">
@@ -332,7 +343,9 @@ export default function ModerationPage() {
                                                 Popularidade:
                                             </span>
                                             <span className="self-stretch my-auto text-neutral-500">
-                                                2.045 visualizações
+                                                {typeof report.reportedUser.popularity !== "undefined" && report.reportedUser.popularity !== null
+                                                    ? `${report.reportedUser.popularity} visualizações`
+                                                    : `0 visualizações`}
                                             </span>
                                         </div>
                                     </div>
@@ -870,21 +883,38 @@ export default function ModerationPage() {
 
     // Converter dados da API de moderação para os tipos do componente
     const convertApiUserToUserReport = (apiUser: any): UserReport => {
-        // Tenta pegar o usuário reportado de diferentes formas, priorizando reportedUser, depois user, depois o próprio objeto
-        const reported = apiUser.reportedUser || apiUser.user || apiUser;
+        // A API de membros da comunidade retorna um objeto CommunityMemberResponse
+        // com campos no nível superior (reputation, popularity, entered_in) e um
+        // sub-objeto `user` com dados do usuário. Precisamos mesclar essas fontes.
+        const member = apiUser || {};
+        const userObj = member.user || {};
+        // profile_picture pode vir como profile_picture ou profile_image_url
+        const profilePicture = userObj.profile_picture || userObj.profile_image_url || userObj.profile_image || "/no-profile-pic.png";
+        // joined/entered date pode estar em member.entered_in ou em user.joined_date/created_at
+        const joinedDate = member.entered_in || userObj.joined_date || userObj.created_at || member.created_at || undefined;
+        // reputação e popularidade podem existir tanto no nível do membro quanto no user
+        const reputationValue = typeof member.reputation !== 'undefined' ? member.reputation : (userObj.reputation ?? userObj.reputation_level ?? undefined);
+        const popularityValue = typeof member.popularity !== 'undefined' ? member.popularity : (userObj.popularity ?? userObj.views_count ?? userObj.views ?? undefined);
+
         return {
             id: apiUser.id,
             reportedUser: {
-                id: reported.id,
-                name: reported.name || reported.username || "Usuário desconhecido",
-                profile_picture: reported.profile_picture || "/no-profile-pic.png",
-                role: reported.role || "member",
+                id: userObj.id || member.id,
+                name: userObj.name || userObj.username || member.name || "Usuário desconhecido",
+                profile_picture: profilePicture,
+                role: userObj.role || member.role || "member",
+                joined_date: joinedDate,
+                reputation: reputationValue,
+                popularity: popularityValue,
             },
             reporter: {
                 id: (apiUser.reporter && apiUser.reporter.id) || "system",
                 name: (apiUser.reporter && (apiUser.reporter.name || apiUser.reporter.username)) || "Sistema",
-                profile_picture: (apiUser.reporter && apiUser.reporter.profile_picture) || "/system-avatar.png",
+                profile_picture: (apiUser.reporter && (apiUser.reporter.profile_picture || apiUser.reporter.profile_image_url)) || "/system-avatar.png",
                 role: (apiUser.reporter && apiUser.reporter.role) || "admin",
+                joined_date: apiUser.reporter && (apiUser.reporter.joined_date || apiUser.reporter.created_at),
+                reputation: apiUser.reporter && (apiUser.reporter.reputation ?? apiUser.reporter.reputation_level),
+                popularity: apiUser.reporter && (apiUser.reporter.popularity ?? apiUser.reporter.views_count ?? apiUser.reporter.views),
             },
             reason: apiUser.suspension_reason || apiUser.reason || "Violação das diretrizes da comunidade",
             description: apiUser.description || `Usuário reportado por comportamento inadequado. Status atual: ${apiUser.status}`,
@@ -2218,7 +2248,9 @@ function UserReportDetails({ reportId, onTolerate, onSuspend }: {
                                             Data de entrada:
                                         </span>
                                         <time className="self-stretch my-auto text-neutral-500">
-                                            {report.date}
+                                            {report.reportedUser?.joined_date
+                                                ? new Date(report.reportedUser.joined_date).toLocaleDateString("pt-BR")
+                                                : (report.date || "-")}
                                         </time>
                                     </div>
                                 </div>
@@ -2228,7 +2260,9 @@ function UserReportDetails({ reportId, onTolerate, onSuspend }: {
                                             Reputação:
                                         </span>
                                         <span className="self-stretch my-auto text-neutral-500">
-                                            {report.status === "Resolvido" ? "Suspenso" : "Sob Observação"}
+                                            {typeof report.reportedUser?.reputation !== "undefined" && report.reportedUser?.reputation !== null
+                                                ? report.reportedUser.reputation
+                                                : (report.status === "Resolvido" ? "Suspenso" : "Sob Observação")}
                                         </span>
                                     </div>
                                     <div className="flex gap-2 items-center mt-4 w-full">
@@ -2236,7 +2270,9 @@ function UserReportDetails({ reportId, onTolerate, onSuspend }: {
                                             Popularidade:
                                         </span>
                                         <span className="self-stretch my-auto text-neutral-500">
-                                            {report.popularity || Math.floor(Math.random() * 5000)} visualizações
+                                            {typeof report.reportedUser?.popularity !== "undefined" && report.reportedUser?.popularity !== null
+                                                ? `${report.reportedUser.popularity} visualizações`
+                                                : `0 visualizações`}
                                         </span>
                                     </div>
                                 </div>

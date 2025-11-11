@@ -11,12 +11,14 @@ export const translateUserRole = (role: string): string => {
     'leader': 'Líder',
     'owner': 'Dono',
     'creator': 'Criador',
-    
+
     // Roles de reputação
+    'under_observation': 'Sob observação',
     'sub-observation': 'Sob observação',
     'helper': 'Ajudante',
+    'contributor': 'Colaborador',
     'collaborator': 'Colaborador',
-    
+
     // Casos especiais em maiúsculo
     'ADMIN': 'Administrador',
     'ADMINISTRATOR': 'Administrador',

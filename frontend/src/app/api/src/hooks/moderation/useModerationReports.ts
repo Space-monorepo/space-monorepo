@@ -83,6 +83,13 @@ const useModerationReports = () => {
                 }
             );
 
+            // Debug: log returned items to verify where reputation/popularity live
+            try {
+                console.debug('fetchReportedUsers response items sample:', response.data?.items?.[0]);
+            } catch (e) {
+                // ignore
+            }
+
             setReportedUsers(response.data?.items || []);
         } catch (err: any) {
             console.error('Erro ao buscar usuários reportados:', err);
