@@ -52,6 +52,10 @@ def init_community():
             print(f"Community {community.name} member {user.name} (admin) created successfully")
             admin_member_id = community_member.id
 
+            # listas para armazenar os ids de CommunityMember dos demais membros
+            membros_member_ids = []
+            moderadores_member_ids = []
+
             # Criar membros comuns
             membros_info = [
                 {"username": "joao", "name": "João Membro", "email": "joao@space.com", "role": "member"},
@@ -75,6 +79,8 @@ def init_community():
                 db.add(community_member)
                 db.commit()
                 db.refresh(community_member)
+                # salvar o id do CommunityMember para uso em comentários
+                membros_member_ids.append(community_member.id)
                 print(f"Community {community.name} member {membro_user.name} ({membro['role']}) created successfully")
 
             # Criar moderadores
@@ -100,6 +106,8 @@ def init_community():
                 db.add(community_member)
                 db.commit()
                 db.refresh(community_member)
+                # salvar o id do CommunityMember para uso em comentários
+                moderadores_member_ids.append(community_member.id)
                 print(f"Community {community.name} member {mod_user.name} ({mod['role']}) created successfully")
 
             post_service = PostService(tm)
@@ -224,10 +232,17 @@ def init_community():
 
             # Adicionar comentários e replies em todos os posts
             comments = []
+            # lista combinada de member_ids (CommunityMember.id) para atribuir comentários
+            all_member_ids = [admin_member_id] + membros_member_ids + moderadores_member_ids
+            if not all_member_ids:
+                # fallback: usar o admin_member_id se por algum motivo não houver outros membros
+                all_member_ids = [admin_member_id]
             for idx, post in enumerate(posts):
+                # escolher um member_id em round-robin entre os membros criados
+                selected_member_id = all_member_ids[idx % len(all_member_ids)]
                 comment_data = CommentCreate(
                     post_id=str(post.id),
-                    user_id=str(user.id),
+                    member_id=str(selected_member_id),
                     content=f"Comentário principal no post {idx+1}",
                     parent_id=None,
                 )
@@ -237,7 +252,7 @@ def init_community():
 
                 reply_data = CommentCreate(
                     post_id=str(post.id),
-                    user_id=str(user.id),
+                    member_id=str(selected_member_id),
                     content=f"Reply ao comentário no post {idx+1}",
                     parent_id=str(comment.id),
                 )
