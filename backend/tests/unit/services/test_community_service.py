@@ -1,11 +1,12 @@
-import pytest
+from datetime import datetime
 from unittest.mock import Mock
 from uuid import uuid4
-from datetime import datetime
+
+import pytest
 
 from app.api.communities.exceptions import (
-    CommunityMemberNotFoundError,
     CommunityMemberAlreadyExistsError,
+    CommunityMemberNotFoundError,
     CommunityNotFoundError,
     UnexpectedCommunityError,
     UnexpectedCommunityMemberError,
@@ -13,15 +14,15 @@ from app.api.communities.exceptions import (
 from app.api.communities.model import Community, CommunityMember
 from app.api.communities.schema import (
     CommunityCreate,
-    CommunityTypeEnum,
-    CommunityUpdate,
-    CommunityMemberRoleEnum,
-    CommunityMemberStatusEnum,
     CommunityMemberCreate,
     CommunityMemberResponse,
+    CommunityMemberRoleEnum,
+    CommunityMemberStatusEnum,
+    CommunityTypeEnum,
+    CommunityUpdate,
 )
-from app.api.users.schema import UserStatusEnum
 from app.api.communities.service import CommunityService
+from app.api.users.schema import UserStatusEnum
 from app.utils.schema import PaginationSearchParams
 
 
@@ -729,6 +730,8 @@ def test_create_member_service_success():
     fake_saved_member.community_id = fake_community_id
     fake_saved_member.role = CommunityMemberRoleEnum.MEMBER
     fake_saved_member.reputation = 10
+    fake_saved_member.reputation_level = 'helper'
+    fake_saved_member.popularity = 0
     fake_saved_member.status_participation = CommunityMemberStatusEnum.ACTIVE
     fake_saved_member.entered_in = datetime.now()
     # Configure the user and community attributes for _map_member_to_response

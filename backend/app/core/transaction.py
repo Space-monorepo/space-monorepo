@@ -2,34 +2,34 @@ import logging
 
 from sqlalchemy.orm import Session
 
+from app.api.badges.repository import BadgeRepository, MemberBadgeRepository
+from app.api.chat.repository import (
+    ConversationRepository,
+    MessageAttachmentRepository,
+    MessageRepository,
+)
+from app.api.comment.repository import CommentLikesRepository, CommentRepository
 from app.api.communities.repository import CommunityMemberRepository, CommunityRepository
-from app.api.comment.repository import CommentRepository, CommentLikesRepository
 from app.api.post.repository import (
     CampaignParticipantsRepository,
     CampaignPostRepository,
     ComplaintPostRepository,
-    PostFeedbackRepository,
-    PostRepository,
-    PollPostsRepository,
     PollOptionsRepository,
+    PollPostsRepository,
+    PostFeedbackRepository,
     PostLikesRepository,
+    PostRepository,
     PollVotesRepository,
 )
 from app.api.rating.repository import RatingRepository
 from app.api.reports.repository import (
     ModerationVotesRepository,
-    ReportRepository,
+    ReportCommentRepository,
     ReportMemberRepository,
     ReportPostRepository,
-    ReportCommentRepository
+    ReportRepository,
 )
-from app.api.users.repository import UserRepository, UserConnectionRepository
-from app.api.badges.repository import BadgeRepository, MemberBadgeRepository
-from app.api.chat.repository import (
-    ConversationRepository,
-    MessageRepository,
-    MessageAttachmentRepository,
-)
+from app.api.users.repository import UserConnectionRepository, UserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ class TransactionManager:
 
     def get_moderation_votes_repository(self):
         return ModerationVotesRepository(self._session)
-    
+
     def get_conversation_repository(self):
         return ConversationRepository(self._session)
 

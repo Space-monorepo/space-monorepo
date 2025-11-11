@@ -54,10 +54,6 @@ class User(Base):
 
     ratings = relationship('Rating', back_populates='user', cascade='all, delete-orphan')
 
-    comments = relationship(
-        'Comment', back_populates='user', cascade='all, delete-orphan'
-    )
-
     sent_connections = relationship(
         'UserConnection',
         foreign_keys='UserConnection.requester_id',

@@ -322,18 +322,14 @@ class ReportService:
         brief_reports = []
         for comment_id, reason, reports_count in paginated_report_comments:
             comment = self.comment_service.get_comment(comment_id)
-            member = self.community_service.get_member_association(
-                comment.user.id, community_id
-            )
-            user = self.user_service.get_user(member.user_id)
             brief_reports.append(
                 CommentBriefReport(
                     comment_id=str(comment_id),
                     member=Author(
-                        id=str(member.id),
-                        name=user.name,
-                        profile_picture=user.profile_image_url,
-                        role=member.role,
+                        id=str(comment.member.id),
+                        name=comment.member.name,
+                        profile_picture=comment.member.profile_image_url,
+                        role=comment.member.member_role,
                     ),
                     reason=reason,
                     content=comment.content,

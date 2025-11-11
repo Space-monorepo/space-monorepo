@@ -17,6 +17,7 @@ from app.api.post.schemas import (
     PostTypeEnum,
 )
 from app.api.post.service import PostService
+from app.api.reputation.service import ReputationService
 from app.api.users.service import UserService
 from app.core.transaction import TransactionManager
 from app.utils.schema import PaginationResponse, PaginationSearchParams
@@ -35,6 +36,7 @@ class AdministrationService:
         self.post_service = PostService(tm)
         self.user_service = UserService(tm)
         self.community_service = CommunityService(tm)
+        self.reputation_service = ReputationService(tm)
 
     def import_users_to_community(
         self, user_emails: list[str], community_id: str
@@ -95,9 +97,20 @@ class AdministrationService:
     ) -> CampaignResponse:
         try:
             campaign = self.get_campaign(post_id)
+            old_status = campaign.status_campaign
             for key, value in campaign_update.model_dump(exclude_unset=True).items():
                 setattr(campaign, key, value)
             campaign_saved = self.campaign_repo.save(campaign)
+
+            post = self.post_service._get_post(post_id)
+            member = self.community_service.get_member_association(
+                post.user_id, post.community_id
+            )
+            self.reputation_service.award_campaign_status_change(
+                author_id=member.id,
+                old_status=old_status,
+                new_status=campaign_saved.status_campaign,
+            )
             return CampaignResponse(
                 post=self.post_service.get_post(post_id),
                 target_participants=campaign_saved.target_participants,

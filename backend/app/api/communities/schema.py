@@ -4,6 +4,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.api.reputation.schema import ReputationLevelEnum
 from app.api.users.schema import UserResponse
 
 
@@ -97,9 +98,6 @@ class CommunityMemberCreate(BaseModel):
         default=CommunityMemberRoleEnum.MEMBER,
         description='The role of the member in the community',
     )
-    reputation: int = Field(
-        default=0, description='The reputation of the member in the community'
-    )
     status_participation: CommunityMemberStatusEnum = Field(
         default=CommunityMemberStatusEnum.ACTIVE,
         description='The status of the member in the community',
@@ -109,9 +107,6 @@ class CommunityMemberCreate(BaseModel):
 class CommunityMemberUpdate(BaseModel):
     role: CommunityMemberRoleEnum | None = Field(
         None, description='The role of the member in the community'
-    )
-    reputation: int | None = Field(
-        None, description='The reputation of the member in the community'
     )
     status_participation: CommunityMemberStatusEnum | None = Field(
         None, description='The status of the member in the community'
@@ -125,6 +120,8 @@ class CommunityMemberResponse(BaseModel):
     role: CommunityMemberRoleEnum
     status_participation: CommunityMemberStatusEnum
     reputation: int
+    reputation_level: ReputationLevelEnum
+    popularity: int
     entered_in: datetime
 
     model_config = ConfigDict(
@@ -151,7 +148,9 @@ class CommunityMemberResponse(BaseModel):
                     },
                     'role': 'admin',
                     'status_participation': 'active',
-                    'reputation': 100,
+                    'reputation': 5000,
+                    'reputation_level': 'helper',
+                    'popularity': 0,
                     'entered_in': '2025-01-01T00:00:00Z',
                 }
             ]
