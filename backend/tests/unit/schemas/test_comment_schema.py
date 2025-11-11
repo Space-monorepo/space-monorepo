@@ -18,11 +18,11 @@ from app.api.communities.schema import CommunityMemberRoleEnum
 
 def test_comment_create_schema():
     post_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
+    member_id = str(uuid.uuid4())
 
     comment = CommentCreate(
         post_id=post_id,
-        user_id=user_id,
+        member_id=member_id,
         content='Este é um comentário de teste',
         parent_id=None,
         status=CommentStatusEnum.ACTIVE,
@@ -30,7 +30,7 @@ def test_comment_create_schema():
 
     assert comment.model_dump() == {
         'post_id': post_id,
-        'user_id': user_id,
+        'member_id': member_id,
         'content': 'Este é um comentário de teste',
         'parent_id': None,
         'status': 'active',
@@ -39,12 +39,12 @@ def test_comment_create_schema():
 
 def test_comment_create_with_parent_schema():
     post_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
+    member_id = str(uuid.uuid4())
     parent_id = str(uuid.uuid4())
 
     comment = CommentCreate(
         post_id=post_id,
-        user_id=user_id,
+        member_id=member_id,
         content='Esta é uma resposta',
         parent_id=parent_id,
         status=CommentStatusEnum.ACTIVE,
@@ -52,7 +52,7 @@ def test_comment_create_with_parent_schema():
 
     assert comment.model_dump() == {
         'post_id': post_id,
-        'user_id': user_id,
+        'member_id': member_id,
         'content': 'Esta é uma resposta',
         'parent_id': parent_id,
         'status': 'active',
@@ -218,7 +218,7 @@ def test_comment_response_schema():
     comment = CommentResponse(
         id=comment_id,
         post=post,
-        user=author,
+        member=author,
         content='Este é um comentário de teste',
         status=CommentStatusEnum.ACTIVE,
         likes_count=5,
@@ -234,7 +234,7 @@ def test_comment_response_schema():
             'id': post_id,
             'title': 'Título do Post',
         },
-        'user': {
+        'member': {
             'id': user_id,
             'name': 'João Silva',
             'profile_image_url': 'https://example.com/profile.jpg',
@@ -281,7 +281,7 @@ def test_comment_response_with_replies_schema():
     reply = CommentResponse(
         id=reply_id,
         post=post,
-        user=reply_author,
+        member=reply_author,
         content='Esta é uma resposta',
         status=CommentStatusEnum.ACTIVE,
         likes_count=2,
@@ -294,7 +294,7 @@ def test_comment_response_with_replies_schema():
     comment = CommentResponse(
         id=comment_id,
         post=post,
-        user=author,
+        member=author,
         content='Este é um comentário de teste',
         status=CommentStatusEnum.ACTIVE,
         likes_count=5,
@@ -310,7 +310,7 @@ def test_comment_response_with_replies_schema():
             'id': post_id,
             'title': 'Título do Post',
         },
-        'user': {
+        'member': {
             'id': user_id,
             'name': 'João Silva',
             'profile_image_url': 'https://example.com/profile.jpg',
@@ -329,7 +329,7 @@ def test_comment_response_with_replies_schema():
                     'id': post_id,
                     'title': 'Título do Post',
                 },
-                'user': {
+                'member': {
                     'id': reply_user_id,
                     'name': 'Maria Santos',
                     'profile_image_url': None,
@@ -349,18 +349,18 @@ def test_comment_response_with_replies_schema():
 
 def test_comment_like_response_schema():
     comment_id = uuid.uuid4()
-    user_id = uuid.uuid4()
+    member_id = uuid.uuid4()
     created_at = datetime.now()
 
     comment_like = CommentLikeResponse(
         comment_id=comment_id,
-        user_id=user_id,
+        member_id=member_id,
         created_at=created_at,
     )
 
     assert comment_like.model_dump() == {
         'comment_id': comment_id,
-        'user_id': user_id,
+        'member_id': member_id,
         'created_at': created_at,
     }
 
@@ -369,7 +369,7 @@ def test_comment_create_invalid_schema():
     with pytest.raises(ValidationError):
         CommentCreate(
             post_id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
+            member_id=str(uuid.uuid4()),
             content='',
             parent_id=None,
             status=CommentStatusEnum.ACTIVE,
@@ -380,7 +380,7 @@ def test_comment_create_content_too_long_invalid_schema():
     with pytest.raises(ValidationError):
         CommentCreate(
             post_id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
+            member_id=str(uuid.uuid4()),
             content='a' * 1001,
             parent_id=None,
             status=CommentStatusEnum.ACTIVE,
@@ -440,7 +440,7 @@ def test_comment_response_invalid_schema():
         CommentResponse(
             id=uuid.uuid4(),
             post=PostRelated(id=uuid.uuid4(), title=''),
-            user=CommentAuthor(
+            member=CommentAuthor(
                 id=uuid.uuid4(),
                 name='João Silva',
                 profile_image_url=None,

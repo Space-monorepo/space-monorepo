@@ -95,7 +95,7 @@ def fake_comment(fake_ids, fake_comment_data, fake_post, fake_user):
     comment = Mock(spec=Comment)
     comment.id = fake_ids['comment_id']
     comment.post_id = fake_ids['post_id']
-    comment.user_id = fake_ids['user_id']
+    comment.member_id = fake_ids['member_id']
     comment.content = fake_comment_data['content']
     comment.status = fake_comment_data['status']
     comment.likes_count = fake_comment_data['likes_count']
@@ -103,7 +103,9 @@ def fake_comment(fake_ids, fake_comment_data, fake_post, fake_user):
     comment.parent_id = None
     comment.created_at = fake_comment_data['created_at']
     comment.post = fake_post
-    comment.user = fake_user
+    comment.member = Mock()
+    comment.member.user = fake_user
+    comment.member.role = CommunityMemberRoleEnum.MEMBER
     return comment
 
 
@@ -177,7 +179,7 @@ def test_create_comment_service_success(
 
     fake_comment_create = CommentCreate(
         post_id=fake_ids['post_id'],
-        user_id=fake_ids['user_id'],
+        member_id=fake_ids['member_id'],
         content='Test comment content',
         parent_id=None,
         status=CommentStatusEnum.ACTIVE,
@@ -190,6 +192,7 @@ def test_create_comment_service_success(
     mock_repositories['comment_repo'].save.return_value = fake_comment
     mock_repositories['post_repo'].get_by_id.return_value = fake_post
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
+    mock_services['community_service'].get_member.return_value = fake_member
     mock_services['community_service'].get_member_association.return_value = fake_member
 
     # Act
@@ -199,10 +202,10 @@ def test_create_comment_service_success(
     assert mock_repositories['post_repo'].get_by_id.call_count == 2
     mock_repositories['comment_repo'].save.assert_called_once()
     mock_repositories['post_repo'].save.assert_called_once_with(fake_post)
-    mock_repositories['member_repo'].get_member_role.assert_called_once_with(
-        fake_ids['user_id'], fake_ids['community_id']
+    mock_services['community_service'].get_member.assert_called_once_with(
+        fake_ids['member_id']
     )
-    assert mock_services['community_service'].get_member_association.call_count == 2
+    mock_services['community_service'].get_member_association.assert_called_once()
     mock_services['reputation_service'].award_comment_creation.assert_called_once_with(
         fake_member.id, fake_member.id
     )
@@ -211,13 +214,13 @@ def test_create_comment_service_success(
     assert isinstance(result, CommentResponse)
     assert str(result.id) == str(fake_ids['comment_id'])
     assert str(result.post.id) == fake_ids['post_id']
-    assert str(result.user.id) == fake_ids['user_id']
+    assert str(result.member.id) == fake_ids['member_id']
     assert result.content == 'Test comment content'
     assert result.status == CommentStatusEnum.ACTIVE
     assert result.likes_count == DEFAULT_LIKES_COUNT
     assert result.report_count == DEFAULT_REPORT_COUNT
     assert result.parent_id is None
-    assert result.user.member_role == fake_member_role
+    assert result.member.member_role == fake_member_role
 
 
 @pytest.mark.unit
@@ -237,7 +240,7 @@ def test_create_comment_reply_service_success(
 
     fake_comment_create = CommentCreate(
         post_id=fake_ids['post_id'],
-        user_id=fake_ids['user_id'],
+        member_id=fake_ids['member_id'],
         content='Test reply content',
         parent_id=fake_ids['parent_id'],
         status=CommentStatusEnum.ACTIVE,
@@ -251,7 +254,7 @@ def test_create_comment_reply_service_success(
     fake_created_reply = Mock(spec=Comment)
     fake_created_reply.id = fake_ids['comment_id']
     fake_created_reply.post_id = fake_ids['post_id']
-    fake_created_reply.user_id = fake_ids['user_id']
+    fake_created_reply.member_id = fake_ids['member_id']
     fake_created_reply.content = 'Test reply content'
     fake_created_reply.parent_id = fake_ids['parent_id']
     fake_created_reply.status = CommentStatusEnum.ACTIVE
@@ -259,7 +262,9 @@ def test_create_comment_reply_service_success(
     fake_created_reply.report_count = DEFAULT_REPORT_COUNT
     fake_created_reply.created_at = datetime.now(timezone.utc)
     fake_created_reply.post = fake_post
-    fake_created_reply.user = fake_user
+    fake_created_reply.member = Mock()
+    fake_created_reply.member.user = fake_user
+    fake_created_reply.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_member = Mock(spec=CommunityMember)
     fake_member.id = fake_ids['member_id']
@@ -269,6 +274,7 @@ def test_create_comment_reply_service_success(
     mock_repositories['comment_repo'].save.return_value = fake_created_reply
     mock_repositories['post_repo'].get_by_id.return_value = fake_post
     mock_repositories['member_repo'].get_member_role.return_value = fake_member_role
+    mock_services['community_service'].get_member.return_value = fake_member
     mock_services['community_service'].get_member_association.return_value = fake_member
 
     # Act
@@ -280,7 +286,10 @@ def test_create_comment_reply_service_success(
         fake_ids['parent_id']
     )
     mock_repositories['comment_repo'].save.assert_called_once()
-    assert mock_services['community_service'].get_member_association.call_count == 2
+    mock_services['community_service'].get_member.assert_called_once_with(
+        fake_ids['member_id']
+    )
+    mock_services['community_service'].get_member_association.assert_called_once()
     mock_services['reputation_service'].award_comment_creation.assert_called_once_with(
         fake_member.id, fake_member.id
     )
@@ -321,7 +330,7 @@ def test_get_comment_by_id_service_success(
     assert isinstance(result, CommentResponse)
     assert str(result.id) == str(fake_ids['comment_id'])
     assert result.content == fake_comment.content
-    assert str(result.user.id) == fake_ids['user_id']
+    assert str(result.member.id) == fake_ids['member_id']
     assert str(result.post.id) == fake_ids['post_id']
     assert result.status == CommentStatusEnum.ACTIVE
     assert result.likes_count == 3
@@ -413,7 +422,7 @@ def test_list_comments_by_user_service_success(
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 1
-    assert str(result.items[0].user.id) == fake_ids['user_id']
+    assert str(result.items[0].member.id) == fake_ids['member_id']
     assert str(result.items[0].id) == str(fake_ids['comment_id'])
     assert result.total == 1
     assert result.has_more == False
@@ -443,7 +452,7 @@ def test_list_replies_by_parent_service_success(
     fake_reply = Mock(spec=Comment)
     fake_reply.id = fake_ids['reply_id']
     fake_reply.post_id = fake_ids['post_id']
-    fake_reply.user_id = fake_ids['user_id']
+    fake_reply.member_id = fake_ids['member_id']
     fake_reply.content = 'Test reply content'
     fake_reply.parent_id = fake_ids['parent_id']
     fake_reply.status = CommentStatusEnum.ACTIVE
@@ -451,7 +460,9 @@ def test_list_replies_by_parent_service_success(
     fake_reply.report_count = DEFAULT_REPORT_COUNT
     fake_reply.created_at = datetime.now(timezone.utc)
     fake_reply.post = fake_post
-    fake_reply.user = fake_user
+    fake_reply.member = Mock()
+    fake_reply.member.user = fake_user
+    fake_reply.member.role = CommunityMemberRoleEnum.MEMBER
 
     mock_repositories['comment_repo'].get_by_id.return_value = fake_parent_comment
     mock_repositories['comment_repo'].list_replies_by_parent.return_value = (
@@ -502,7 +513,7 @@ def test_update_comment_content_service_success(
     fake_existing_comment = Mock(spec=Comment)
     fake_existing_comment.id = fake_ids['comment_id']
     fake_existing_comment.post_id = fake_ids['post_id']
-    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.member_id = fake_ids['member_id']
     fake_existing_comment.content = fake_original_content
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 2
@@ -510,12 +521,14 @@ def test_update_comment_content_service_success(
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
     fake_existing_comment.post = fake_post
-    fake_existing_comment.user = fake_user
+    fake_existing_comment.member = Mock()
+    fake_existing_comment.member.user = fake_user
+    fake_existing_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_saved_comment = Mock(spec=Comment)
     fake_saved_comment.id = fake_ids['comment_id']
     fake_saved_comment.post_id = fake_ids['post_id']
-    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.member_id = fake_ids['member_id']
     fake_saved_comment.content = fake_updated_content
     fake_saved_comment.status = CommentStatusEnum.ACTIVE
     fake_saved_comment.likes_count = 2
@@ -523,7 +536,9 @@ def test_update_comment_content_service_success(
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
     fake_saved_comment.post = fake_post
-    fake_saved_comment.user = fake_user
+    fake_saved_comment.member = Mock()
+    fake_saved_comment.member.user = fake_user
+    fake_saved_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     mock_repositories['comment_repo'].get_by_id.side_effect = [
         fake_existing_comment,
@@ -564,7 +579,7 @@ def test_update_comment_status_service_success(
     fake_existing_comment = Mock(spec=Comment)
     fake_existing_comment.id = fake_ids['comment_id']
     fake_existing_comment.post_id = fake_ids['post_id']
-    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.member_id = fake_ids['member_id']
     fake_existing_comment.content = 'Test content'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 1
@@ -572,12 +587,14 @@ def test_update_comment_status_service_success(
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
     fake_existing_comment.post = fake_post
-    fake_existing_comment.user = fake_user
+    fake_existing_comment.member = Mock()
+    fake_existing_comment.member.user = fake_user
+    fake_existing_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_saved_comment = Mock(spec=Comment)
     fake_saved_comment.id = fake_ids['comment_id']
     fake_saved_comment.post_id = fake_ids['post_id']
-    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.member_id = fake_ids['member_id']
     fake_saved_comment.content = 'Test content'
     fake_saved_comment.status = CommentStatusEnum.SUSPENDED
     fake_saved_comment.likes_count = 1
@@ -585,7 +602,9 @@ def test_update_comment_status_service_success(
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
     fake_saved_comment.post = fake_post
-    fake_saved_comment.user = fake_user
+    fake_saved_comment.member = Mock()
+    fake_saved_comment.member.user = fake_user
+    fake_saved_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     mock_repositories['comment_repo'].get_by_id.side_effect = [
         fake_existing_comment,
@@ -670,7 +689,7 @@ def test_like_comment_service_success(
     fake_existing_comment = Mock(spec=Comment)
     fake_existing_comment.id = fake_ids['comment_id']
     fake_existing_comment.post_id = fake_ids['post_id']
-    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.member_id = fake_ids['member_id']
     fake_existing_comment.content = 'Comment to like'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = DEFAULT_LIKES_COUNT
@@ -678,12 +697,14 @@ def test_like_comment_service_success(
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
     fake_existing_comment.post = fake_post
-    fake_existing_comment.user = fake_user
+    fake_existing_comment.member = Mock()
+    fake_existing_comment.member.user = fake_user
+    fake_existing_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_saved_comment = Mock(spec=Comment)
     fake_saved_comment.id = fake_ids['comment_id']
     fake_saved_comment.post_id = fake_ids['post_id']
-    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.member_id = fake_ids['member_id']
     fake_saved_comment.content = 'Comment to like'
     fake_saved_comment.status = CommentStatusEnum.ACTIVE
     fake_saved_comment.likes_count = 1
@@ -691,7 +712,9 @@ def test_like_comment_service_success(
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
     fake_saved_comment.post = fake_post
-    fake_saved_comment.user = fake_user
+    fake_saved_comment.member = Mock()
+    fake_saved_comment.member.user = fake_user
+    fake_saved_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_comment_like = Mock(spec=CommentLikes)
     fake_comment_like.comment_id = fake_ids['comment_id']
@@ -744,7 +767,7 @@ def test_unlike_comment_service_success(
     fake_existing_comment = Mock(spec=Comment)
     fake_existing_comment.id = fake_ids['comment_id']
     fake_existing_comment.post_id = fake_ids['post_id']
-    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.member_id = fake_ids['member_id']
     fake_existing_comment.content = 'Comment to unlike'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 1
@@ -752,12 +775,14 @@ def test_unlike_comment_service_success(
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
     fake_existing_comment.post = fake_post
-    fake_existing_comment.user = fake_user
+    fake_existing_comment.member = Mock()
+    fake_existing_comment.member.user = fake_user
+    fake_existing_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_saved_comment = Mock(spec=Comment)
     fake_saved_comment.id = fake_ids['comment_id']
     fake_saved_comment.post_id = fake_ids['post_id']
-    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.member_id = fake_ids['member_id']
     fake_saved_comment.content = 'Comment to unlike'
     fake_saved_comment.status = CommentStatusEnum.ACTIVE
     fake_saved_comment.likes_count = DEFAULT_LIKES_COUNT
@@ -765,7 +790,9 @@ def test_unlike_comment_service_success(
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
     fake_saved_comment.post = fake_post
-    fake_saved_comment.user = fake_user
+    fake_saved_comment.member = Mock()
+    fake_saved_comment.member.user = fake_user
+    fake_saved_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_existing_like = Mock(spec=CommentLikes)
     fake_existing_like.comment_id = fake_ids['comment_id']
@@ -893,7 +920,7 @@ def test_report_comment_service_success(
     fake_existing_comment = Mock(spec=Comment)
     fake_existing_comment.id = fake_ids['comment_id']
     fake_existing_comment.post_id = fake_ids['post_id']
-    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.member_id = fake_ids['member_id']
     fake_existing_comment.content = 'Comment to report'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 2
@@ -901,12 +928,14 @@ def test_report_comment_service_success(
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
     fake_existing_comment.post = fake_post
-    fake_existing_comment.user = fake_user
+    fake_existing_comment.member = Mock()
+    fake_existing_comment.member.user = fake_user
+    fake_existing_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_saved_comment = Mock(spec=Comment)
     fake_saved_comment.id = fake_ids['comment_id']
     fake_saved_comment.post_id = fake_ids['post_id']
-    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.member_id = fake_ids['member_id']
     fake_saved_comment.content = 'Comment to report'
     fake_saved_comment.status = CommentStatusEnum.ACTIVE
     fake_saved_comment.likes_count = 2
@@ -914,7 +943,9 @@ def test_report_comment_service_success(
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
     fake_saved_comment.post = fake_post
-    fake_saved_comment.user = fake_user
+    fake_saved_comment.member = Mock()
+    fake_saved_comment.member.user = fake_user
+    fake_saved_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
     mock_repositories['comment_repo'].save.return_value = fake_saved_comment
@@ -955,7 +986,7 @@ def test_report_comment_threshold_service_success(
     fake_existing_comment = Mock(spec=Comment)
     fake_existing_comment.id = fake_ids['comment_id']
     fake_existing_comment.post_id = fake_ids['post_id']
-    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.member_id = fake_ids['member_id']
     fake_existing_comment.content = 'Comment at threshold'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 1
@@ -963,12 +994,14 @@ def test_report_comment_threshold_service_success(
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
     fake_existing_comment.post = fake_post
-    fake_existing_comment.user = fake_user
+    fake_existing_comment.member = Mock()
+    fake_existing_comment.member.user = fake_user
+    fake_existing_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_saved_comment = Mock(spec=Comment)
     fake_saved_comment.id = fake_ids['comment_id']
     fake_saved_comment.post_id = fake_ids['post_id']
-    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.member_id = fake_ids['member_id']
     fake_saved_comment.content = 'Comment at threshold'
     fake_saved_comment.status = CommentStatusEnum.REPORTED
     fake_saved_comment.likes_count = 1
@@ -976,7 +1009,9 @@ def test_report_comment_threshold_service_success(
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
     fake_saved_comment.post = fake_post
-    fake_saved_comment.user = fake_user
+    fake_saved_comment.member = Mock()
+    fake_saved_comment.member.user = fake_user
+    fake_saved_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     mock_repositories['comment_repo'].get_by_id.return_value = fake_existing_comment
     mock_repositories['comment_repo'].save.return_value = fake_saved_comment
@@ -1016,7 +1051,7 @@ def test_list_comments_by_post_with_replies_service_success(
     fake_main_comment = Mock(spec=Comment)
     fake_main_comment.id = fake_ids['comment_id']
     fake_main_comment.post_id = fake_ids['post_id']
-    fake_main_comment.user_id = fake_ids['user_id']
+    fake_main_comment.member_id = fake_ids['member_id']
     fake_main_comment.content = 'Main comment'
     fake_main_comment.status = CommentStatusEnum.ACTIVE
     fake_main_comment.likes_count = 2
@@ -1024,13 +1059,15 @@ def test_list_comments_by_post_with_replies_service_success(
     fake_main_comment.parent_id = None
     fake_main_comment.created_at = datetime.now(timezone.utc)
     fake_main_comment.post = fake_post
-    fake_main_comment.user = fake_user
+    fake_main_comment.member = Mock()
+    fake_main_comment.member.user = fake_user
+    fake_main_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     # Mock reply comment
     fake_reply_comment = Mock(spec=Comment)
     fake_reply_comment.id = fake_ids['reply_id']
     fake_reply_comment.post_id = fake_ids['post_id']
-    fake_reply_comment.user_id = fake_ids['user_id']
+    fake_reply_comment.member_id = fake_ids['member_id']
     fake_reply_comment.content = 'Reply comment'
     fake_reply_comment.status = CommentStatusEnum.ACTIVE
     fake_reply_comment.likes_count = 1
@@ -1038,7 +1075,9 @@ def test_list_comments_by_post_with_replies_service_success(
     fake_reply_comment.parent_id = fake_ids['comment_id']
     fake_reply_comment.created_at = datetime.now(timezone.utc)
     fake_reply_comment.post = fake_post
-    fake_reply_comment.user = fake_user
+    fake_reply_comment.member = Mock()
+    fake_reply_comment.member.user = fake_user
+    fake_reply_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     # Setup pagination with status filter
     pagination_params.status = ['active']
@@ -1184,7 +1223,7 @@ def test_unlike_comment_with_zero_likes_service_success(
     fake_existing_comment = Mock(spec=Comment)
     fake_existing_comment.id = fake_ids['comment_id']
     fake_existing_comment.post_id = fake_ids['post_id']
-    fake_existing_comment.user_id = fake_ids['user_id']
+    fake_existing_comment.member_id = fake_ids['member_id']
     fake_existing_comment.content = 'Comment to unlike'
     fake_existing_comment.status = CommentStatusEnum.ACTIVE
     fake_existing_comment.likes_count = 0
@@ -1192,12 +1231,14 @@ def test_unlike_comment_with_zero_likes_service_success(
     fake_existing_comment.parent_id = None
     fake_existing_comment.created_at = datetime.now(timezone.utc)
     fake_existing_comment.post = fake_post
-    fake_existing_comment.user = fake_user
+    fake_existing_comment.member = Mock()
+    fake_existing_comment.member.user = fake_user
+    fake_existing_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_saved_comment = Mock(spec=Comment)
     fake_saved_comment.id = fake_ids['comment_id']
     fake_saved_comment.post_id = fake_ids['post_id']
-    fake_saved_comment.user_id = fake_ids['user_id']
+    fake_saved_comment.member_id = fake_ids['member_id']
     fake_saved_comment.content = 'Comment to unlike'
     fake_saved_comment.status = CommentStatusEnum.ACTIVE
     fake_saved_comment.likes_count = 0
@@ -1205,7 +1246,9 @@ def test_unlike_comment_with_zero_likes_service_success(
     fake_saved_comment.parent_id = None
     fake_saved_comment.created_at = datetime.now(timezone.utc)
     fake_saved_comment.post = fake_post
-    fake_saved_comment.user = fake_user
+    fake_saved_comment.member = Mock()
+    fake_saved_comment.member.user = fake_user
+    fake_saved_comment.member.role = CommunityMemberRoleEnum.MEMBER
 
     fake_existing_like = Mock(spec=CommentLikes)
     fake_existing_like.comment_id = fake_ids['comment_id']
@@ -1257,7 +1300,7 @@ def test_create_comment_with_unexpected_error_raises_exception(
     # Arrange
     fake_comment_create = CommentCreate(
         post_id=fake_ids['post_id'],
-        user_id=fake_ids['user_id'],
+        member_id=fake_ids['member_id'],
         content='Test comment',
         parent_id=None,
         status=CommentStatusEnum.ACTIVE,
@@ -1441,7 +1484,7 @@ def test_create_comment_with_nonexistent_post_raises_error(
     # Arrange
     fake_comment_create = CommentCreate(
         post_id=fake_ids['post_id'],
-        user_id=fake_ids['user_id'],
+        member_id=fake_ids['member_id'],
         content='Comment with nonexistent post',
         parent_id=None,
         status=CommentStatusEnum.ACTIVE,
@@ -1471,7 +1514,7 @@ def test_create_comment_with_nonexistent_parent_raises_error(
     # Arrange
     fake_comment_create = CommentCreate(
         post_id=fake_ids['post_id'],
-        user_id=fake_ids['user_id'],
+        member_id=fake_ids['member_id'],
         content='Reply with nonexistent parent',
         parent_id=fake_ids['parent_id'],
         status=CommentStatusEnum.ACTIVE,
