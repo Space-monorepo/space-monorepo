@@ -265,7 +265,10 @@ export default function ModerationPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-4">
+                                        <div className="self-stretch my-auto text-sm text-neutral-500">
+                                            {((voteCounts[report.id]?.tolerate || 0) + (voteCounts[report.id]?.suspend || 0))}/{VOTE_THRESHOLD} votos
+                                        </div>
                                         {getSeverityBadge(report.severity)}
                                     </div>
                                 </div>
@@ -422,7 +425,10 @@ export default function ModerationPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-4">
+                                        <div className="self-stretch my-auto text-sm text-neutral-500">
+                                            {((voteCounts[report.id]?.tolerate || 0) + (voteCounts[report.id]?.suspend || 0))}/{VOTE_THRESHOLD} votos
+                                        </div>
                                         {getSeverityBadge(report.severity)}
                                     </div>
                                 </div>
@@ -581,7 +587,10 @@ export default function ModerationPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-4">
+                                        <div className="self-stretch my-auto text-sm text-neutral-500">
+                                            {((voteCounts[report.id]?.tolerate || 0) + (voteCounts[report.id]?.suspend || 0))}/{VOTE_THRESHOLD} votos
+                                        </div>
                                         {getSeverityBadge(report.severity)}
                                     </div>
                                 </div>
@@ -1253,16 +1262,43 @@ export default function ModerationPage() {
 
     // Handlers reais para ações de moderação
     const { moderateReport } = useModerationActions();
+    // Contador de votos locais por reporte (chave = report.id)
+    // Alinha com o backend (REPORT_VOTES_THRESHOLD = 2)
+    const VOTE_THRESHOLD = 2;
+    const [voteCounts, setVoteCounts] = useState<Record<string, { tolerate: number; suspend: number }>>({});
     const handleActuallyTolerate = async (report: UserReport | PostReport | CommentReport) => {
         if (!selectedCommunity || !user) return;
         const reportId = report.id;
         try {
-            await moderateReport(selectedCommunity.id, reportId, {
+            const result: any = await moderateReport(selectedCommunity.id, reportId, {
                 report_id: reportId,
                 moderator_id: user.id,
                 vote: 'tolerate',
             });
-            toast.success("Reporte tolerado com sucesso!");
+
+            // Se o backend retornou uma action, a decisão foi tomada e executada
+            if (result && result.action) {
+                toast.success(result.message || 'Ação automática executada');
+                // limpar contadores locais para este report
+                setVoteCounts(prev => {
+                    const copy = { ...prev };
+                    delete copy[reportId];
+                    return copy;
+                });
+                if (selectedCommunity) {
+                    fetchReportedUsers(selectedCommunity.id);
+                    fetchReportedPosts(selectedCommunity.id);
+                    fetchReportedComments(selectedCommunity.id);
+                }
+            } else {
+                // apenas registro do voto
+                setVoteCounts(prev => {
+                    const prevCounts = prev[reportId] || { tolerate: 0, suspend: 0 };
+                    return { ...prev, [reportId]: { ...prevCounts, tolerate: prevCounts.tolerate + 1 } };
+                });
+                toast.success("Voto registrado");
+            }
+
             setSelectedUserReport(null);
             setSelectedPostReport(null);
             setSelectedCommentReport(null);
@@ -1275,12 +1311,32 @@ export default function ModerationPage() {
         if (!selectedCommunity || !user) return;
         const reportId = report.id;
         try {
-            await moderateReport(selectedCommunity.id, reportId, {
+            const result: any = await moderateReport(selectedCommunity.id, reportId, {
                 report_id: reportId,
                 moderator_id: user.id,
                 vote: 'suspend',
             });
-            toast.success("Reporte suspenso com sucesso!");
+
+            if (result && result.action) {
+                toast.success(result.message || 'Ação automática executada');
+                setVoteCounts(prev => {
+                    const copy = { ...prev };
+                    delete copy[reportId];
+                    return copy;
+                });
+                if (selectedCommunity) {
+                    fetchReportedUsers(selectedCommunity.id);
+                    fetchReportedPosts(selectedCommunity.id);
+                    fetchReportedComments(selectedCommunity.id);
+                }
+            } else {
+                setVoteCounts(prev => {
+                    const prevCounts = prev[reportId] || { tolerate: 0, suspend: 0 };
+                    return { ...prev, [reportId]: { ...prevCounts, suspend: prevCounts.suspend + 1 } };
+                });
+                toast.success("Voto registrado");
+            }
+
             setSelectedUserReport(null);
             setSelectedPostReport(null);
             setSelectedCommentReport(null);
