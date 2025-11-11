@@ -403,7 +403,9 @@ def poll_option_on_db(session_sql, poll_post_on_db):
 
 
 @pytest.fixture
-def announcement_post_on_db(session_sql, community_on_db, user_on_db, community_member_on_db):
+def announcement_post_on_db(
+    session_sql, community_on_db, user_on_db, community_member_on_db
+):
     announcement_post = Post(
         community_id=community_on_db.id,
         user_id=user_on_db.id,
@@ -551,10 +553,10 @@ def multiple_ratings_on_db(
 
 
 @pytest.fixture
-def comment_on_db(session_sql, post_on_db, user_on_db):
+def comment_on_db(session_sql, post_on_db, community_member_on_db):
     comment = Comment(
         post_id=post_on_db.id,
-        user_id=user_on_db.id,
+        member_id=community_member_on_db.id,
         content='Este é um comentário de teste',
         status=CommentStatusEnum.ACTIVE,
         likes_count=0,
@@ -569,10 +571,10 @@ def comment_on_db(session_sql, post_on_db, user_on_db):
 
 
 @pytest.fixture
-def comment_reply_on_db(session_sql, comment_on_db, secondary_user_on_db):
+def comment_reply_on_db(session_sql, comment_on_db, community_member_on_db):
     reply = Comment(
         post_id=comment_on_db.post_id,
-        user_id=secondary_user_on_db.id,
+        member_id=community_member_on_db.id,
         content='Esta é uma resposta ao comentário',
         status=CommentStatusEnum.ACTIVE,
         likes_count=0,
@@ -587,10 +589,10 @@ def comment_reply_on_db(session_sql, comment_on_db, secondary_user_on_db):
 
 
 @pytest.fixture
-def comment_like_on_db(session_sql, comment_on_db, user_on_db):
+def comment_like_on_db(session_sql, comment_on_db, community_member_on_db):
     comment_like = CommentLikes(
         comment_id=comment_on_db.id,
-        user_id=user_on_db.id,
+        member_id=community_member_on_db.id,
     )
 
     session_sql.add(comment_like)
@@ -642,7 +644,9 @@ def report_to_comment_on_db(session_sql, community_member_on_db):
 
 
 @pytest.fixture
-def report_member_on_db(session_sql, report_to_member_on_db, commun_member_on_db, community_on_db):
+def report_member_on_db(
+    session_sql, report_to_member_on_db, commun_member_on_db, community_on_db
+):
     report_member = ReportMember(
         report_id=report_to_member_on_db.id,
         member_id=commun_member_on_db.id,
@@ -668,7 +672,9 @@ def report_post_on_db(session_sql, report_to_post_on_db, post_on_db, community_o
 
 
 @pytest.fixture
-def report_comment_on_db(session_sql, report_to_comment_on_db, comment_on_db, community_on_db):
+def report_comment_on_db(
+    session_sql, report_to_comment_on_db, comment_on_db, community_on_db
+):
     report_comment = ReportComment(
         report_id=report_to_comment_on_db.id,
         comment_id=comment_on_db.id,
@@ -683,6 +689,7 @@ def report_comment_on_db(session_sql, report_to_comment_on_db, comment_on_db, co
 @pytest.fixture
 def websocket_client(session_sql):
     """Create a WebSocket test client for unauthenticated connections."""
+
     def get_db_override():
         return session_sql
 
@@ -718,7 +725,7 @@ def authenticated_websocket_client(session_sql, user_on_db):
     with TestClient(app) as client:
         response = client.post(
             '/users/login',
-            data={'username': user_on_db.email, 'password': 'hashed_password'}
+            data={'username': user_on_db.email, 'password': 'hashed_password'},
         )
         token = response.json().get('access_token')
 
@@ -733,29 +740,25 @@ def authenticated_websocket_client(session_sql, user_on_db):
 def websocket_event_data():
     """Sample WebSocket event data for testing."""
     return {
-        "ping": {
-            "type": "ping",
-            "request_id": "ping_123",
-            "timestamp": 1703001600.0
+        'ping': {'type': 'ping', 'request_id': 'ping_123', 'timestamp': 1703001600.0},
+        'join_room': {
+            'type': 'join_conversation',
+            'conversation_id': 'test_room_123',
+            'request_id': 'join_123',
+            'timestamp': 1703001600.0,
         },
-        "join_room": {
-            "type": "join_conversation",
-            "conversation_id": "test_room_123",
-            "request_id": "join_123",
-            "timestamp": 1703001600.0
+        'send_message': {
+            'type': 'send_message',
+            'conversation_id': 'conv_123',
+            'content': 'Hello, World!',
+            'request_id': 'msg_123',
+            'timestamp': 1703001600.0,
         },
-        "send_message": {
-            "type": "send_message",
-            "conversation_id": "conv_123",
-            "content": "Hello, World!",
-            "request_id": "msg_123",
-            "timestamp": 1703001600.0
+        'invalid_event': {
+            'type': 'invalid_type',
+            'invalid_field': 'invalid_value',
+            'request_id': 'invalid_123',
         },
-        "invalid_event": {
-            "type": "invalid_type",
-            "invalid_field": "invalid_value",
-            "request_id": "invalid_123"
-        }
     }
 
 
@@ -786,9 +789,9 @@ def sample_conversation_id(conversation_on_db):
 def sample_room_data():
     """Sample room data for testing."""
     return {
-        "room_id": "test_room_123",
-        "conversation_id": "test_conversation_123",
-        "participants": ["user1", "user2"]
+        'room_id': 'test_room_123',
+        'conversation_id': 'test_conversation_123',
+        'participants': ['user1', 'user2'],
     }
 
 
@@ -797,7 +800,7 @@ def mock_websocket():
     """Create a mock WebSocket connection for testing."""
     websocket = Mock(spec=WebSocket)
     websocket.client = Mock()
-    websocket.client.host = "127.0.0.1"
+    websocket.client.host = '127.0.0.1'
     websocket.headers = {}
     websocket.query_params = {}
     return websocket
@@ -806,10 +809,10 @@ def mock_websocket():
 @pytest.fixture
 def mock_authenticated_websocket(mock_websocket):
     """Create a mock authenticated WebSocket with token."""
-    mock_websocket.query_params = {"token": "valid_jwt_token"}
+    mock_websocket.query_params = {'token': 'valid_jwt_token'}
     mock_websocket.headers = {
-        "authorization": "Bearer valid_jwt_token",
-        "x-forwarded-for": "192.168.1.1",
+        'authorization': 'Bearer valid_jwt_token',
+        'x-forwarded-for': '192.168.1.1',
     }
     return mock_websocket
 
@@ -819,9 +822,9 @@ def mock_user():
     """Create a mock User object for testing."""
     user = Mock(spec=User)
     user.id = uuid4()
-    user.email = "test@example.com"
-    user.name = "Test User"
-    user.status = "active"
+    user.email = 'test@example.com'
+    user.name = 'Test User'
+    user.status = 'active'
     return user
 
 

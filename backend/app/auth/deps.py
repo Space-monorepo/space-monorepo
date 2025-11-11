@@ -3,16 +3,16 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from app.api.communities.service import CommunityService
-from app.api.communities.exceptions import CommunityMemberNotFoundError
 from app.api.comment.service import CommentService
+from app.api.communities.exceptions import CommunityMemberNotFoundError
+from app.api.communities.model import CommunityMember
+from app.api.communities.service import CommunityService
+from app.api.post.service import PostService
+from app.api.users.model import User
+from app.api.users.service import UserService
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.transaction import TransactionManager
-from app.api.post.service import PostService
-from app.api.communities.model import CommunityMember
-from app.api.users.model import User
-from app.api.users.service import UserService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/users/login')
 
@@ -87,7 +87,7 @@ def require_comment_owner(
 ) -> CommunityMember:
     with TransactionManager(session) as tm:
         comment = CommentService(tm).get_comment(comment_id)
-    if str(comment.user.id) != str(member.user_id):
+    if str(comment.member.id) != str(member.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail='User not allowed.'
         )

@@ -43,6 +43,8 @@ class CommunityService:
             role=member.role,
             status_participation=member.status_participation,
             reputation=member.reputation,
+            reputation_level=member.reputation_level,
+            popularity=member.popularity,
             entered_in=member.entered_in,
         )
 

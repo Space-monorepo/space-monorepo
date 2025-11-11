@@ -37,8 +37,8 @@ class CommentCreate(BaseModel):
     post_id: str = Field(
         ..., min_length=36, max_length=36, description='Post id of the comment'
     )
-    user_id: str = Field(
-        ..., min_length=36, max_length=36, description='User id of the comment'
+    member_id: str = Field(
+        ..., min_length=36, max_length=36, description='Member id of the comment'
     )
     content: str = Field(
         ...,
@@ -59,7 +59,7 @@ class CommentCreate(BaseModel):
             'examples': [
                 {
                     'post_id': '123e4567-e89b-12d3-a456-426614174000',
-                    'user_id': '456e7890-e89b-12d3-a456-426614174000',
+                    'member_id': '456e7890-e89b-12d3-a456-426614174000',
                     'content': 'Este é um comentário muito interessante!',
                     'parent_id': None,
                     'status': 'active',
@@ -77,7 +77,7 @@ class CommentUpdate(BaseModel):
 class CommentResponse(BaseModel):
     id: uuid.UUID
     post: PostRelated
-    user: CommentAuthor
+    member: CommentAuthor
     content: str
     status: CommentStatusEnum
     likes_count: int
@@ -96,7 +96,7 @@ class CommentResponse(BaseModel):
                         'id': '789e0123-e89b-12d3-a456-426614174000',
                         'title': 'Título do Post',
                     },
-                    'user': {
+                    'member': {
                         'id': '456e7890-e89b-12d3-a456-426614174000',
                         'name': 'João Silva',
                         'profile_image_url': 'https://example.com/profile.jpg',
@@ -117,7 +117,7 @@ class CommentResponse(BaseModel):
 
 class CommentLikeResponse(BaseModel):
     comment_id: uuid.UUID = Field(..., description='Comment id that was liked')
-    user_id: uuid.UUID = Field(..., description='User id who liked')
+    member_id: uuid.UUID = Field(..., description='Member id who liked')
     created_at: datetime = Field(..., description='When the like was created')
 
     model_config = ConfigDict(
@@ -126,7 +126,7 @@ class CommentLikeResponse(BaseModel):
             'examples': [
                 {
                     'comment_id': '123e4567-e89b-12d3-a456-426614174000',
-                    'user_id': '456e7890-e89b-12d3-a456-426614174000',
+                    'member_id': '456e7890-e89b-12d3-a456-426614174000',
                     'created_at': '2021-01-01T00:00:00Z',
                 }
             ]

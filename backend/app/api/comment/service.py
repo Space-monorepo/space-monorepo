@@ -19,6 +19,8 @@ from app.api.comment.schema import (
 from app.api.communities.schema import CommunityMemberResponse
 from app.api.communities.service import CommunityService
 from app.api.post.exceptions import PostNotFoundError
+from app.api.reputation.schema import POPULARITY_POINTS, PopularityActionEnum
+from app.api.reputation.service import ReputationService
 from app.core.transaction import TransactionManager
 from app.utils.schema import PaginationResponse, PaginationSearchParams
 
@@ -33,6 +35,7 @@ class CommentService:
         self.post_repo = tm.get_post_repository()
         self.member_repo = tm.get_member_repository()
         self.community_service = CommunityService(tm)
+        self.reputation_service = ReputationService(tm)
 
     def _get_comment(self, comment_id: UUID) -> Comment:
         comment = self.comment_repo.get_by_id(comment_id)
@@ -53,22 +56,18 @@ class CommentService:
         Mapeia um comentário para response.
         Se replies_map for fornecido, inclui replies recursivamente.
         """
-        # Busca o role do usuário na comunidade do post
-        member_role = None
-        if comment.post and comment.post.community_id:
-            member_role = self.member_repo.get_member_role(
-                comment.user_id, comment.post.community_id
-            )
+        # Pega o role diretamente do membro
+        member_role = comment.member.role if comment.member else None
 
         response = CommentResponse(
             id=comment.id,
             post=PostRelated(
                 id=comment.post_id, title=comment.post.title if comment.post else None
             ),
-            user=CommentAuthor(
-                id=comment.user_id,
-                name=comment.user.name,
-                profile_image_url=comment.user.profile_image_url,
+            member=CommentAuthor(
+                id=comment.member_id,
+                name=comment.member.user.name,
+                profile_image_url=comment.member.user.profile_image_url,
                 member_role=member_role,
             ),
             content=comment.content,
@@ -98,9 +97,16 @@ class CommentService:
         try:
             comment = Comment(**comment_create.model_dump())
             comment_saved = self.comment_repo.save(comment)
-
             post = self._get_post(comment_create.post_id)
             post.comments_count += 1
+
+            commenter_member = self.community_service.get_member(comment_saved.member_id)
+            post_author_member = self.community_service.get_member_association(
+                post.user_id, post.community_id
+            )
+            self.reputation_service.award_comment_creation(
+                commenter_member.id, post_author_member.id
+            )
             self.post_repo.save(post)
 
             return self._map_comment_to_response(comment_saved)
@@ -256,6 +262,10 @@ class CommentService:
             like = CommentLikes(comment_id=comment_id, member_id=member_id)
             self.comment_likes_repo.save(like)
             comment = self.comment_repo.save(comment)
+            comment_author_member = self.community_service.get_member(comment.member_id)
+            self.reputation_service.award_comment_like(
+                member_id, comment_author_member.id
+            )
             return self._map_comment_to_response(comment)
         except Exception as e:
             raise UnexpectedCommentError('Unexpected error liking comment') from e
@@ -269,6 +279,17 @@ class CommentService:
                 comment.likes_count -= 1
             self.comment_likes_repo.delete(like)
             comment = self.comment_repo.save(comment)
+
+            comment_author_member = self.community_service.get_member(comment.member_id)
+            comment_author_member.popularity -= POPULARITY_POINTS[
+                PopularityActionEnum.RECEIVE_LIKE
+            ]
+            comment_author_member.popularity = max(0, comment_author_member.popularity)
+            self.community_service.member_repo.save(comment_author_member)
+
+            liker = self.community_service.get_member(member_id)
+            liker.popularity -= POPULARITY_POINTS[PopularityActionEnum.LIKE]
+            self.community_service.member_repo.save(liker)
             return self._map_comment_to_response(comment)
         except Exception as e:
             raise UnexpectedCommentError('Unexpected error unliking comment') from e

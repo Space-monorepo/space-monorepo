@@ -201,10 +201,12 @@ def update_status_complaint(
     post_id: str,
     complaint_status: ComplaintStatusEnum,
     session: Session = Depends(get_db),
-    _: CommunityMember = Depends(require_roles(['admin', 'moderator'])),
+    moderator: CommunityMember = Depends(require_roles(['admin', 'moderator'])),
 ) -> ComplaintResponse:
     with TransactionManager(session) as tm:
-        return ModerationService(tm).udpate_status_complaint(post_id, complaint_status)
+        return ModerationService(tm).udpate_status_complaint(
+            post_id, complaint_status, moderator.id
+        )
 
 
 @router.delete(

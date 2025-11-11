@@ -18,8 +18,8 @@ from app.api.communities.schema import (
     CommunityMemberResponse,
     CommunityMemberRoleEnum,
     CommunityMemberStatusEnum,
-    CommunityMemberCreate,
-    CommunityMemberResponse,
+    CommunityTypeEnum,
+    CommunityUpdate,
 )
 from app.api.communities.service import CommunityService
 from app.api.users.schema import UserStatusEnum
@@ -832,6 +832,8 @@ def test_create_member_service_success():
     fake_saved_member.community_id = fake_community_id
     fake_saved_member.role = CommunityMemberRoleEnum.MEMBER
     fake_saved_member.reputation = 10
+    fake_saved_member.reputation_level = 'helper'
+    fake_saved_member.popularity = 0
     fake_saved_member.status_participation = CommunityMemberStatusEnum.ACTIVE
     fake_saved_member.entered_in = datetime.now()
     # Configure the user and community attributes for _map_member_to_response

@@ -6,7 +6,6 @@ import pytest
 
 from app.api.communities.schema import CommunityMemberRoleEnum
 from app.api.post.exceptions import PollVoteAlreadyExistsError, PostSuspendedError
-
 from app.api.post.model import CampaignPost, ComplaintPost, PollOptions, PollPosts, Post
 from app.api.post.schemas import (
     CampaignStatusEnum,
@@ -16,6 +15,7 @@ from app.api.post.schemas import (
     ComplaintStatusEnum,
     PollCreate,
     PollOptionResponse,
+    PollVoteResponse,
     PostAuthor,
     PostCreate,
     PostFeedResponse,
@@ -23,7 +23,6 @@ from app.api.post.schemas import (
     PostStatusEnum,
     PostTypeEnum,
     PostUpdate,
-    PollVoteResponse,
 )
 from app.api.post.service import PostService
 from app.utils.schema import PaginationSearchParams
@@ -96,18 +95,25 @@ def test_create_post_service_success():
     mock_community_service = Mock()
     mock_community_service.get_member_association.return_value = fake_member_association
 
+    mock_reputation_service = Mock()
+
     service = PostService(mock_tm)
     service.post_repo = mock_post_repo
     service.community_service = mock_community_service
+    service.reputation_service = mock_reputation_service
 
     # Act
     result = service.create_post(fake_post_create)
 
     # Assert
-    mock_community_service.get_member_association.assert_called_once_with(
+    assert mock_community_service.get_member_association.call_count == 2
+    mock_community_service.get_member_association.assert_called_with(
         fake_user_id, fake_community_id
     )
     mock_post_repo.save.assert_called_once()
+    mock_reputation_service.award_post_creation.assert_called_once_with(
+        fake_member_association.id
+    )
     assert result is not None
     assert isinstance(result, PostFeedResponse)
     assert result.id == fake_post_id
@@ -424,7 +430,7 @@ def test_get_user_feed_service_with_polls():
 
     # Criar posts incluindo um poll
     fake_posts = []
-    
+
     # Post normal
     fake_post_normal = Mock(spec=Post)
     fake_post_normal.id = uuid4()
@@ -441,18 +447,18 @@ def test_get_user_feed_service_with_polls():
     fake_post_normal.report_count = 0
     fake_post_normal.created_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
     fake_post_normal.updated_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
-    
+
     fake_community_normal = Mock()
     fake_community_normal.name = 'Normal Community'
     fake_post_normal.community = fake_community_normal
-    
+
     fake_user_normal = Mock()
     fake_user_normal.name = 'Normal User'
     fake_user_normal.profile_image_url = 'https://example.com/user.jpg'
     fake_post_normal.user = fake_user_normal
-    
+
     fake_posts.append(fake_post_normal)
-    
+
     # Post poll
     fake_poll_post_id = uuid4()
     fake_post_poll = Mock(spec=Post)
@@ -470,39 +476,39 @@ def test_get_user_feed_service_with_polls():
     fake_post_poll.report_count = 0
     fake_post_poll.created_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
     fake_post_poll.updated_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
-    
+
     fake_community_poll = Mock()
     fake_community_poll.name = 'Poll Community'
     fake_post_poll.community = fake_community_poll
-    
+
     fake_user_poll = Mock()
     fake_user_poll.name = 'Poll User'
     fake_user_poll.profile_image_url = 'https://example.com/polluser.jpg'
     fake_post_poll.user = fake_user_poll
-    
+
     fake_posts.append(fake_post_poll)
 
     # Mock PollPosts e PollOptions
     fake_poll_posts = Mock(spec=PollPosts)
     fake_poll_posts.question = 'What is your favorite color?'
-    
+
     fake_poll_option1 = Mock(spec=PollOptions)
     fake_poll_option1.id = uuid4()
     fake_poll_option1.answer = 'Red'
     fake_poll_option1.votes_count = 10
-    
+
     fake_poll_option2 = Mock(spec=PollOptions)
     fake_poll_option2.id = uuid4()
     fake_poll_option2.answer = 'Blue'
     fake_poll_option2.votes_count = 5
-    
+
     fake_poll_options = [fake_poll_option1, fake_poll_option2]
 
     mock_tm = Mock()
     mock_post_repo = Mock()
     mock_poll_posts_repo = Mock()
     mock_poll_options_repo = Mock()
-    
+
     mock_post_repo.get_user_feed.return_value = (fake_posts, 2)
     mock_poll_posts_repo.get_by_id.return_value = fake_poll_posts
     mock_poll_options_repo.list_by_post.return_value = fake_poll_options
@@ -522,12 +528,14 @@ def test_get_user_feed_service_with_polls():
     assert result is not None
     assert result.items is not None
     assert len(result.items) == 2
-    
+
     # Verificar post normal (sem dados de poll)
-    normal_post = next(p for p in result.items if p.type_post == PostTypeEnum.ANNOUNCEMENT)
+    normal_post = next(
+        p for p in result.items if p.type_post == PostTypeEnum.ANNOUNCEMENT
+    )
     assert normal_post.poll_question is None
     assert normal_post.poll_options is None
-    
+
     # Verificar post poll (com dados de poll)
     poll_post = next(p for p in result.items if p.type_post == PostTypeEnum.POLL)
     assert poll_post.poll_question == 'What is your favorite color?'
@@ -537,7 +545,7 @@ def test_get_user_feed_service_with_polls():
     assert poll_post.poll_options[0].votes_count == 10
     assert poll_post.poll_options[1].answer == 'Blue'
     assert poll_post.poll_options[1].votes_count == 5
-    
+
     # Verificar que os repositórios foram chamados para o poll
     mock_poll_posts_repo.get_by_id.assert_called_once_with(fake_poll_post_id)
     mock_poll_options_repo.list_by_post.assert_called_once_with(fake_poll_post_id)
@@ -759,10 +767,13 @@ def test_like_post_service_success():
     mock_community_service = Mock()
     mock_community_service.get_member_association.return_value = fake_member_association
 
+    mock_reputation_service = Mock()
+
     service = PostService(mock_tm)
     service.post_repo = mock_post_repo
     service.post_likes_repo = mock_post_likes_repo
     service.community_service = mock_community_service
+    service.reputation_service = mock_reputation_service
 
     # Act
     result = service.like_post(fake_post_id, fake_member_id)
@@ -854,7 +865,18 @@ def test_unlike_post_service_success():
     mock_post_likes_repo.get_by_id.return_value = fake_existing_like
     mock_post_likes_repo.delete.return_value = True
 
+    fake_author_member = Mock()
+    fake_author_member.popularity = 10
+
+    fake_liker_member = Mock()
+    fake_liker_member.popularity = 5
+
     mock_community_service = Mock()
+    mock_community_service.get_member_association.return_value = fake_member_association
+    mock_community_service.get_member.side_effect = [
+        fake_author_member,
+        fake_liker_member,
+    ]
 
     service = PostService(mock_tm)
     service.post_repo = mock_post_repo
@@ -1019,8 +1041,18 @@ def test_create_campaign_service_success():
     mock_campaign_repo = Mock()
     mock_campaign_repo.save.return_value = fake_campaign
 
+    fake_member_association = Mock()
+    fake_member_association.id = str(uuid4())
+
+    mock_community_service = Mock()
+    mock_community_service.get_member_association.return_value = fake_member_association
+
+    mock_reputation_service = Mock()
+
     service = PostService(mock_tm)
     service.campaign_repo = mock_campaign_repo
+    service.community_service = mock_community_service
+    service.reputation_service = mock_reputation_service
 
     # Mock dos métodos que create_campaign chama
     service.create_post = Mock(return_value=fake_created_post_response)
@@ -1091,10 +1123,13 @@ def test_participate_campaign_service_success():
     mock_community_service = Mock()
     mock_community_service.get_member.return_value = fake_member
 
+    mock_reputation_service = Mock()
+
     service = PostService(mock_tm)
     service.campaign_repo = mock_campaign_repo
     service.campaign_participants_repo = mock_campaign_participants_repo
     service.community_service = mock_community_service
+    service.reputation_service = mock_reputation_service
 
     # Act
     result = service.participate_campaign(fake_post_id, fake_member_id)
@@ -1265,8 +1300,18 @@ def test_create_complaint_service_success():
     mock_complaint_repo = Mock()
     mock_complaint_repo.save.return_value = fake_complaint
 
+    fake_member_association = Mock()
+    fake_member_association.id = str(uuid4())
+
+    mock_community_service = Mock()
+    mock_community_service.get_member_association.return_value = fake_member_association
+
+    mock_reputation_service = Mock()
+
     service = PostService(mock_tm)
     service.complaint_repo = mock_complaint_repo
+    service.community_service = mock_community_service
+    service.reputation_service = mock_reputation_service
 
     # Mock dos métodos que create_complaint chama
     service.create_post = Mock(return_value=fake_created_post_response)
@@ -1572,7 +1617,7 @@ def test_vote_poll_service_already_voted_same_option():
     # Act & Assert
     with pytest.raises(PollVoteAlreadyExistsError) as exc_info:
         service.vote_poll(fake_poll_option_id, fake_member_id)
-    
+
     assert 'Poll vote already exists' in str(exc_info.value)
     mock_poll_options_repo.get_by_id.assert_called_once_with(fake_poll_option_id)
     mock_poll_votes_repo.member_has_voted.assert_called_once_with(
@@ -1941,14 +1986,18 @@ def test_confirm_complaint_service_success():
     mock_tm = Mock()
     mock_complaint_repo = Mock()
     mock_complaint_repo.get_by_id.return_value = fake_complaint
-    mock_complaint_repo.save.return_value = fake_saved_complaint
+    mock_complaint_repo.save.return_value = fake_complaint
+
+    mock_reputation_service = Mock()
 
     service = PostService(mock_tm)
     service.complaint_repo = mock_complaint_repo
+    service.reputation_service = mock_reputation_service
     service.get_post = Mock(return_value=fake_post_response)
 
     # Act
-    result = service.confirm_complaint(fake_post_id)
+    fake_member_id = str(uuid4())
+    result = service.confirm_complaint(fake_post_id, fake_member_id)
 
     # Assert
     mock_complaint_repo.get_by_id.assert_called_once_with(fake_post_id)
@@ -2019,20 +2068,26 @@ def test_confirm_complaint_service_updates_level_low_to_medium():
     mock_tm = Mock()
     mock_complaint_repo = Mock()
     mock_complaint_repo.get_by_id.return_value = fake_complaint
-    mock_complaint_repo.save.return_value = fake_saved_complaint
+    mock_complaint_repo.save.return_value = fake_complaint
+
+    mock_reputation_service = Mock()
 
     service = PostService(mock_tm)
     service.complaint_repo = mock_complaint_repo
+    service.reputation_service = mock_reputation_service
     service.get_post = Mock(return_value=fake_post_response)
 
     # Act
-    result = service.confirm_complaint(fake_post_id)
+    fake_member_id = str(uuid4())
+    result = service.confirm_complaint(fake_post_id, fake_member_id)
 
     # Assert
     mock_complaint_repo.get_by_id.assert_called_once_with(fake_post_id)
     mock_complaint_repo.save.assert_called_once_with(fake_complaint)
     assert fake_complaint.confirmations_count == 30
-    assert fake_complaint.level_complaint == ComplaintLevelEnum.MEDIUM  # Mudou para MEDIUM
+    assert (
+        fake_complaint.level_complaint == ComplaintLevelEnum.MEDIUM
+    )  # Mudou para MEDIUM
     service.get_post.assert_called_once_with(fake_post_id)
     assert result is not None
     assert isinstance(result, ComplaintResponse)
@@ -2097,14 +2152,18 @@ def test_confirm_complaint_service_updates_level_to_high():
     mock_tm = Mock()
     mock_complaint_repo = Mock()
     mock_complaint_repo.get_by_id.return_value = fake_complaint
-    mock_complaint_repo.save.return_value = fake_saved_complaint
+    mock_complaint_repo.save.return_value = fake_complaint
+
+    mock_reputation_service = Mock()
 
     service = PostService(mock_tm)
     service.complaint_repo = mock_complaint_repo
+    service.reputation_service = mock_reputation_service
     service.get_post = Mock(return_value=fake_post_response)
 
     # Act
-    result = service.confirm_complaint(fake_post_id)
+    fake_member_id = str(uuid4())
+    result = service.confirm_complaint(fake_post_id, fake_member_id)
 
     # Assert
     mock_complaint_repo.get_by_id.assert_called_once_with(fake_post_id)

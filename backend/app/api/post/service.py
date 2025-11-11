@@ -38,6 +38,11 @@ from app.api.post.schemas import (
     PostTypeEnum,
     PostUpdate,
 )
+from app.api.reputation.schema import (
+    POPULARITY_POINTS,
+    PopularityActionEnum,
+)
+from app.api.reputation.service import ReputationService
 from app.core.transaction import TransactionManager
 from app.utils.schema import PaginationResponse, PaginationSearchParams
 
@@ -61,6 +66,7 @@ class PostService:
         self.post_likes_repo = tm.get_post_likes_repository()
         self.poll_votes_repo = tm.get_poll_votes_repository()
         self.community_service = CommunityService(tm)
+        self.reputation_service = ReputationService(tm)
 
     def _get_post(self, post_id: UUID) -> Post:
         post = self.post_repo.get_by_id(str(post_id))
@@ -109,6 +115,11 @@ class PostService:
             post = Post(**post.model_dump())
             post.user_role_in_community = role
             post_saved = self.post_repo.save(post)
+
+            member = self.community_service.get_member_association(
+                post_saved.user_id, post_saved.community_id
+            )
+            self.reputation_service.award_post_creation(member.id)
             return self.__map_post_to_feed_response(post_saved)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error creating post') from e
@@ -226,6 +237,11 @@ class PostService:
         try:
             self.post_likes_repo.save(PostLikes(post_id=post_id, member_id=member_id))
             post = self.post_repo.save(post)
+
+            author_post = self.community_service.get_member_association(
+                post.user_id, post.community_id
+            )
+            self.reputation_service.award_post_like(member_id, author_post.id)
             return self.__map_post_to_feed_response(post)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error liking post') from e
@@ -237,6 +253,20 @@ class PostService:
             post.likes_count -= 1
             self.post_likes_repo.delete(like)
             post = self.post_repo.save(post)
+
+            author_post = self.community_service.get_member_association(
+                post.user_id, post.community_id
+            )
+            author = self.community_service.get_member(author_post.id)
+            author.popularity -= POPULARITY_POINTS[PopularityActionEnum.RECEIVE_LIKE]
+            author.popularity = max(0, author.popularity)
+            self.community_service.member_repo.save(author)
+
+            liker = self.community_service.get_member(member_id)
+            liker.popularity -= POPULARITY_POINTS[PopularityActionEnum.LIKE]
+            liker.popularity = max(0, liker.popularity)
+            self.community_service.member_repo.save(liker)
+
             return self.__map_post_to_feed_response(post)
         except Exception as e:
             raise UnexpectedPostError('Unexpected error unliking post') from e
@@ -267,11 +297,16 @@ class PostService:
 
     def create_campaign(self, post: PostCreate) -> CampaignResponse:
         try:
-            post = self.create_post(post)
-            campaign = CampaignPost(post_id=str(post.id))
+            created_post = self.create_post(post)
+            campaign = CampaignPost(post_id=str(created_post.id))
             campaign_saved = self.campaign_repo.save(campaign)
+
+            member = self.community_service.get_member_association(
+                created_post.user.id, created_post.community.id
+            )
+            self.reputation_service.award_campaign_creation(member.id)
             return CampaignResponse(
-                post=self.get_post(post.id),
+                post=self.get_post(created_post.id),
                 target_participants=campaign_saved.target_participants,
                 current_participants=campaign_saved.current_participants,
                 status_campaign=campaign_saved.status_campaign,
@@ -318,6 +353,7 @@ class PostService:
             participant_saved = self.campaign_participants_repo.save(
                 campaign_participants
             )
+            self.reputation_service.award_campaign_support(member_id)
             return participant_saved
         except Exception as e:
             raise UnexpectedPostError(
@@ -340,11 +376,16 @@ class PostService:
 
     def create_complaint(self, post: PostCreate) -> ComplaintResponse:
         try:
-            post = self.create_post(post)
-            complaint = ComplaintPost(post_id=str(post.id))
+            created_post = self.create_post(post)
+            complaint = ComplaintPost(post_id=str(created_post.id))
             complaint_saved = self.complaint_repo.save(complaint)
+
+            member = self.community_service.get_member_association(
+                created_post.user.id, created_post.community.id
+            )
+            self.reputation_service.award_complaint_creation(member.id)
             return ComplaintResponse(
-                post=self.get_post(post.id),
+                post=self.get_post(created_post.id),
                 confirmations_count=complaint_saved.confirmations_count,
                 status_complaint=complaint_saved.status_complaint,
                 level_complaint=complaint_saved.level_complaint,
@@ -352,7 +393,7 @@ class PostService:
         except Exception as e:
             raise UnexpectedPostError('Unexpected error creating complaint') from e
 
-    def confirm_complaint(self, post_id: UUID) -> ComplaintResponse:
+    def confirm_complaint(self, post_id: UUID, member_id: UUID) -> ComplaintResponse:
         complaint = self.get_complaint(post_id)
         complaint.confirmations_count += 1
         if complaint.confirmations_count >= self.COMPLAINT_HIGH_THRESHOLD:
@@ -362,6 +403,7 @@ class PostService:
         else:
             complaint.level_complaint = ComplaintLevelEnum.LOW
         complaint_saved = self.complaint_repo.save(complaint)
+        self.reputation_service.award_complaint_confirmation(member_id)
         return ComplaintResponse(
             post=self.get_post(post_id),
             confirmations_count=complaint_saved.confirmations_count,
