@@ -110,6 +110,37 @@ def init_community():
                 moderadores_member_ids.append(community_member.id)
                 print(f"Community {community.name} member {mod_user.name} ({mod['role']}) created successfully")
 
+            # Criar alguns pedidos de conexão entre usuários (requests)
+            try:
+                user_service = UserService(tm)
+
+                # Cada membro pede conexão com o admin
+                for membro_user in membros:
+                    try:
+                        conn = user_service.request_connection(membro_user.id, user.id)
+                        print(f"Connection request created: {membro_user.name} -> {user.name} (ID: {conn.id})")
+                    except Exception as e:
+                        print(f"Could not create connection {membro_user.name} -> {user.name}: {e}")
+
+                # Primeiro membro pede conexão ao segundo membro (se existirem ao menos 2)
+                if len(membros) >= 2:
+                    try:
+                        conn = user_service.request_connection(membros[0].id, membros[1].id)
+                        print(f"Connection request created: {membros[0].name} -> {membros[1].name} (ID: {conn.id})")
+                    except Exception as e:
+                        print(f"Could not create connection {membros[0].name} -> {membros[1].name}: {e}")
+
+                # Um moderador pede conexão ao admin
+                if len(moderadores) >= 1:
+                    try:
+                        conn = user_service.request_connection(moderadores[0].id, user.id)
+                        print(f"Connection request created: {moderadores[0].name} -> {user.name} (ID: {conn.id})")
+                    except Exception as e:
+                        print(f"Could not create connection {moderadores[0].name} -> {user.name}: {e}")
+
+            except Exception as e:
+                print(f"Erro ao criar pedidos de conexão: {e}")
+
             post_service = PostService(tm)
             comment_service = CommentService(tm)
             posts = []
