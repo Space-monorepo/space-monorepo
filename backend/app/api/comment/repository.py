@@ -50,7 +50,7 @@ class CommentRepository(BaseRepository[Comment]):
     def list_comments_by_user(
         self, user_id: UUID, params: PaginationSearchParams
     ) -> tuple[List[Comment], int]:
-        query = self.session.query(Comment).filter(Comment.user_id == user_id)
+        query = self.session.query(Comment).filter(Comment.member_id == user_id)
 
         if params.status:
             query = query.filter(Comment.status.in_(params.status))

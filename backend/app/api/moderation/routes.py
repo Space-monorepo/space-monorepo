@@ -204,7 +204,9 @@ def update_status_complaint(
     moderator: CommunityMember = Depends(require_roles(['admin', 'moderator'])),
 ) -> ComplaintResponse:
     with TransactionManager(session) as tm:
-        return ModerationService(tm).udpate_status_complaint(post_id, complaint_status, moderator.id)
+        return ModerationService(tm).udpate_status_complaint(
+            post_id, complaint_status, moderator.id
+        )
 
 
 @router.delete(

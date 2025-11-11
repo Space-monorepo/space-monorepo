@@ -33,7 +33,7 @@ class Comment(Base):
 
     id = Column(UUIDColumn, primary_key=True, default=uuid_default, index=True)
     post_id = Column(UUIDColumn, ForeignKey('posts.id'), nullable=False)
-    user_id = Column(UUIDColumn, ForeignKey('users.id'), nullable=False)
+    member_id = Column(UUIDColumn, ForeignKey('community_members.id'), nullable=False)
     content = Column(Text, nullable=False)
     status = Column(String, nullable=False, default='active')
     likes_count = Column(Integer, nullable=False, default=0)
@@ -42,7 +42,7 @@ class Comment(Base):
     created_at = Column(DateTime, nullable=False, default=func.now())
 
     post = relationship('Post', back_populates='comments')
-    user = relationship('User', back_populates='comments')
+    member = relationship('CommunityMember', back_populates='comments')
     parent = relationship('Comment', remote_side=[id], back_populates='replies')
     replies = relationship(
         'Comment', back_populates='parent', cascade='all, delete-orphan'

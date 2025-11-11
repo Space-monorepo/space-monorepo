@@ -86,4 +86,8 @@ class CommunityMember(Base):
         'Comment', secondary='comment_likes', back_populates='liked_by', viewonly=True
     )
 
+    comments = relationship(
+        'Comment', back_populates='member', cascade='all, delete-orphan'
+    )
+
     badges = relationship('Badge', secondary='member_badges', back_populates='members')

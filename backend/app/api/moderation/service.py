@@ -137,7 +137,7 @@ class ModerationService:
         elif report.type == ReportTypeEnum.COMMENT_REPORT:
             report_comment = self.report_service.report_comment_repo.get_by_id(report.id)
             comment = self.comment_service.get_comment(str(report_comment.comment_id))
-            author_comment_id = comment.user.id
+            author_comment_id = comment.member.id
             if action == VoteTypeEnum.SUSPEND:
                 self.reputation_service.handle_comment_report_suspended(
                     report_comment.comment_id, author_comment_id

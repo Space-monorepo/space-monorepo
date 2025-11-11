@@ -56,22 +56,18 @@ class CommentService:
         Mapeia um comentário para response.
         Se replies_map for fornecido, inclui replies recursivamente.
         """
-        # Busca o role do usuário na comunidade do post
-        member_role = None
-        if comment.post and comment.post.community_id:
-            member_role = self.member_repo.get_member_role(
-                comment.user_id, comment.post.community_id
-            )
+        # Pega o role diretamente do membro
+        member_role = comment.member.role if comment.member else None
 
         response = CommentResponse(
             id=comment.id,
             post=PostRelated(
                 id=comment.post_id, title=comment.post.title if comment.post else None
             ),
-            user=CommentAuthor(
-                id=comment.user_id,
-                name=comment.user.name,
-                profile_image_url=comment.user.profile_image_url,
+            member=CommentAuthor(
+                id=comment.member_id,
+                name=comment.member.user.name,
+                profile_image_url=comment.member.user.profile_image_url,
                 member_role=member_role,
             ),
             content=comment.content,
@@ -104,9 +100,7 @@ class CommentService:
             post = self._get_post(comment_create.post_id)
             post.comments_count += 1
 
-            commenter_member = self.community_service.get_member_association(
-                comment_saved.user_id, post.community_id
-            )
+            commenter_member = self.community_service.get_member(comment_saved.member_id)
             post_author_member = self.community_service.get_member_association(
                 post.user_id, post.community_id
             )
@@ -268,11 +262,7 @@ class CommentService:
             like = CommentLikes(comment_id=comment_id, member_id=member_id)
             self.comment_likes_repo.save(like)
             comment = self.comment_repo.save(comment)
-            post = self._get_post(comment.post_id)
-
-            comment_author_member = self.community_service.get_member_association(
-                comment.user_id, post.community_id
-            )
+            comment_author_member = self.community_service.get_member(comment.member_id)
             self.reputation_service.award_comment_like(
                 member_id, comment_author_member.id
             )
@@ -289,15 +279,13 @@ class CommentService:
                 comment.likes_count -= 1
             self.comment_likes_repo.delete(like)
             comment = self.comment_repo.save(comment)
-            post = self._get_post(comment.post_id)
 
-            comment_author_member = self.community_service.get_member_association(
-                comment.user_id, post.community_id
-            )
-            author = self.community_service.get_member(comment_author_member.id)
-            author.popularity -= POPULARITY_POINTS[PopularityActionEnum.RECEIVE_LIKE]
-            author.popularity = max(0, author.popularity)
-            self.community_service.member_repo.save(author)
+            comment_author_member = self.community_service.get_member(comment.member_id)
+            comment_author_member.popularity -= POPULARITY_POINTS[
+                PopularityActionEnum.RECEIVE_LIKE
+            ]
+            comment_author_member.popularity = max(0, comment_author_member.popularity)
+            self.community_service.member_repo.save(comment_author_member)
 
             liker = self.community_service.get_member(member_id)
             liker.popularity -= POPULARITY_POINTS[PopularityActionEnum.LIKE]
