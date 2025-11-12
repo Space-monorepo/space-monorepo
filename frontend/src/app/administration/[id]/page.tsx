@@ -1296,7 +1296,7 @@ export default function CommunityAdminPage({
 
             {/* Communities Settings Tab */}
             {activeTab === "Comunidade" && (
-              <div className="bg-white fixed top-0 right-0 bottom-0 left-[512px]">
+              <div className="bg-white fixed top-0 right-0 bottom-0 left-[512px] overflow-y-auto no-scrollbar">
                 <main className="flex flex-col justify-center p-20 bg-white max-md:px-5 max-md:max-w-full">
                   <div className="w-full max-w-[894px] min-h-[832px] max-md:max-w-full">
                     <div className="w-full max-md:max-w-full">
@@ -1305,10 +1305,41 @@ export default function CommunityAdminPage({
                           Configurações
                         </nav>
                         <div className="mt-1 w-full text-xl text-black max-md:max-w-full">
-                          <SectionHeader title="Publicações" />
+                          <SectionHeader title="Comunidade" />
                         </div>
                       </div>
 
+                      <section className="flex justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
+                        <div className="self-stretch my-auto min-w-60 w-[894px] max-md:max-w-full">
+                          <h3 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                            Reporte
+                          </h3>
+                          <ConfigurationItem
+                            description="Quantidade de reportes necessárias para investigação"
+                            value="30"
+                          />
+                          <div className="flex flex-wrap mt-6 gap-10 justify-between items-center w-full max-md:max-w-full">
+                            <div className="self-stretch my-auto min-w-60 w-[680px] max-md:max-w-full">
+                              <h4 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                                Item 1
+                              </h4>
+                            </div>
+                            <DropdownSelect
+                              options={['Opção 1', 'Opção 2', 'Opção 3']}
+                              value={dropdown1Value}
+                              onChange={setDropdown1Value}
+                              isOpen={dropdown1Open}
+                              onToggle={() => setDropdown1Open(!dropdown1Open)}
+                              variant="primary"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2.5 self-stretch py-2.5 my-auto min-h-9" />
+                      </section>
+
+                      <div className="mt-10 w-full text-xl text-black max-md:max-w-full">
+                        <SectionHeader title="Publicações" />
+                      </div>
                       <section className="flex justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
                         <div className="self-stretch my-auto min-w-60 w-[894px] max-md:max-w-full">
                           <h3 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
@@ -1330,6 +1361,7 @@ export default function CommunityAdminPage({
                         <div className="flex gap-2.5 self-stretch py-2.5 my-auto min-h-9" />
                       </section>
 
+
                       <section className="flex justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
                         <div className="flex-1 shrink self-stretch my-auto w-full basis-0 min-w-60 max-md:max-w-full">
                           <h3 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
@@ -1349,14 +1381,14 @@ export default function CommunityAdminPage({
                         <div className="flex flex-wrap gap-10 justify-between items-center w-full max-md:max-w-full">
                           <div className="self-stretch my-auto min-w-60 w-[680px] max-md:max-w-full">
                             <h4 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
-                              Item 1
+                              Item 2
                             </h4>
                             <p className="mt-2 text-xs leading-none text-justify text-neutral-500 max-md:max-w-full">
                               Descrição
                             </p>
                           </div>
                           <DropdownSelect
-                            options={['Opção 1', 'Opção 2', 'Opção 3']}
+                            options={['Opção 2', 'Opção 1', 'Opção 3']}
                             value={dropdown1Value}
                             onChange={setDropdown1Value}
                             isOpen={dropdown1Open}
@@ -1367,14 +1399,14 @@ export default function CommunityAdminPage({
                         <div className="flex flex-wrap gap-10 justify-between items-center mt-6 w-full max-md:max-w-full">
                           <div className="self-stretch my-auto min-w-60 w-[680px] max-md:max-w-full">
                             <h4 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
-                              Item 2
+                              Item 3
                             </h4>
                             <p className="mt-2 text-xs leading-none text-justify text-neutral-500 max-md:max-w-full">
                               Descrição
                             </p>
                           </div>
                           <DropdownSelect
-                            options={['Opção 2', 'Opção 1', 'Opção 3']}
+                            options={['Opção 3', 'Opção 1', 'Opção 2']}
                             value={dropdown2Value}
                             onChange={setDropdown2Value}
                             isOpen={dropdown2Open}
