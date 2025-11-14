@@ -972,29 +972,36 @@ export default function ModerationPage() {
         reportedComment: {
             id: apiComment.id,
             content: apiComment.content,
-            author: {
-                id: apiComment.user?.id || 'unknown',
-                name: apiComment.user?.name || apiComment.user?.username || 'Usuário desconhecido',
-                profile_picture: apiComment.user?.profile_picture,
-                role: apiComment.user?.role || "member",
-            },
-            date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
-            postTitle: apiComment.post?.title || "Post não encontrado",
-            likes: apiComment.likes_count || 0,
+            // Normalizar possíveis formatos onde o autor pode vir
+            // (member, user, author, created_by, creator, owner, user_info)
+            author: (() => {
+                const authorObj = apiComment.member || apiComment.user || apiComment.author || apiComment.created_by || apiComment.creator || apiComment.owner || apiComment.user_info || {};
+                const id = authorObj.id || authorObj.user_id || authorObj.uuid || 'unknown';
+                const name = authorObj.name || authorObj.full_name || authorObj.display_name || authorObj.username || authorObj.user_name || 'Usuário desconhecido';
+                const profile_picture = authorObj.profile_picture || authorObj.profile_image_url || authorObj.profile_image || authorObj.avatar_url || authorObj.avatar || undefined;
+                const role = authorObj.role || authorObj.user_role || authorObj.member_role || 'member';
+                return { id, name, profile_picture, role };
+            })(),
+            date: new Date(apiComment.created_at || apiComment.createdAt || apiComment.date || Date.now()).toLocaleDateString("pt-BR"),
+            postTitle: apiComment.post?.title || apiComment.post?.name || apiComment.postTitle || "Post não encontrado",
+            likes: apiComment.likes_count || apiComment.likes || 0,
         },
+        // Mapear reporter real quando disponível. A API pode fornecer o reporter
+        // diretamente ou dentro de um array de reports. Usar fallbacks amigáveis.
         reporter: {
-            id: "community",
-            name: "Comunidade",
-            profile_picture: "/community-avatar.png",
-            role: "member",
+            id: apiComment.reporter?.id || apiComment.reported_by?.id || apiComment.reports?.[0]?.reporter?.id || apiComment.reports?.[0]?.user?.id || "community",
+            name: apiComment.reporter?.name || apiComment.reported_by?.name || apiComment.reports?.[0]?.reporter?.name || apiComment.reports?.[0]?.user?.name || "Comunidade",
+            profile_picture: apiComment.reporter?.profile_picture || apiComment.reported_by?.profile_picture || apiComment.reports?.[0]?.reporter?.profile_picture || apiComment.reports?.[0]?.user?.profile_picture || "/community-avatar.png",
+            role: apiComment.reporter?.role || apiComment.reported_by?.role || apiComment.reports?.[0]?.reporter?.role || apiComment.reports?.[0]?.user?.role || "member",
         },
-        reason: "Linguagem inadequada",
-        description: "Comentário foi reportado pela comunidade por conter linguagem inadequada ou ofensiva.",
+        reason: apiComment.reason || apiComment.report_reason || apiComment.reports?.[0]?.reason || apiComment.reports?.[0]?.report_reason || "Linguagem inadequada",
+        description: apiComment.description || apiComment.report_description || apiComment.reports?.[0]?.description || `Comentário reportado (id: ${apiComment.id})`,
         date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
-        status: "Em análise",
-        severity: apiComment.level_complaint || "Leve",
-        confirmations: apiComment.report_count || 0,
-        category: "Comportamento",
+        // status pode vir da API; mapear para os valores do frontend quando possível
+        status: apiComment.status === 'resolved' || apiComment.status === 'suspended' ? 'Resolvido' : 'Em análise',
+        severity: apiComment.level_complaint || apiComment.severity || "Leve",
+        confirmations: apiComment.report_count || (apiComment.reports && apiComment.reports.length) || 0,
+        category: apiComment.category || apiComment.type || "Comportamento",
     });
 
     const convertPostToReport = (post: PostResponse): Report => ({
