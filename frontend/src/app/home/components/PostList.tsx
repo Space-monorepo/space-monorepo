@@ -29,8 +29,14 @@ import { confirmComplaint } from "@/app/api/src/services/post/postService";
 // CommentsSection como componente interno
 interface Comment {
   id: string;
-  user: {
-    name: string;
+  user?: {
+    name?: string;
+    profile_picture?: string;
+    profile_image_url?: string;
+    member_role?: string;
+  };
+  member?: {
+    name?: string;
     profile_picture?: string;
     profile_image_url?: string;
     member_role?: string;
@@ -148,158 +154,173 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
     }
   };
 
-  const renderComment = (comment: Comment, isChild = false) => (
-    <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]' : 'flex flex-wrap justify-between w-full max-md:max-w-full'}`}>
-      <div className="flex flex-col items-center w-11">
-        <img
-          src={comment.user && (comment.user.profile_image_url || comment.user.profile_picture) ? (comment.user.profile_image_url || comment.user.profile_picture) : '/no-profile-pic.png'}
-          alt={`${comment.user.name} avatar`}
-          className={`object-contain w-11 aspect-square ${isChild ? 'rounded-[32px]' : ''}`}
-        />
-        {!isChild && ((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) && (
-          <div className="flex mt-2 w-px bg-zinc-300 min-h-[78px]" />
-        )}
-      </div>
-      <div className="flex-1 shrink basis-0 min-w-60 max-md:max-w-full">
-        <div className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
-          <div className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
-            <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
-              <div className="flex gap-2 items-center w-full h-[23px]">
-                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
-                  <div className="self-stretch my-auto whitespace-nowrap text-sm text-neutral-800">
-                    {comment.user.name}
-                  </div>
-                  <CheckmarkFilled
-                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(comment.user.member_role)}`}
-                    aria-label="Verificado"
-                  />
-                  <div className="self-stretch my-auto text-[10px] text-black font-semibold">
-                    •
-                  </div>
-                  {comment.user.member_role && (
-                    <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(comment.user.member_role)}`}>
-                      <div className="self-stretch my-auto">
-                        {translateUserRole(comment.user.member_role)}
-                      </div>
-                    </div>
-                  )}
-                  <div className="self-stretch my-auto text-[10px] text-black">
-                    •
-                  </div>
-                  <div className="self-stretch my-auto text-[10px] whitespace-nowrap font-semibold">
-                    <div className="text-neutral-800">
-                      {getRelativeTime(comment.created_at)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-4 items-center self-stretch my-auto w-5 min-h-5">
-            {/* Menu de opções para comentários pode ser implementado aqui se necessário */}
-          </div>
-        </div>
-        <div className="px-3 mt-2 w-full max-md:max-w-full">
-          <div className={`flex ${isChild ? 'overflow-hidden ' : ''}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-md:max-w-full`}>
-            <div className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-md:max-w-full">
-              {comment.content}
-            </div>
-          </div>
-          <div className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? 'whitespace-nowrap ' : ''}text-neutral-500 max-md:max-w-full`}>
-            <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5">
-              <div className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? '' : 'whitespace-nowrap'}`}>
-                <ArrowUp
-                  className="object-contain shrink-0 self-stretch my-auto w-3 aspect-square cursor-pointer hover:opacity-70 transition-opacity text-neutral-500"
-                  onClick={() => handleLikeComment(comment)}
-                  aria-label="Curtir"
-                />
-                <div className={`self-stretch my-auto ${likedComments[comment.id] ? 'text-neutral-600' : 'text-neutral-500'}`}>
-                  {comment.likes_count ?? 0}
-                </div>
-              </div>
-              <div className="flex overflow-hidden gap-2 items-center self-stretch my-auto">
-                <img
-                  src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/76fc42bedb22beda24433b506515bdee6ba7cab0?placeholderIfAbsent=true"
-                  className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square cursor-pointer hover:opacity-70 transition-opacity"
-                  onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                  alt="Reply"
-                />
-                <div className="self-stretch my-auto text-neutral-500 cursor-pointer hover:text-neutral-700 transition-colors" onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}>
-                  {isChild ? 'Responder' : `Responder${((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) ? ` (${(comment.children?.length || 0) + (comment.replies?.length || 0)})` : ''}`}
-                </div>
-              </div>
-            </div>
-          </div>
-          {replyingTo === comment.id && (
-            <div className="flex flex-col gap-2 items-start self-stretch w-full mt-4">
-              <div className="flex flex-col items-start self-stretch w-full">
-                <div className="flex flex-col justify-between items-start self-stretch p-4 bg-gray-100 h-[160px] rounded-xs w-full">
-                  <textarea
-                    className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
-                    rows={2}
-                    placeholder="Digite sua resposta..."
-                    value={replyInput[comment.id] || ''}
-                    onChange={e => setReplyInput(prev => ({ ...prev, [comment.id]: e.target.value }))}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleReply(comment.id);
-                      }
-                    }}
-                  />
-                  <div className="flex flex-row justify-between items-end w-full mt-2">
-                    <div className="flex gap-4 items-center max-sm:gap-3">
-                      <button type="button" aria-label="Adicionar emoji">
-                        <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
-                      </button>
-                      <button type="button" aria-label="Negrito">
-                        <TextBold size={20} className="toolbar-icon text-neutral-500" />
-                      </button>
-                      <button type="button" aria-label="Itálico">
-                        <TextItalic size={20} className="toolbar-icon text-neutral-500" />
-                      </button>
-                      <button type="button" aria-label="Lista numerada">
-                        <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
-                      </button>
-                      <button type="button" aria-label="Lista com marcadores">
-                        <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
-                      </button>
-                    </div>
-                    <div className="flex flex-row items-end">
-                      <button
-                        className="px-3 py-2 bg-neutral-800 text-white rounded-xs font-regular"
-                        onClick={() => handleReply(comment.id)}
-                      >
-                        Enviar
-                      </button>
-                      <button
-                        className="ml-2 px-3 py-2 bg-gray-300 text-gray-700 rounded-xs font-regular hover:bg-gray-400 transition-colors"
-                        onClick={() => setReplyingTo(null)}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+  const renderComment = (comment: Comment, isChild = false) => {
+    // API retorna 'member' em vez de 'user'
+    const userObj = comment.member || comment.user;
+
+    // Nome do usuário
+    const displayName = userObj?.name ||
+      (userObj as any)?.username ||
+      (userObj as any)?.full_name ||
+      'Usuário';
+
+    // Role do membro
+    const memberRole = userObj?.member_role ||
+      (userObj as any)?.role;
+
+    return (
+      <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]' : 'flex flex-wrap justify-between w-full max-md:max-w-full'}`}>
+        <div className="flex flex-col items-center w-11">
+          <img
+            src={userObj?.profile_image_url || userObj?.profile_picture || '/no-profile-pic.png'}
+            alt={`${displayName} avatar`}
+            className={`object-contain w-11 aspect-square ${isChild ? 'rounded-[32px]' : ''}`}
+          />
+          {!isChild && ((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) && (
+            <div className="flex mt-2 w-px bg-zinc-300 min-h-[78px]" />
           )}
         </div>
+        <div className="flex-1 shrink basis-0 min-w-60 max-md:max-w-full">
+          <div className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
+            <div className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
+              <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
+                <div className="flex gap-2 items-center w-full h-[23px]">
+                  <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                    <div className="self-stretch my-auto whitespace-nowrap text-sm text-neutral-800">
+                      {displayName}
+                    </div>
+                    <CheckmarkFilled
+                      className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(memberRole)}`}
+                      aria-label="Verificado"
+                    />
+                    <div className="self-stretch my-auto text-[10px] text-black font-semibold">
+                      •
+                    </div>
+                    {memberRole && (
+                      <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(memberRole)}`}>
+                        <div className="self-stretch my-auto">
+                          {translateUserRole(memberRole)}
+                        </div>
+                      </div>
+                    )}
+                    <div className="self-stretch my-auto text-[10px] text-black">
+                      •
+                    </div>
+                    <div className="self-stretch my-auto text-[10px] whitespace-nowrap font-semibold">
+                      <div className="text-neutral-800">
+                        {getRelativeTime(comment.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-4 items-center self-stretch my-auto w-5 min-h-5">
+              {/* Menu de opções para comentários pode ser implementado aqui se necessário */}
+            </div>
+          </div>
+          <div className="px-3 mt-2 w-full max-md:max-w-full">
+            <div className={`flex ${isChild ? 'overflow-hidden ' : ''}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-md:max-w-full`}>
+              <div className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-md:max-w-full">
+                {comment.content}
+              </div>
+            </div>
+            <div className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? 'whitespace-nowrap ' : ''}text-neutral-500 max-md:max-w-full`}>
+              <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5">
+                <div className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? '' : 'whitespace-nowrap'}`}>
+                  <ArrowUp
+                    className="object-contain shrink-0 self-stretch my-auto w-3 aspect-square cursor-pointer hover:opacity-70 transition-opacity text-neutral-500"
+                    onClick={() => handleLikeComment(comment)}
+                    aria-label="Curtir"
+                  />
+                  <div className={`self-stretch my-auto ${likedComments[comment.id] ? 'text-neutral-600' : 'text-neutral-500'}`}>
+                    {comment.likes_count ?? 0}
+                  </div>
+                </div>
+                <div className="flex overflow-hidden gap-2 items-center self-stretch my-auto">
+                  <img
+                    src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/76fc42bedb22beda24433b506515bdee6ba7cab0?placeholderIfAbsent=true"
+                    className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square cursor-pointer hover:opacity-70 transition-opacity"
+                    onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                    alt="Reply"
+                  />
+                  <div className="self-stretch my-auto text-neutral-500 cursor-pointer hover:text-neutral-700 transition-colors" onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}>
+                    {isChild ? 'Responder' : `Responder${((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) ? ` (${(comment.children?.length || 0) + (comment.replies?.length || 0)})` : ''}`}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {replyingTo === comment.id && (
+              <div className="flex flex-col gap-2 items-start self-stretch w-full mt-4">
+                <div className="flex flex-col items-start self-stretch w-full">
+                  <div className="flex flex-col justify-between items-start self-stretch p-4 bg-gray-100 h-[160px] rounded-xs w-full">
+                    <textarea
+                      className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+                      rows={2}
+                      placeholder="Digite sua resposta..."
+                      value={replyInput[comment.id] || ''}
+                      onChange={e => setReplyInput(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleReply(comment.id);
+                        }
+                      }}
+                    />
+                    <div className="flex flex-row justify-between items-end w-full mt-2">
+                      <div className="flex gap-4 items-center max-sm:gap-3">
+                        <button type="button" aria-label="Adicionar emoji">
+                          <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
+                        </button>
+                        <button type="button" aria-label="Negrito">
+                          <TextBold size={20} className="toolbar-icon text-neutral-500" />
+                        </button>
+                        <button type="button" aria-label="Itálico">
+                          <TextItalic size={20} className="toolbar-icon text-neutral-500" />
+                        </button>
+                        <button type="button" aria-label="Lista numerada">
+                          <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
+                        </button>
+                        <button type="button" aria-label="Lista com marcadores">
+                          <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
+                        </button>
+                      </div>
+                      <div className="flex flex-row items-end">
+                        <button
+                          className="px-3 py-2 bg-neutral-800 text-white rounded-xs font-regular"
+                          onClick={() => handleReply(comment.id)}
+                        >
+                          Enviar
+                        </button>
+                        <button
+                          className="ml-2 px-3 py-2 bg-gray-300 text-gray-700 rounded-xs font-regular hover:bg-gray-400 transition-colors"
+                          onClick={() => setReplyingTo(null)}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Renderizar children recursivamente */}
+        {Array.isArray(comment.children) && comment.children.length > 0 && (
+          <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]">
+            {comment.children.map(child => renderComment(child, true))}
+          </div>
+        )}
+        {/* Renderizar replies recursivamente */}
+        {Array.isArray(comment.replies) && comment.replies.length > 0 && (
+          <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px] pl-12">
+            {comment.replies.map(child => renderComment(child, true))}
+          </div>
+        )}
       </div>
-      {/* Renderizar children recursivamente */}
-      {Array.isArray(comment.children) && comment.children.length > 0 && (
-        <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]">
-          {comment.children.map(child => renderComment(child, true))}
-        </div>
-      )}
-      {/* Renderizar replies recursivamente */}
-      {Array.isArray(comment.replies) && comment.replies.length > 0 && (
-        <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px] pl-12">
-          {comment.replies.map(child => renderComment(child, true))}
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   // Função para contar todos os comentários recursivamente
   function countAllComments(comments: Comment[]): number {
@@ -914,6 +935,14 @@ export default function PostList() {
                             likes: post.likes,
                             comments: post.comments,
                             shares: post.shares,
+                            community: post.community,
+                            liked: post.liked,
+                            alreadyParticipating: post.alreadyParticipating,
+                            userVotedOptionId: post.userVotedOptionId,
+                            confirmations_count: post.confirmations_count,
+                            status_complaint: (post as any).status_complaint,
+                            level_complaint: (post as any).level_complaint,
+                            tags: (post as any).tags,
                             username: post.username,
                             user: {
                               id: post.user.id,
@@ -959,6 +988,14 @@ export default function PostList() {
                             likes: post.likes,
                             comments: post.comments,
                             shares: post.shares,
+                            community: post.community,
+                            liked: post.liked,
+                            alreadyParticipating: post.alreadyParticipating,
+                            userVotedOptionId: post.userVotedOptionId,
+                            confirmations_count: post.confirmations_count,
+                            status_complaint: (post as any).status_complaint,
+                            level_complaint: (post as any).level_complaint,
+                            tags: (post as any).tags,
                             username: post.username,
                             user: {
                               id: post.user.id,

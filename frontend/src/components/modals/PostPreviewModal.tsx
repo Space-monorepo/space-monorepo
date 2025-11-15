@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Bookmark, Activity, EllipsisVerticalIcon as OverflowMenuVertical } from "lucide-react";
 import { CheckmarkFilled, ArrowUp, Forum } from "@carbon/icons-react";
+import { FaceSatisfied, TextBold, TextItalic, ListNumbered, ListBulleted } from "@carbon/icons-react";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import { translateUserRole } from "@/lib/roleTranslations";
@@ -10,6 +11,9 @@ import { translatePostType } from "@/lib/postTypeTranslations";
 import { voteOnPoll } from "@/app/api/src/services/post/postService";
 import { confirmComplaint } from "@/app/api/src/services/post/postService";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
+import usePostActions from "@/app/api/src/hooks/post/usePostActions";
+import useReportPost from "@/app/api/src/hooks/post/useReportPost";
+import { useCampaignParticipation } from "@/app/api/src/hooks/post/useCampaignParticipation";
 import { toast } from "react-toastify";
 
 interface PollOption {
@@ -69,11 +73,140 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
     };
     const [openMenu, setOpenMenu] = React.useState(false);
     const [localPost, setLocalPost] = React.useState(post);
+    const { likePost, unlikePost, listComments, addComment, sharePost, replyComment, likeComment, unlikeComment } = usePostActions();
+    const { reportPost } = useReportPost();
+    const { participate } = useCampaignParticipation();
+
+    // Comments state for modal
+    const [showComments, setShowComments] = React.useState(false);
+    const [comments, setComments] = React.useState<any[]>([]);
+    const [commentInput, setCommentInput] = React.useState("");
+    const [loadingComments, setLoadingComments] = React.useState(false);
+    const [commentsError, setCommentsError] = React.useState<string | null>(null);
+    const [likedComments, setLikedComments] = React.useState<{ [key: string]: boolean }>({});
+    const [replyingTo, setReplyingTo] = React.useState<string | null>(null);
+    const [replyInput, setReplyInput] = React.useState<{ [key: string]: string }>({});
 
     // Sincronizar localPost com prop post
     React.useEffect(() => {
         setLocalPost(post);
     }, [post]);
+
+    React.useEffect(() => {
+        console.debug('[PostPreviewModal] mounted/updated localPost:', post);
+    }, [post]);
+    // Busca comentários do post
+    const fetchComments = async () => {
+        if (!localPost) return;
+        setLoadingComments(true);
+        setCommentsError(null);
+        try {
+            const communityId = localPost.community?.id || 'default-community-id';
+            const token = getTokenFromCookies();
+            console.debug('[PostPreviewModal] fetchComments token:', token, 'communityId:', communityId, 'postId:', localPost.id);
+            if (!token) {
+                toast.error('Usuário não autenticado (cookie ausente)');
+            }
+            const data = await listComments(communityId, localPost.id);
+            const items = data?.items || [];
+            console.log('========== COMENTÁRIOS DO MODAL ==========');
+            console.log('Total de comentários:', items.length);
+            if (items.length > 0) {
+                console.log('ESTRUTURA DO PRIMEIRO COMENTÁRIO:');
+                console.log(JSON.stringify(items[0], null, 2));
+                console.log('User do primeiro comentário:', items[0]?.user);
+            }
+            console.log('==========================================');
+            setComments(buildCommentsTree(items));
+            const likedMap: { [key: string]: boolean } = {};
+            items.forEach((c: any) => { likedMap[c.id] = false; });
+            setLikedComments(likedMap);
+        } catch (err) {
+            setCommentsError('Erro ao carregar comentários');
+        } finally {
+            setLoadingComments(false);
+        }
+    };
+
+    function buildCommentsTree(flatComments: any[]): any[] {
+        const commentsMap: { [key: string]: any & { children: any[] } } = {};
+        const roots: (any & { children: any[] })[] = [];
+        flatComments.forEach(comment => {
+            commentsMap[comment.id] = { ...comment, children: [] };
+        });
+        flatComments.forEach(comment => {
+            if (comment.parent_id && commentsMap[comment.parent_id]) {
+                commentsMap[comment.parent_id].children.push(commentsMap[comment.id]);
+            } else {
+                roots.push(commentsMap[comment.id]);
+            }
+        });
+        return roots;
+    }
+
+    // Atualiza likes recursivamente na árvore de comentários
+    function updateCommentLikes(commentsArr: any[], commentId: string, increment: number): any[] {
+        return commentsArr.map(comment => {
+            if (comment.id === commentId) {
+                return { ...comment, likes_count: Math.max(0, (comment.likes_count || 0) + increment) };
+            }
+            const children = comment.children ? updateCommentLikes(comment.children, commentId, increment) : undefined;
+            const replies = comment.replies ? updateCommentLikes(comment.replies, commentId, increment) : undefined;
+            return { ...comment, children, replies };
+        });
+    }
+
+    const handleLikeComment = async (comment: any) => {
+        try {
+            const communityId = localPost?.community?.id || 'default-community-id';
+            if (!likedComments[comment.id]) {
+                await likeComment(communityId, comment.id);
+                setComments(prev => updateCommentLikes(prev, comment.id, 1));
+                setLikedComments(prev => ({ ...prev, [comment.id]: true }));
+            } else {
+                await unlikeComment(communityId, comment.id);
+                setComments(prev => updateCommentLikes(prev, comment.id, -1));
+                setLikedComments(prev => ({ ...prev, [comment.id]: false }));
+            }
+        } catch (err) {
+            setCommentsError('Erro ao curtir/descurtir comentário');
+        }
+    };
+
+    const handleReply = async (parentId: string) => {
+        const content = replyInput[parentId];
+        if (!content?.trim() || !localPost) return;
+        try {
+            const communityId = localPost.community?.id || 'default-community-id';
+            await replyComment(communityId, localPost.id, parentId, content.trim());
+            setReplyInput(prev => ({ ...prev, [parentId]: '' }));
+            setReplyingTo(null);
+            fetchComments();
+        } catch (err) {
+            setCommentsError('Erro ao responder comentário');
+        }
+    };
+
+    const handleAddComment = async () => {
+        if (!localPost || !commentInput.trim()) return;
+        try {
+            const communityId = localPost.community?.id || 'default-community-id';
+            const token = getTokenFromCookies();
+            console.debug('[PostPreviewModal] addComment token:', token, 'communityId:', communityId, 'postId:', localPost.id, 'content:', commentInput.trim());
+            if (!token) {
+                toast.error('Usuário não autenticado (cookie ausente)');
+                return;
+            }
+            await addComment(communityId, localPost.id, commentInput.trim());
+            setCommentInput('');
+            fetchComments();
+            setLocalPost(prev => prev ? { ...prev, comments: (prev.comments ?? 0) + 1 } : prev);
+            toast.success('Comentário adicionado');
+        } catch (err) {
+            console.error('Erro ao adicionar comentário', err);
+            toast.error('Erro ao adicionar comentário');
+        }
+    };
 
     if (!isOpen || !localPost || typeof window === 'undefined') return null;
 
@@ -83,24 +216,77 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
         }
     };
 
-    const handleLike = (e: React.MouseEvent) => {
+    const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        // Implementar lógica de like aqui se necessário
+        if (!localPost) return;
+        try {
+            const communityId = localPost.community?.id || 'default-community-id';
+            const token = getTokenFromCookies();
+            console.debug('[PostPreviewModal] handleLike token:', token, 'communityId:', communityId, 'postId:', localPost.id, 'liked:', localPost.liked);
+            if (!token) {
+                toast.error('Usuário não autenticado (cookie ausente)');
+                return;
+            }
+            if (!localPost.liked) {
+                await likePost(communityId, localPost.id);
+                setLocalPost(prev => prev ? { ...prev, likes: (prev.likes ?? 0) + 1, liked: true } : prev);
+            } else {
+                await unlikePost(communityId, localPost.id);
+                setLocalPost(prev => prev ? { ...prev, likes: Math.max(0, (prev.likes ?? 1) - 1), liked: false } : prev);
+            }
+        } catch (err) {
+            console.error('Erro like/unlike:', err);
+            toast.error('Erro ao atualizar like');
+        }
     };
 
     const handleComment = (e: React.MouseEvent) => {
         e.stopPropagation();
-        // Implementar lógica de comentário aqui se necessário
+        setShowComments(prev => {
+            const next = !prev;
+            if (next) fetchComments();
+            return next;
+        });
     };
 
-    const handleShare = (e: React.MouseEvent) => {
+    const handleShare = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        // Implementar lógica de compartilhamento aqui se necessário
+        if (!localPost) return;
+        try {
+            const communityId = localPost.community?.id || 'default-community-id';
+            const token = getTokenFromCookies();
+            console.debug('[PostPreviewModal] handleShare token:', token, 'communityId:', communityId, 'postId:', localPost.id);
+            if (!token) {
+                toast.error('Usuário não autenticado (cookie ausente)');
+                return;
+            }
+            await sharePost(communityId, localPost.id);
+            setLocalPost(prev => prev ? { ...prev, shares: (prev.shares ?? 0) + 1 } : prev);
+            toast.success('Post compartilhado');
+        } catch (err) {
+            console.error('Erro ao compartilhar:', err);
+            toast.error('Erro ao compartilhar');
+        }
     };
 
-    const handleParticipateCampaign = (e: React.MouseEvent) => {
+    const handleParticipateCampaign = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        // Implementar lógica de participação em campanha aqui se necessário
+        if (!localPost) return;
+        try {
+            const communityId = localPost.community?.id || 'default-community-id';
+            const token = getTokenFromCookies();
+            console.debug('[PostPreviewModal] participate token:', token, 'communityId:', communityId, 'postId:', localPost.id);
+            if (!token) {
+                toast.error('Usuário não autenticado (cookie ausente)');
+                return;
+            }
+            await participate(communityId, localPost.id);
+            setLocalPost(prev => prev ? { ...prev, alreadyParticipating: true } : prev);
+            toast.success('Você agora faz parte da campanha!');
+        } catch (err) {
+            console.error('Erro participar campanha:', err);
+            toast.error('Erro ao participar da campanha');
+        }
     };
 
     const handleVotePoll = async (optionId: string) => {
@@ -142,19 +328,125 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
         e.stopPropagation();
         setOpenMenu(false);
         try {
-            // Implementar lógica de denúncia aqui se necessário
-            // await reportPost(post.community?.id || 'default-community-id', post.id);
+            if (!localPost) return;
+            await reportPost(localPost.community?.id || 'default-community-id', localPost.id);
+            toast.success('Post denunciado!');
         } catch {
             // Tratamento de erro silencioso
         }
     };
+
+    const renderComment = (comment: any, isChild = false) => {
+        // API retorna 'member' em vez de 'user'
+        const userObj = comment.member || comment.user;
+
+        // Nome do usuário
+        const displayName = userObj?.name ||
+            userObj?.username ||
+            userObj?.full_name ||
+            comment.author ||
+            'Usuário';
+
+        // Role do membro
+        const memberRole = userObj?.member_role ||
+            userObj?.role ||
+            comment.member_role;
+
+        return (
+            <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]' : 'flex flex-wrap justify-between w-full max-md:max-w-full'}`}>
+                <div className="flex flex-col items-center w-11">
+                    <img
+                        src={userObj?.profile_image_url || userObj?.profile_picture || '/no-profile-pic.png'}
+                        alt={`${displayName} avatar`}
+                        className={`object-contain w-11 aspect-square ${isChild ? 'rounded-[32px]' : ''}`}
+                    />
+                    {!isChild && ((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) && (
+                        <div className="flex mt-2 w-px bg-zinc-300 min-h-[78px]" />
+                    )}
+                </div>
+                <div className="flex-1 shrink basis-0 min-w-60 max-md:max-w-full">
+                    <div className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
+                        <div className={`flex items-center self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
+                            <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
+                                <div className="flex gap-2 items-center w-full h-[23px]">
+                                    <div className="font-medium text-sm text-neutral-800">{displayName}</div>
+                                    <CheckmarkFilled
+                                        className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(memberRole)}`}
+                                        aria-label="Verificado"
+                                    />
+                                    <div className="self-stretch my-auto text-[10px] text-black font-semibold">•</div>
+                                    {memberRole && (
+                                        <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(memberRole)}`}>
+                                            <div className="self-stretch my-auto">
+                                                {translateUserRole(memberRole)}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="text-xs text-neutral-500">• {new Date(comment.created_at).toLocaleString()}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex gap-4 items-center self-stretch my-auto w-5 min-h-5">
+                            <button onClick={() => handleLikeComment(comment)} aria-label="Curtir comentário">
+                                <ArrowUp className="object-contain shrink-0 self-stretch my-auto w-3 aspect-square cursor-pointer hover:opacity-70 transition-opacity text-neutral-500" />
+                            </button>
+                            <button onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)} aria-label="Responder" className="ml-2 text-xs text-neutral-500">
+                                Responder
+                            </button>
+                        </div>
+                    </div>
+                    <div className="px-3 mt-2 w-full max-md:max-w-full">
+                        <div className={`flex ${isChild ? 'overflow-hidden ' : ''}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-md:max-w-full`}>
+                            <div className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-md:max-w-full">
+                                {comment.content}
+                            </div>
+                        </div>
+                        {replyingTo === comment.id && (
+                            <div className="flex flex-col gap-2 items-start self-stretch w-full mt-4">
+                                <textarea
+                                    value={replyInput[comment.id] || ''}
+                                    onChange={e => setReplyInput(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                                    placeholder="Responda..."
+                                    className="w-full p-3 bg-white rounded resize-none outline-none text-sm text-neutral-700"
+                                    rows={2}
+                                />
+                                <div className="flex justify-end w-full">
+                                    <button
+                                        className="px-3 py-1 bg-black text-white rounded disabled:opacity-50"
+                                        onClick={() => handleReply(comment.id)}
+                                        disabled={!replyInput[comment.id] || !replyInput[comment.id].trim()}
+                                    >
+                                        Responder
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                {/* Renderizar children recursivamente */}
+                {Array.isArray(comment.children) && comment.children.length > 0 && (
+                    <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]">
+                        {comment.children.map((child: any) => renderComment(child, true))}
+                    </div>
+                )}
+                {/* Renderizar replies recursivamente */}
+                {Array.isArray(comment.replies) && comment.replies.length > 0 && (
+                    <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px] pl-12">
+                        {comment.replies.map((child: any) => renderComment(child, true))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    if (!localPost) return null;
 
     const modalContent = (
         <div
             className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/10 backdrop-blur-sm"
             onClick={handleBackdropClick}
         >
-            <div className="bg-white shadow-lg max-w-[680px] w-full p-8 relative">
+            <div className="bg-white shadow-lg max-w-[680px] w-full px-6 py-4 relative max-h-[90vh] overflow-y-auto no-scrollbar">
                 <button
                     className="absolute top-2 right-4 text-gray-500 hover:text-gray-700 text-2xl cursor-pointer"
                     onClick={onClose}
@@ -455,6 +747,82 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                             </div>
                         </div>
                     </div>
+
+                    {showComments && (
+                        <main className="flex flex-col shrink-0 gap-8 items-start p-4 bg-white w-full mt-6 max-md:p-3 max-sm:gap-6 max-sm:p-2">
+                            {/* Comment Input Section */}
+                            <div className="flex flex-col gap-2 items-start self-stretch">
+                                <div className="flex flex-col items-start self-stretch">
+                                    <div className="flex flex-col justify-between items-start self-stretch p-4 bg-gray-100 h-[160px] rounded-xs">
+                                        <textarea
+                                            id="comment-textarea-modal"
+                                            value={commentInput}
+                                            onChange={e => setCommentInput(e.target.value)}
+                                            placeholder="Adicione um comentário"
+                                            className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+                                            rows={2}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleAddComment();
+                                                }
+                                            }}
+                                        />
+                                        <div className="flex flex-row justify-between items-end w-full mt-2">
+                                            <div className="flex gap-4 items-center max-sm:gap-3">
+                                                <button type="button" aria-label="Adicionar emoji">
+                                                    <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
+                                                </button>
+                                                <button type="button" aria-label="Negrito">
+                                                    <TextBold size={20} className="toolbar-icon text-neutral-500" />
+                                                </button>
+                                                <button type="button" aria-label="Itálico">
+                                                    <TextItalic size={20} className="toolbar-icon text-neutral-500" />
+                                                </button>
+                                                <button type="button" aria-label="Lista numerada">
+                                                    <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
+                                                </button>
+                                                <button type="button" aria-label="Lista com marcadores">
+                                                    <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
+                                                </button>
+                                            </div>
+                                            <div className="flex flex-row items-end">
+                                                <button
+                                                    className="px-3 py-2 bg-neutral-800 text-white rounded-xs font-regular"
+                                                    onClick={handleAddComment}
+                                                    disabled={!commentInput.trim()}
+                                                >
+                                                    Enviar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Comments Header */}
+                            <header className="flex gap-4 items-center self-stretch px-2 py-0 max-md:gap-3 max-md:px-3 max-md:py-0 max-sm:flex-wrap max-sm:gap-2 max-sm:px-2 max-sm:py-0">
+                                <h2 className="text-base leading-6 text-neutral-800 max-md:text-base max-sm:text-sm">
+                                    Comentários
+                                </h2>
+                                <div className="flex flex-col gap-2.5 justify-center items-center px-2 py-1 rounded-xs bg-neutral-800">
+                                    <span className="self-stretch text-base leading-6 text-zinc-100 max-md:text-base max-sm:text-sm">
+                                        {comments.length}
+                                    </span>
+                                </div>
+                            </header>
+
+                            {/* Comments List */}
+                            <section
+                                className="flex flex-col p-4 bg-white rounded-sm w-full no-scrollbar"
+                                style={{ maxHeight: 500, overflowY: 'auto' }}
+                            >
+                                {loadingComments && <div>Carregando comentários...</div>}
+                                {commentsError && <div className="text-red-500">{commentsError}</div>}
+                                {!loadingComments && comments.length === 0 && <div className="px-2">Nenhum comentário ainda.</div>}
+                                {!loadingComments && comments.map((c: any) => renderComment(c))}
+                            </section>
+                        </main>
+                    )}
                 </article>
             </div>
         </div>

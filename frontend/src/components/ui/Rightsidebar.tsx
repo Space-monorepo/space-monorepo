@@ -66,6 +66,7 @@ export default function RightSidebar() {
                       avatar: campaign.user.profile_picture || "/no-profile-pic.png",
                       role: translateUserRole(campaign.user.role),
                       location: campaign.community.name,
+                      community: campaign.community,
                       type: translatePostType(campaign.type_post),
                       time: getRelativeTime(campaign.created_at),
                       imageUrl: campaign.image_url,
