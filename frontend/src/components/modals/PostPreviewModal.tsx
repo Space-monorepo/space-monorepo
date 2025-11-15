@@ -8,6 +8,7 @@ import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import { translateUserRole } from "@/lib/roleTranslations";
 import { translatePostType } from "@/lib/postTypeTranslations";
+import { getRelativeTime } from "@/lib/relativeTime";
 import { voteOnPoll } from "@/app/api/src/services/post/postService";
 import { confirmComplaint } from "@/app/api/src/services/post/postService";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
@@ -357,33 +358,41 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                 </div>
                 <div className="flex-1 shrink basis-0 min-w-60 max-md:max-w-full">
                     <div className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
-                        <div className={`flex items-center self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
+                        <div className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
                             <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
                                 <div className="flex gap-2 items-center w-full h-[23px]">
-                                    <div className="font-medium text-sm text-neutral-800">{displayName}</div>
-                                    <CheckmarkFilled
-                                        className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(memberRole)}`}
-                                        aria-label="Verificado"
-                                    />
-                                    <div className="self-stretch my-auto text-[10px] text-black font-semibold">•</div>
-                                    {memberRole && (
-                                        <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(memberRole)}`}>
-                                            <div className="self-stretch my-auto">
-                                                {translateUserRole(memberRole)}
+                                    <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                        <div className="self-stretch my-auto whitespace-nowrap text-sm text-neutral-800">
+                                            {displayName}
+                                        </div>
+                                        <CheckmarkFilled
+                                            className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(memberRole)}`}
+                                            aria-label="Verificado"
+                                        />
+                                        <div className="self-stretch my-auto text-[10px] text-black font-semibold">
+                                            •
+                                        </div>
+                                        {memberRole && (
+                                            <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(memberRole)}`}>
+                                                <div className="self-stretch my-auto">
+                                                    {translateUserRole(memberRole)}
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="self-stretch my-auto text-[10px] text-black">
+                                            •
+                                        </div>
+                                        <div className="self-stretch my-auto text-[10px] whitespace-nowrap font-semibold">
+                                            <div className="text-neutral-800">
+                                                {getRelativeTime(comment.created_at)}
                                             </div>
                                         </div>
-                                    )}
-                                    <div className="text-xs text-neutral-500">• {new Date(comment.created_at).toLocaleString()}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <div className="flex gap-4 items-center self-stretch my-auto w-5 min-h-5">
-                            <button onClick={() => handleLikeComment(comment)} aria-label="Curtir comentário">
-                                <ArrowUp className="object-contain shrink-0 self-stretch my-auto w-3 aspect-square cursor-pointer hover:opacity-70 transition-opacity text-neutral-500" />
-                            </button>
-                            <button onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)} aria-label="Responder" className="ml-2 text-xs text-neutral-500">
-                                Responder
-                            </button>
+                            {/* Menu de opções para comentários pode ser implementado aqui se necessário */}
                         </div>
                     </div>
                     <div className="px-3 mt-2 w-full max-md:max-w-full">
@@ -392,23 +401,67 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                 {comment.content}
                             </div>
                         </div>
+                        <div className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? 'whitespace-nowrap ' : ''}text-neutral-500 max-md:max-w-full`}>
+                            <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5">
+                                <div className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? '' : 'whitespace-nowrap'}`}>
+                                    <ArrowUp
+                                        className="object-contain shrink-0 self-stretch my-auto w-3 aspect-square cursor-pointer hover:opacity-70 transition-opacity text-neutral-500"
+                                        onClick={() => handleLikeComment(comment)}
+                                        aria-label="Curtir"
+                                    />
+                                    <div className={`self-stretch my-auto ${likedComments[comment.id] ? 'text-neutral-600' : 'text-neutral-500'}`}>
+                                        {comment.likes_count || 0} {comment.likes_count === 1 ? 'curtida' : 'curtidas'}
+                                    </div>
+                                </div>
+                                <div className="flex overflow-hidden gap-2 items-center self-stretch my-auto">
+                                    <img
+                                        src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/76fc42bedb22beda24433b506515bdee6ba7cab0?placeholderIfAbsent=true"
+                                        className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square cursor-pointer hover:opacity-70 transition-opacity"
+                                        onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                                        alt="Reply"
+                                    />
+                                    <div className="self-stretch my-auto text-neutral-500 cursor-pointer hover:text-neutral-700 transition-colors" onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}>
+                                        Responder
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         {replyingTo === comment.id && (
                             <div className="flex flex-col gap-2 items-start self-stretch w-full mt-4">
-                                <textarea
-                                    value={replyInput[comment.id] || ''}
-                                    onChange={e => setReplyInput(prev => ({ ...prev, [comment.id]: e.target.value }))}
-                                    placeholder="Responda..."
-                                    className="w-full p-3 bg-white rounded resize-none outline-none text-sm text-neutral-700"
-                                    rows={2}
-                                />
-                                <div className="flex justify-end w-full">
-                                    <button
-                                        className="px-3 py-1 bg-black text-white rounded disabled:opacity-50"
-                                        onClick={() => handleReply(comment.id)}
-                                        disabled={!replyInput[comment.id] || !replyInput[comment.id].trim()}
-                                    >
-                                        Responder
-                                    </button>
+                                <div className="flex flex-col items-start self-stretch w-full">
+                                    <div className="flex flex-col justify-between items-start self-stretch p-4 bg-gray-100 h-[160px] rounded-xs">
+                                        <textarea
+                                            value={replyInput[comment.id] || ''}
+                                            onChange={e => setReplyInput(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                                            placeholder="Responda..."
+                                            className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+                                            rows={2}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleReply(comment.id);
+                                                }
+                                            }}
+                                        />
+                                        <div className="flex flex-row justify-between items-end w-full mt-2">
+                                            <div className="flex gap-4 items-center max-sm:gap-3">
+                                                <FaceSatisfied className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square cursor-pointer hover:opacity-70 transition-opacity" />
+                                                <TextBold className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square cursor-pointer hover:opacity-70 transition-opacity" />
+                                                <TextItalic className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square cursor-pointer hover:opacity-70 transition-opacity" />
+                                                <ListNumbered className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square cursor-pointer hover:opacity-70 transition-opacity" />
+                                                <ListBulleted className="object-contain shrink-0 self-stretch my-auto w-5 aspect-square cursor-pointer hover:opacity-70 transition-opacity" />
+                                            </div>
+                                            <div className="flex flex-row items-end">
+                                                <button
+                                                    className="px-3 py-1 bg-black text-white rounded disabled:opacity-50 hover:bg-gray-800 transition-colors"
+                                                    onClick={() => handleReply(comment.id)}
+                                                    disabled={!replyInput[comment.id] || !replyInput[comment.id].trim()}
+                                                >
+                                                    Responder
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
