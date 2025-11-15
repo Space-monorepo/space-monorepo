@@ -93,7 +93,6 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
     }, [post]);
 
     React.useEffect(() => {
-        console.debug('[PostPreviewModal] mounted/updated localPost:', post);
     }, [post]);
     // Busca comentários do post
     const fetchComments = async () => {
@@ -103,20 +102,12 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
         try {
             const communityId = localPost.community?.id || 'default-community-id';
             const token = getTokenFromCookies();
-            console.debug('[PostPreviewModal] fetchComments token:', token, 'communityId:', communityId, 'postId:', localPost.id);
             if (!token) {
                 toast.error('Usuário não autenticado (cookie ausente)');
             }
             const data = await listComments(communityId, localPost.id);
             const items = data?.items || [];
-            console.log('========== COMENTÁRIOS DO MODAL ==========');
-            console.log('Total de comentários:', items.length);
-            if (items.length > 0) {
-                console.log('ESTRUTURA DO PRIMEIRO COMENTÁRIO:');
-                console.log(JSON.stringify(items[0], null, 2));
-                console.log('User do primeiro comentário:', items[0]?.user);
-            }
-            console.log('==========================================');
+
             setComments(buildCommentsTree(items));
             const likedMap: { [key: string]: boolean } = {};
             items.forEach((c: any) => { likedMap[c.id] = false; });
@@ -192,7 +183,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
         try {
             const communityId = localPost.community?.id || 'default-community-id';
             const token = getTokenFromCookies();
-            console.debug('[PostPreviewModal] addComment token:', token, 'communityId:', communityId, 'postId:', localPost.id, 'content:', commentInput.trim());
+
             if (!token) {
                 toast.error('Usuário não autenticado (cookie ausente)');
                 return;
@@ -222,7 +213,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
         try {
             const communityId = localPost.community?.id || 'default-community-id';
             const token = getTokenFromCookies();
-            console.debug('[PostPreviewModal] handleLike token:', token, 'communityId:', communityId, 'postId:', localPost.id, 'liked:', localPost.liked);
+
             if (!token) {
                 toast.error('Usuário não autenticado (cookie ausente)');
                 return;
@@ -255,7 +246,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
         try {
             const communityId = localPost.community?.id || 'default-community-id';
             const token = getTokenFromCookies();
-            console.debug('[PostPreviewModal] handleShare token:', token, 'communityId:', communityId, 'postId:', localPost.id);
+
             if (!token) {
                 toast.error('Usuário não autenticado (cookie ausente)');
                 return;
@@ -275,7 +266,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
         try {
             const communityId = localPost.community?.id || 'default-community-id';
             const token = getTokenFromCookies();
-            console.debug('[PostPreviewModal] participate token:', token, 'communityId:', communityId, 'postId:', localPost.id);
+
             if (!token) {
                 toast.error('Usuário não autenticado (cookie ausente)');
                 return;
