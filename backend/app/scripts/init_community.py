@@ -292,15 +292,87 @@ def init_community():
 
             # Criar reports de posts
             print("\nCriando reports de posts...")
+            from app.api.reports.service import ReportService
+            from app.api.reports.schema import ReportCreate, ReportPostCreate, ReportReasonEnum, ReportTypeEnum
+            
+            report_service = ReportService(tm)
+            
             for i, post in enumerate(posts[:2]):  # Exemplo: reportar os 2 primeiros posts
-                post_service.report_post(post.id)
-                print(f"Post '{post.title}' (ID: {post.id}) reportado com sucesso!")
+                try:
+                    # Criar o reporte base
+                    report_data = ReportCreate(
+                        reporter_id=str(membros_member_ids[0] if membros_member_ids else admin_member_id),
+                        type=ReportTypeEnum.POST_REPORT,
+                        reason=ReportReasonEnum.INAPPROPRIATE_CONTENT,
+                        description=f"Este post contém conteúdo inadequado e deve ser revisado."
+                    )
+                    report = report_service.create_report(report_data)
+                    print(f"Report criado (ID: {report.id}) para o post '{post.title}'")
+                    
+                    # Criar a associação report-post
+                    report_post_data = ReportPostCreate(
+                        report_id=str(report.id),
+                        post_id=str(post.id),
+                        community_id=str(community.id)
+                    )
+                    report_service.create_report_post(report_post_data)
+                    print(f"Post '{post.title}' (ID: {post.id}) reportado com sucesso!")
+                except Exception as e:
+                    print(f"Erro ao reportar post {post.id}: {e}")
 
             # Criar reports de comentários
             print("\nCriando reports de comentários...")
+            from app.api.reports.schema import ReportCommentCreate
+            
             for i, comment in enumerate(comments[:2]):  # Exemplo: reportar os 2 primeiros comentários
-                comment_service.report_comment(comment.id)
-                print(f"Comentário (ID: {comment.id}) reportado com sucesso!")
+                try:
+                    # Criar o reporte base
+                    report_data = ReportCreate(
+                        reporter_id=str(membros_member_ids[1] if len(membros_member_ids) > 1 else admin_member_id),
+                        type=ReportTypeEnum.COMMENT_REPORT,
+                        reason=ReportReasonEnum.HARASSMENT,
+                        description=f"Este comentário contém linguagem ofensiva e viola as regras da comunidade."
+                    )
+                    report = report_service.create_report(report_data)
+                    print(f"Report criado (ID: {report.id}) para o comentário (ID: {comment.id})")
+                    
+                    # Criar a associação report-comment
+                    report_comment_data = ReportCommentCreate(
+                        report_id=str(report.id),
+                        comment_id=str(comment.id),
+                        community_id=str(community.id)
+                    )
+                    report_service.create_report_comment(report_comment_data)
+                    print(f"Comentário (ID: {comment.id}) reportado com sucesso!")
+                except Exception as e:
+                    print(f"Erro ao reportar comentário {comment.id}: {e}")
+                    
+            # Criar reports de membros/usuários
+            print("\nCriando reports de membros...")
+            from app.api.reports.schema import ReportMemberCreate
+            
+            # Reportar o primeiro membro comum
+            if membros_member_ids:
+                try:
+                    report_data = ReportCreate(
+                        reporter_id=str(moderadores_member_ids[0] if moderadores_member_ids else admin_member_id),
+                        type=ReportTypeEnum.MEMBER_REPORT,
+                        reason=ReportReasonEnum.SPAM,
+                        description=f"Este usuário está enviando spam repetidamente na comunidade."
+                    )
+                    report = report_service.create_report(report_data)
+                    print(f"Report criado (ID: {report.id}) para o membro (ID: {membros_member_ids[0]})")
+                    
+                    # Criar a associação report-member
+                    report_member_data = ReportMemberCreate(
+                        report_id=str(report.id),
+                        member_id=str(membros_member_ids[0]),
+                        community_id=str(community.id)
+                    )
+                    report_service.create_report_member(report_member_data)
+                    print(f"Membro (ID: {membros_member_ids[0]}) reportado com sucesso!")
+                except Exception as e:
+                    print(f"Erro ao reportar membro {membros_member_ids[0]}: {e}")
     except Exception as e:
         print(f"Error creating community: {e}")
 
