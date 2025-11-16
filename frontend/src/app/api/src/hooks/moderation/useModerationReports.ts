@@ -10,7 +10,8 @@ import getTokenFromCookies from '@/app/api/src/controllers/getTokenFromCookies';
 
 // Tipos para dados reportados da API
 export interface ReportedUser {
-    id: string;
+    id: string; // Este é o ID do membro, não do reporte
+    report_id?: string; // ID do primeiro reporte associado (para votação)
     name: string;
     profile_picture?: string;
     role?: string;
@@ -21,7 +22,8 @@ export interface ReportedUser {
 }
 
 export interface ReportedPost {
-    id: string;
+    id: string; // Este é o ID do post, não do reporte
+    report_id?: string; // ID do primeiro reporte associado (para votação)
     title: string;
     content: string;
     status: string;
@@ -39,7 +41,8 @@ export interface ReportedPost {
 }
 
 export interface ReportedComment {
-    id: string;
+    id: string; // Este é o ID do comentário, não do reporte
+    report_id?: string; // ID do primeiro reporte associado (para votação)
     content: string;
     status: string;
     report_count: number;
@@ -73,24 +76,59 @@ const useModerationReports = () => {
             const token = getTokenFromCookies();
             if (!token) throw new Error("Token não encontrado");
 
-            // Como não há endpoint específico para usuários reportados, vamos buscar membros da comunidade
-            // e filtrar por aqueles que têm status suspenso ou reportado
-            const response = await axios.get(
-                `${API_URL}/communities/${communityId}/members`,
+            // Buscar lista de brief reports (resumo dos membros reportados)
+            const briefResponse = await axios.get(
+                `${API_URL}/moderation/${communityId}/list-all-member-brief-reports`,
                 {
-                    headers: { Authorization: `Bearer ${token}` },
-                    params: { status: ['suspended', 'reported'] }
+                    headers: { Authorization: `Bearer ${token}` }
                 }
             );
 
-            // Debug: log returned items to verify where reputation/popularity live
-            try {
-                console.debug('fetchReportedUsers response items sample:', response.data?.items?.[0]);
-            } catch (e) {
-                // ignore
-            }
+            const briefReports = briefResponse.data?.items || [];
 
-            setReportedUsers(response.data?.items || []);
+            // Para cada membro reportado, buscar os detalhes dos reportes para obter o report_id
+            const usersWithReportIds = await Promise.all(
+                briefReports.map(async (brief: any) => {
+                    try {
+                        // Buscar reportes detalhados para este membro
+                        const detailsResponse = await axios.get(
+                            `${API_URL}/moderation/${communityId}/list-all-member-reports/${brief.member.id}`,
+                            {
+                                headers: { Authorization: `Bearer ${token}` },
+                                params: { limit: 1 } // Pegar apenas o primeiro reporte
+                            }
+                        );
+
+                        const firstReport = detailsResponse.data?.items?.[0];
+
+                        return {
+                            id: brief.member.id,
+                            report_id: firstReport?.id, // ID do reporte para votação
+                            name: brief.member.name,
+                            profile_picture: brief.member.profile_picture,
+                            role: brief.member.role,
+                            status: 'reported',
+                            report_count: brief.reports_count,
+                            created_at: brief.member_entry_date,
+                            suspension_reason: brief.reason,
+                        };
+                    } catch (err) {
+                        console.warn(`Erro ao buscar reportes para membro ${brief.member.id}:`, err);
+                        return {
+                            id: brief.member.id,
+                            name: brief.member.name,
+                            profile_picture: brief.member.profile_picture,
+                            role: brief.member.role,
+                            status: 'reported',
+                            report_count: brief.reports_count,
+                            created_at: brief.member_entry_date,
+                            suspension_reason: brief.reason,
+                        };
+                    }
+                })
+            );
+
+            setReportedUsers(usersWithReportIds);
         } catch (err: any) {
             console.error('Erro ao buscar usuários reportados:', err);
             setError(err.response?.data?.message || 'Erro ao carregar usuários reportados');
@@ -108,15 +146,73 @@ const useModerationReports = () => {
             const token = getTokenFromCookies();
             if (!token) throw new Error("Token não encontrado");
 
-            const response = await axios.get(
-                `${API_URL}/posts/${communityId}/community/list-posts`,
+            // Buscar lista de brief reports (resumo dos posts reportados)
+            const briefResponse = await axios.get(
+                `${API_URL}/moderation/${communityId}/list-all-post-brief-reports`,
                 {
-                    headers: { Authorization: `Bearer ${token}` },
-                    params: { status: ['reported'] }
+                    headers: { Authorization: `Bearer ${token}` }
                 }
             );
 
-            setReportedPosts(response.data?.items || []);
+            const briefReports = briefResponse.data?.items || [];
+
+            // Para cada post reportado, buscar os detalhes dos reportes para obter o report_id
+            const postsWithReportIds = await Promise.all(
+                briefReports.map(async (brief: any) => {
+                    try {
+                        // Buscar reportes detalhados para este post
+                        const detailsResponse = await axios.get(
+                            `${API_URL}/moderation/${communityId}/list-all-post-reports/${brief.post_id}`,
+                            {
+                                headers: { Authorization: `Bearer ${token}` },
+                                params: { limit: 1 } // Pegar apenas o primeiro reporte
+                            }
+                        );
+
+                        const firstReport = detailsResponse.data?.items?.[0];
+
+                        return {
+                            id: brief.post_id,
+                            report_id: firstReport?.id, // ID do reporte para votação
+                            title: brief.title,
+                            content: brief.content,
+                            status: 'reported',
+                            report_count: brief.report_count,
+                            likes_count: brief.likes_count,
+                            comments_count: brief.comments_count,
+                            created_at: brief.published_at,
+                            image_url: brief.image_url,
+                            user: {
+                                id: brief.member.id,
+                                name: brief.member.name,
+                                profile_picture: brief.member.profile_picture,
+                                role: brief.member.role,
+                            },
+                        };
+                    } catch (err) {
+                        console.warn(`Erro ao buscar reportes para post ${brief.post_id}:`, err);
+                        return {
+                            id: brief.post_id,
+                            title: brief.title,
+                            content: brief.content,
+                            status: 'reported',
+                            report_count: brief.report_count,
+                            likes_count: brief.likes_count,
+                            comments_count: brief.comments_count,
+                            created_at: brief.published_at,
+                            image_url: brief.image_url,
+                            user: {
+                                id: brief.member.id,
+                                name: brief.member.name,
+                                profile_picture: brief.member.profile_picture,
+                                role: brief.member.role,
+                            },
+                        };
+                    }
+                })
+            );
+
+            setReportedPosts(postsWithReportIds);
         } catch (err: any) {
             console.error('Erro ao buscar posts reportados:', err);
             setError(err.response?.data?.message || 'Erro ao carregar posts reportados');
@@ -134,43 +230,77 @@ const useModerationReports = () => {
             const token = getTokenFromCookies();
             if (!token) throw new Error("Token não encontrado");
 
-            // Primeiro, buscar todos os posts da comunidade
-            const postsResponse = await axios.get(
-                `${API_URL}/posts/${communityId}/community/list-posts`,
+            // Buscar lista de brief reports (resumo dos comentários reportados)
+            const briefResponse = await axios.get(
+                `${API_URL}/moderation/${communityId}/list-all-comment-brief-reports`,
                 {
                     headers: { Authorization: `Bearer ${token}` }
                 }
             );
 
-            const posts = postsResponse.data?.items || [];
-            let allReportedComments: ReportedComment[] = [];
+            const briefReports = briefResponse.data?.items || [];
 
-            // Para cada post, buscar comentários reportados
-            for (const post of posts) {
-                try {
-                    const commentsResponse = await axios.get(
-                        `${API_URL}/comments/${communityId}/post/${post.id}/list-comments`,
-                        {
-                            headers: { Authorization: `Bearer ${token}` },
-                            params: { status: ['reported'] }
-                        }
-                    );
+            // Para cada comentário reportado, buscar os detalhes dos reportes para obter o report_id
+            const commentsWithReportIds = await Promise.all(
+                briefReports.map(async (brief: any) => {
+                    try {
+                        // Buscar reportes detalhados para este comentário
+                        const detailsResponse = await axios.get(
+                            `${API_URL}/moderation/${communityId}/list-all-comment-reports/${brief.comment_id}`,
+                            {
+                                headers: { Authorization: `Bearer ${token}` },
+                                params: { limit: 1 } // Pegar apenas o primeiro reporte
+                            }
+                        );
 
-                    const reportedCommentsForPost = (commentsResponse.data?.items || []).map((comment: any) => ({
-                        ...comment,
-                        post: {
-                            id: post.id,
-                            title: post.title
-                        }
-                    }));
+                        const firstReport = detailsResponse.data?.items?.[0];
 
-                    allReportedComments = [...allReportedComments, ...reportedCommentsForPost];
-                } catch (commentErr) {
-                    console.warn(`Erro ao buscar comentários do post ${post.id}:`, commentErr);
-                }
-            }
+                        return {
+                            id: brief.comment_id,
+                            report_id: firstReport?.id, // ID do reporte para votação
+                            content: brief.content,
+                            status: 'reported',
+                            report_count: brief.report_count,
+                            likes_count: brief.likes_count,
+                            created_at: brief.commented_at,
+                            parent_id: brief.parent_id,
+                            user: {
+                                id: brief.member.id,
+                                name: brief.member.name,
+                                profile_picture: brief.member.profile_picture,
+                                role: brief.member.role,
+                            },
+                            post: {
+                                id: brief.post_id,
+                                title: brief.post_title,
+                            },
+                        };
+                    } catch (err) {
+                        console.warn(`Erro ao buscar reportes para comentário ${brief.comment_id}:`, err);
+                        return {
+                            id: brief.comment_id,
+                            content: brief.content,
+                            status: 'reported',
+                            report_count: brief.report_count,
+                            likes_count: brief.likes_count,
+                            created_at: brief.commented_at,
+                            parent_id: brief.parent_id,
+                            user: {
+                                id: brief.member.id,
+                                name: brief.member.name,
+                                profile_picture: brief.member.profile_picture,
+                                role: brief.member.role,
+                            },
+                            post: {
+                                id: brief.post_id,
+                                title: brief.post_title,
+                            },
+                        };
+                    }
+                })
+            );
 
-            setReportedComments(allReportedComments);
+            setReportedComments(commentsWithReportIds);
         } catch (err: any) {
             console.error('Erro ao buscar comentários reportados:', err);
             setError(err.response?.data?.message || 'Erro ao carregar comentários reportados');

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import Cookies from "js-cookie";
 import { API_URL } from "@/config";
 import { useReportersList, ReportListItem } from "@/app/api/src/hooks/moderation/useReportersList";
 import ReportersModal from "@/components/modals/ReportersModal";
@@ -595,19 +596,11 @@ export default function ModerationPage() {
                                     </div>
                                 </div>
                                 <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
-                                    <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
-                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
-                                            Post:
-                                        </span>
-                                        <span className="self-stretch my-auto text-neutral-800">
-                                            {report.reportedComment.postTitle}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-4 items-center w-full leading-6 mt-4 max-md:max-w-full">
-                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                    <div className="flex flex-col gap-2 w-full max-md:max-w-full">
+                                        <span className="font-semibold text-neutral-800">
                                             Comentário:
                                         </span>
-                                        <span className="self-stretch my-auto text-neutral-800">
+                                        <span className="text-neutral-800 leading-6">
                                             {report.reportedComment.content}
                                         </span>
                                     </div>
@@ -727,6 +720,7 @@ export default function ModerationPage() {
     };
 
     const { user } = useAuth();
+    const [currentUserMemberId, setCurrentUserMemberId] = useState<string | null>(null);
 
     // Hook para buscar dados da comunidade específica
     const {
@@ -825,6 +819,34 @@ export default function ModerationPage() {
             setSelectedCommunity(userCommunities[0]);
         }
     }, [userCommunities, selectedCommunity]);
+
+    // Buscar o member_id do usuário logado na comunidade selecionada
+    useEffect(() => {
+        const fetchUserMemberId = async () => {
+            if (!selectedCommunity || !user) return;
+
+            try {
+                const token = Cookies.get('token');
+                if (!token) return;
+
+                const response = await fetch(`${API_URL}/communities/${selectedCommunity.id}/members?user_id=${user.id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const userMember = data.items?.find((m: any) => m.user?.id === user.id || m.user_id === user.id);
+                    if (userMember) {
+                        setCurrentUserMemberId(userMember.id);
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao buscar member_id do usuário:', error);
+            }
+        };
+
+        fetchUserMemberId();
+    }, [selectedCommunity?.id, user?.id]);
 
     // Sempre que selectedCommunity mudar, buscar dados da comunidade, posts e membros
     useEffect(() => {
@@ -1079,9 +1101,96 @@ export default function ModerationPage() {
     const polls: Poll[] = (apiPolls || []).map(convertPostToPoll);
 
     // Dados reais de moderação convertidos dos dados da API
-    const userReports: UserReport[] = (reportedUsers || []).map(convertApiUserToUserReport);
-    const postReports: PostReport[] = (reportedPosts || []).map(convertApiPostToPostReport);
-    const commentReports: CommentReport[] = (reportedComments || []).map(convertApiCommentToCommentReport);
+    const userReports: UserReport[] = (reportedUsers || []).map((apiUser): UserReport => {
+        return {
+            id: apiUser.report_id || apiUser.id, // Usar report_id se disponível, senão fallback para o id do membro
+            reportedUser: {
+                id: apiUser.id,
+                name: apiUser.name || "Usuário desconhecido",
+                profile_picture: apiUser.profile_picture,
+                role: apiUser.role || "member",
+            },
+            reporter: {
+                id: "system",
+                name: "Sistema",
+                profile_picture: "/system-avatar.png",
+                role: "admin",
+            },
+            reason: apiUser.suspension_reason || "Violação das diretrizes da comunidade",
+            description: `Usuário reportado por comportamento inadequado. Status atual: ${apiUser.status}`,
+            date: new Date(apiUser.created_at).toLocaleDateString("pt-BR"),
+            status: apiUser.status === "suspended" ? "Resolvido" : "Em análise",
+            severity: "Leve",
+            confirmations: apiUser.report_count || 0,
+            category: "Comportamento",
+        };
+    });
+
+    const postReports: PostReport[] = (reportedPosts || []).map((apiPost): PostReport => {
+        return {
+            id: apiPost.report_id || apiPost.id, // Usar report_id se disponível
+            reportedPost: {
+                id: apiPost.id,
+                title: apiPost.title,
+                content: apiPost.content,
+                author: {
+                    id: apiPost.user?.id || 'unknown',
+                    name: apiPost.user?.name || 'Usuário desconhecido',
+                    profile_picture: apiPost.user?.profile_picture,
+                    role: apiPost.user?.role || "member",
+                },
+                image: apiPost.image_url,
+                likes: apiPost.likes_count || 0,
+                comments: apiPost.comments_count || 0,
+                date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
+            },
+            reporter: {
+                id: "community",
+                name: "Comunidade",
+                profile_picture: "/community-avatar.png",
+                role: "member",
+            },
+            reason: "Conteúdo inapropriado",
+            description: "Publicação foi reportada pela comunidade por violar as diretrizes de conteúdo.",
+            date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
+            status: "Em análise",
+            severity: "Leve",
+            confirmations: apiPost.report_count || 0,
+            category: "Conteúdo",
+        };
+    });
+
+    const commentReports: CommentReport[] = (reportedComments || []).map((apiComment): CommentReport => {
+        return {
+            id: apiComment.report_id || apiComment.id, // Usar report_id se disponível
+            reportedComment: {
+                id: apiComment.id,
+                content: apiComment.content,
+                author: {
+                    id: apiComment.user?.id || 'unknown',
+                    name: apiComment.user?.name || 'Usuário desconhecido',
+                    profile_picture: apiComment.user?.profile_picture,
+                    role: apiComment.user?.role || 'member',
+                },
+                date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
+                postTitle: apiComment.post?.title || "Post não encontrado",
+                likes: apiComment.likes_count || 0,
+            },
+            reporter: {
+                id: "community",
+                name: "Comunidade",
+                profile_picture: "/community-avatar.png",
+                role: "member",
+            },
+            reason: "Linguagem inadequada",
+            description: `Comentário reportado (id: ${apiComment.id})`,
+            date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
+            status: "Em análise",
+            severity: "Leve",
+            confirmations: apiComment.report_count || 0,
+            category: "Comportamento",
+        };
+    });
 
     // Set default selected items when changing tabs
     const handleTabChange = (tab: string) => {
@@ -1274,12 +1383,24 @@ export default function ModerationPage() {
     const VOTE_THRESHOLD = 2;
     const [voteCounts, setVoteCounts] = useState<Record<string, { tolerate: number; suspend: number }>>({});
     const handleActuallyTolerate = async (report: UserReport | PostReport | CommentReport) => {
-        if (!selectedCommunity || !user) return;
+        if (!selectedCommunity || !user || !currentUserMemberId) {
+            if (!currentUserMemberId) {
+                toast.error("Você precisa ser membro da comunidade para moderar");
+            }
+            return;
+        }
+
         const reportId = report.id;
+
+        if (!reportId) {
+            toast.error("ID do reporte não encontrado");
+            return;
+        }
+
         try {
             const result: any = await moderateReport(selectedCommunity.id, reportId, {
                 report_id: reportId,
-                moderator_id: user.id,
+                moderator_id: currentUserMemberId,
                 vote: 'tolerate',
             });
 
@@ -1315,12 +1436,24 @@ export default function ModerationPage() {
     };
 
     const handleActuallyResolve = async (report: UserReport | PostReport | CommentReport) => {
-        if (!selectedCommunity || !user) return;
+        if (!selectedCommunity || !user || !currentUserMemberId) {
+            if (!currentUserMemberId) {
+                toast.error("Você precisa ser membro da comunidade para moderar");
+            }
+            return;
+        }
+
         const reportId = report.id;
+
+        if (!reportId) {
+            toast.error("ID do reporte não encontrado");
+            return;
+        }
+
         try {
             const result: any = await moderateReport(selectedCommunity.id, reportId, {
                 report_id: reportId,
-                moderator_id: user.id,
+                moderator_id: currentUserMemberId,
                 vote: 'suspend',
             });
 
