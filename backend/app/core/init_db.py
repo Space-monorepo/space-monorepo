@@ -16,6 +16,13 @@ from app.api.badges.model import Badge, MemberBadge
 from app.api.rating.model import Rating
 from app.api.comment.model import Comment, CommentLikes
 from app.api.chat.model import Conversation, Message, MessageAttachment
+from app.api.reports.model import (
+    Report,
+    ReportMember,
+    ReportPost,
+    ReportComment,
+    ModerationVotes,
+)
 
 
 Base.metadata.create_all(bind=engine)
