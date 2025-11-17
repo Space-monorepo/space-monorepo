@@ -60,7 +60,8 @@ export const fetchCommunityReports = async (token: string, communityId: string):
 
 // Busca campanhas reais do endpoint específico de campanhas
 export const fetchCommunityCampaigns = async (token: string, communityId: string): Promise<PostsListFeed> => {
-  const url = `${API_URL}/posts/${communityId}/community/list-posts?type_post=campaign`;
+  // Usar rota de administração que retorna o status específico da campanha
+  const url = `${API_URL}/admin/${communityId}/post/list-all-campaigns`;
   const response = await fetch(url, {
     method: 'GET',
     headers: {
@@ -72,7 +73,15 @@ export const fetchCommunityCampaigns = async (token: string, communityId: string
     const errorData = await response.json().catch(() => ({ message: 'Erro ao carregar campanhas da comunidade' }));
     throw new Error(errorData.message || 'Erro ao carregar campanhas da comunidade');
   }
-  return response.json();
+
+  const data = await response.json();
+  // O endpoint de admin retorna CampaignResponse dentro de items. Normalizamos para o formato esperado
+  // transformando cada item para incluir os campos do `post` e `status_campaign` diretamente.
+  const normalized = {
+    ...data,
+    items: (data.items || []).map((c: any) => ({ ...(c.post || {}), status_campaign: c.status_campaign }))
+  };
+  return normalized;
 };
 
 export const fetchCommunityAnnouncements = async (token: string, communityId: string): Promise<PostsListFeed> => {

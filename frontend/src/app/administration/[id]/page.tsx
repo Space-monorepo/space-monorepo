@@ -197,24 +197,25 @@ export default function CommunityAdminPage({
 
   // Função para mapear status da API para status do frontend
   const mapApiStatusToFrontendStatus = (apiStatus: string): "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada" => {
+    if (!apiStatus) return 'Em análise';
     switch (apiStatus.toLowerCase()) {
-      case 'active':
-        return "Em análise";
-      case 'approved':
-        return "Aprovado";
-      case 'rejected':
-        return "Rejeitado";
+      case 'under_analysis':
       case 'pending':
-        return "Pendente";
+        return 'Em análise';
+      case 'approved':
+        return 'Aprovado';
+      case 'rejected':
+        return 'Rejeitado';
       case 'in_progress':
-        return "Em progresso";
+        return 'Em progresso';
+      case 'canceled':
       case 'cancelled':
-        return "Cancelada";
-      case 'completed':
+        return 'Cancelada';
       case 'finished':
-        return "Finalizada";
+      case 'completed':
+        return 'Finalizada';
       default:
-        return "Em análise";
+        return 'Em análise';
     }
   };
 
@@ -231,7 +232,8 @@ export default function CommunityAdminPage({
     },
     participants: 0, // Zerar participantes temporariamente
     date: new Date(post.created_at).toLocaleDateString("pt-BR"),
-    status: mapApiStatusToFrontendStatus(post.status),
+    // Preferir o status da campanha quando disponível (via admin endpoint normalizado)
+    status: mapApiStatusToFrontendStatus((post as any).status_campaign || post.status),
     description: post.content,
     accesses: 0,
     likes: post.likes_count || 0,
@@ -333,9 +335,25 @@ export default function CommunityAdminPage({
   const handleApproveCampaign = async (subject: string, message: string) => {
     if (!selectedCampaign) return;
     try {
-      await approveCampaign(id, selectedCampaign.id, subject, message);
-      setSelectedCampaign({ ...selectedCampaign, status: "Aprovado" });
+      const response = await approveCampaign(id, selectedCampaign.id, subject, message);
+      // Se a API retornar o objeto da campanha, usar o status retornado
+      if (response && response.status_campaign) {
+        const mappedStatus = mapApiStatusToFrontendStatus(response.status_campaign);
+        setSelectedCampaign({ ...selectedCampaign, status: mappedStatus });
+      } else {
+        // fallback otimista
+        setSelectedCampaign({ ...selectedCampaign, status: "Aprovado" });
+      }
       toast.success("Campanha aprovada com sucesso!");
+      // Recarregar posts da comunidade para garantir consistência
+      try {
+        if (id) await fetchCommunityPosts(id);
+        if (id && selectedCampaign?.id) {
+          await fetchCampaignDetailsById(id, selectedCampaign.id as any);
+        }
+      } catch (err) {
+        console.warn("Falha ao atualizar posts após aprovação:", err);
+      }
     } catch (error: any) {
       toast.error(error?.message || "Erro ao aprovar campanha");
     } finally {
@@ -347,9 +365,22 @@ export default function CommunityAdminPage({
   const handleRejectCampaign = async (subject: string, reason: string) => {
     if (!selectedCampaign) return;
     try {
-      await rejectCampaign(id, selectedCampaign.id, subject, reason);
-      setSelectedCampaign({ ...selectedCampaign, status: "Rejeitado" });
+      const response = await rejectCampaign(id, selectedCampaign.id, subject, reason);
+      if (response && response.status_campaign) {
+        const mappedStatus = mapApiStatusToFrontendStatus(response.status_campaign);
+        setSelectedCampaign({ ...selectedCampaign, status: mappedStatus });
+      } else {
+        setSelectedCampaign({ ...selectedCampaign, status: "Rejeitado" });
+      }
       toast.success("Campanha rejeitada com sucesso!");
+      try {
+        if (id) await fetchCommunityPosts(id);
+        if (id && selectedCampaign?.id) {
+          await fetchCampaignDetailsById(id, selectedCampaign.id as any);
+        }
+      } catch (err) {
+        console.warn("Falha ao atualizar posts após rejeição:", err);
+      }
     } catch (error: any) {
       toast.error(error?.message || "Erro ao rejeitar campanha");
     } finally {

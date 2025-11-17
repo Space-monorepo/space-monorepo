@@ -17,7 +17,7 @@ export function useCampaignAdminActions() {
         try {
             const token = getTokenFromCookies();
             if (!token) throw new Error('Token não encontrado. Usuário não autenticado.');
-            await updateCampaignStatus({
+            const data = await updateCampaignStatus({
                 token,
                 communityId,
                 postId,
@@ -25,6 +25,7 @@ export function useCampaignAdminActions() {
                 subject,
                 message,
             });
+            return data;
         } catch (err) {
             setError(err as Error);
             throw err;
@@ -44,7 +45,7 @@ export function useCampaignAdminActions() {
         try {
             const token = getTokenFromCookies();
             if (!token) throw new Error('Token não encontrado. Usuário não autenticado.');
-            await updateCampaignStatus({
+            const data = await updateCampaignStatus({
                 token,
                 communityId,
                 postId,
@@ -52,6 +53,7 @@ export function useCampaignAdminActions() {
                 subject,
                 message: reason,
             });
+            return data;
         } catch (err) {
             setError(err as Error);
             throw err;
