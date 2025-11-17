@@ -891,6 +891,22 @@ export default function ModerationPage() {
         }
     };
 
+    // Função para mapear status de denúncia da API
+    const mapComplaintStatusToFrontendStatus = (apiStatus?: string): "Em análise" | "Resolvido" | "Arquivado" => {
+        if (!apiStatus) return 'Em análise';
+        switch (apiStatus.toLowerCase()) {
+            case 'pending':
+            case 'under_investigation':
+                return 'Em análise';
+            case 'resolved':
+                return 'Resolvido';
+            case 'archived':
+                return 'Arquivado';
+            default:
+                return 'Em análise';
+        }
+    };
+
     // Funções auxiliares para converter dados da API para o formato do componente
     const convertPostToCampaign = (post: PostResponse): Campaign => ({
         id: post.id,
@@ -1377,7 +1393,7 @@ export default function ModerationPage() {
     };
 
     // Handlers reais para ações de moderação
-    const { moderateReport } = useModerationActions();
+    const { moderateReport, updateComplaintStatus } = useModerationActions();
     // Contador de votos locais por reporte (chave = report.id)
     // Alinha com o backend (REPORT_VOTES_THRESHOLD = 2)
     const VOTE_THRESHOLD = 2;
@@ -1482,6 +1498,50 @@ export default function ModerationPage() {
             setSelectedCommentReport(null);
         } catch (error: any) {
             toast.error(error.message || "Erro ao suspender reporte");
+        }
+    };
+
+    // Handlers confirmados para denúncias (resolução / dissolução)
+    const handleConfirmResolveReport = async (subject: string, message: string) => {
+        if (!selectedReport || !selectedCommunity) return;
+        try {
+            const response: any = await updateComplaintStatus(selectedCommunity.id, selectedReport.id, 'resolved');
+            if (response && response.status_complaint) {
+                const mapped = mapComplaintStatusToFrontendStatus(response.status_complaint);
+                setSelectedReport({ ...selectedReport, status: mapped });
+            } else {
+                setSelectedReport({ ...selectedReport, status: 'Resolvido' });
+            }
+            toast.success('Denúncia resolvida com sucesso!');
+            try {
+                if (selectedCommunity) await fetchCommunityPosts(selectedCommunity.id);
+            } catch (err) {
+                console.warn('Falha ao atualizar posts após resolver denúncia:', err);
+            }
+        } catch (error: any) {
+            toast.error(error?.message || 'Erro ao resolver denúncia');
+        }
+    };
+
+    const handleConfirmDissolveReport = async (subject: string, reason: string) => {
+        if (!selectedReport || !selectedCommunity) return;
+        try {
+            // Usar 'resolved' no backend para arquivar/dissolver
+            const response: any = await updateComplaintStatus(selectedCommunity.id, selectedReport.id, 'resolved');
+            if (response && response.status_complaint) {
+                const mapped = mapComplaintStatusToFrontendStatus(response.status_complaint);
+                setSelectedReport({ ...selectedReport, status: mapped });
+            } else {
+                setSelectedReport({ ...selectedReport, status: 'Arquivado' });
+            }
+            toast.success('Denúncia dissolvida com sucesso!');
+            try {
+                if (selectedCommunity) await fetchCommunityPosts(selectedCommunity.id);
+            } catch (err) {
+                console.warn('Falha ao atualizar posts após dissolver denúncia:', err);
+            }
+        } catch (error: any) {
+            toast.error(error?.message || 'Erro ao dissolver denúncia');
         }
     };
 
@@ -2291,6 +2351,27 @@ export default function ModerationPage() {
                     onEmailChange={setEmailsToImport}
                 />
             )}
+
+            {/* Modais de denúncia (dissolver / resolver) */}
+            <RejectComplaintModal
+                isOpen={isDissolveModalOpen}
+                onClose={() => setIsDissolveModalOpen(false)}
+                onReject={async (subject: string, reason: string) => {
+                    await handleConfirmDissolveReport(subject, reason);
+                    setIsDissolveModalOpen(false);
+                }}
+                complaintTitle={selectedReport?.title || ""}
+            />
+
+            <ApproveComplaintModal
+                isOpen={isResolveModalOpen}
+                onClose={() => setIsResolveModalOpen(false)}
+                onApprove={async (subject: string, message: string) => {
+                    await handleConfirmResolveReport(subject, message);
+                    setIsResolveModalOpen(false);
+                }}
+                complaintTitle={selectedReport?.title || ""}
+            />
 
             {/* Modal de preview de usuário reportado */}
             {isUserReportPreviewOpen && previewUserReport && (

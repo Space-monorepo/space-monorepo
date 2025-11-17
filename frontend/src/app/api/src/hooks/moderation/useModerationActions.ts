@@ -33,5 +33,29 @@ export function useModerationActions() {
         return response.json();
     }
 
-    return { moderateReport };
+    async function updateComplaintStatus(
+        communityId: string,
+        postId: string,
+        complaintStatus: string
+    ) {
+        const token = Cookies.get('token');
+        if (!token) throw new Error('Token não encontrado');
+
+        const response = await fetch(`${API_URL}/moderation/${communityId}/complaint/${postId}/status/${complaintStatus}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(error || 'Erro ao atualizar status da denúncia');
+        }
+
+        return response.json();
+    }
+
+    return { moderateReport, updateComplaintStatus };
 }
