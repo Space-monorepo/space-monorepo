@@ -129,12 +129,12 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
 
 
       const response = await axios.post(
-        `${API_URL}/posts/${communityIdForPost}/create-post`, // Endpoint genérico
+        `${API_URL}/posts/${communityIdForPost}/create-announcement`, // Endpoint correto no backend
         finalPayload, // Enviando JSON
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json", // Mudado para JSON
+            "Content-Type": "application/json",
           },
         }
       );

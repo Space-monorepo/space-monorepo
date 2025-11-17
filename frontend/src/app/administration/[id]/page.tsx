@@ -153,6 +153,7 @@ export default function CommunityAdminPage({
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [selectedAnnouncement, setSelectedAnnouncement] =
     useState<Announcement | null>(null);
+  const [selectedAnnouncementIndex, setSelectedAnnouncementIndex] = useState<number | null>(null);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
@@ -304,6 +305,7 @@ export default function CommunityAdminPage({
     setSelectedCampaign(null);
     setSelectedReport(null);
     setSelectedAnnouncement(null);
+    setSelectedAnnouncementIndex(null);
     clearDetails(); // Limpar detalhes da campanha
 
     // Set the first item of the active tab as selected
@@ -313,6 +315,7 @@ export default function CommunityAdminPage({
       setSelectedReport(reports[0]);
     } else if (tab === "Anúncios" && announcements.length > 0) {
       setSelectedAnnouncement(announcements[0]);
+      setSelectedAnnouncementIndex(0);
     }
   };
 
@@ -409,7 +412,9 @@ export default function CommunityAdminPage({
     !selectedAnnouncement &&
     announcements.length > 0
   ) {
-    setSelectedAnnouncement(announcements[0]);
+    const firstAnnouncement = announcements[0];
+    setSelectedAnnouncement(firstAnnouncement);
+    setSelectedAnnouncementIndex(0);
   }
   // Removidas as versões duplicadas dos handlers (mantendo apenas as assíncronas reais)
   const getSeverityColor = (severity: string) => {
@@ -849,11 +854,11 @@ export default function CommunityAdminPage({
                   announcements.map((announcement, index) => (
                     <div
                       key={`${announcement.id}-${index}`}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedAnnouncement?.id === announcement.id
-                        ? "bg-[#f4f4f4]"
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-gray-100 ${selectedAnnouncementIndex === index
+                        ? "bg-[#f8f8f8]"
                         : ""
                         }`}
-                      onClick={() => setSelectedAnnouncement(announcement)}
+                      onClick={() => { setSelectedAnnouncement(announcement); setSelectedAnnouncementIndex(index); }}
                     >
                       <div className="mb-2">
                         <p className="text-xs text-[#525252] mb-1">
