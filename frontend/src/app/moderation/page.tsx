@@ -120,6 +120,11 @@ export type PostReport = {
         likes: number;
         comments: number;
         date: string;
+        type_post?: string;
+        poll_options?: Array<{ id: string; answer: string; votes_count: number }>;
+        poll_question?: string;
+        status_complaint?: string;
+        level_complaint?: string;
     };
     reporter: UserInfo;
     reason: string;
@@ -1161,6 +1166,11 @@ export default function ModerationPage() {
                 likes: apiPost.likes_count || 0,
                 comments: apiPost.comments_count || 0,
                 date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
+                type_post: apiPost.type_post,
+                poll_options: apiPost.poll_options,
+                poll_question: apiPost.poll_question,
+                status_complaint: apiPost.status_complaint,
+                level_complaint: apiPost.level_complaint,
             },
             reporter: {
                 id: "community",

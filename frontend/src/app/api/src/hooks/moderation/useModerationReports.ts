@@ -32,6 +32,11 @@ export interface ReportedPost {
     comments_count: number;
     created_at: string;
     image_url?: string;
+    type_post?: string;
+    poll_options?: Array<{ id: string; answer: string; votes_count: number }>;
+    poll_question?: string;
+    status_complaint?: string;
+    level_complaint?: string;
     user: {
         id: string;
         name: string;
