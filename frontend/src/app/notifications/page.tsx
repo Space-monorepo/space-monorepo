@@ -5,6 +5,8 @@ import { Close, CheckmarkFilled, Forum, ArrowUp, Filter, SortDescending, FaceSat
 import { useState, useEffect } from "react"
 import { ArrowLeft, Eye } from "lucide-react"
 import Sidebar from "@/components/ui/sidebar"
+import { useAuth } from "@/app/api/src/auth/useAuth";
+import { toast } from "react-toastify";
 import { useNotifications } from "@/app/api/src/hooks/notifications/useNotifications"
 import { Notification } from "@/app/api/src/types/notifications/Notification"
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
@@ -476,7 +478,43 @@ export default function NotificacoesPage() {
   const [activeTab, setActiveTab] = useState<NotificationType>("Campanhas")
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null)
   const [showCommentsModal, setShowCommentsModal] = useState(false)
+  const [likedAnnouncements, setLikedAnnouncements] = useState<Record<string, boolean>>({})
   const { notifications, loading, error } = useNotifications()
+  const { user, loading: authLoading } = useAuth();
+  const { likePost, unlikePost, isLoading: postActionLoading } = usePostActions();
+
+  // Toggle like/unlike for an announcement using backend endpoints
+  const toggleAnnouncementLike = async (announcementId: string, communityId: string) => {
+    if (!announcementId || !communityId) return
+    const isLiked = !!likedAnnouncements[announcementId]
+    try {
+      if (!user) {
+        toast.warning('Faça login para curtir este aviso.')
+        return
+      }
+
+      if (!isLiked) {
+        await likePost(communityId, announcementId)
+        toast.success('Aviso curtido')
+      } else {
+        await unlikePost(communityId, announcementId)
+        toast.info('Curtida removida')
+      }
+
+      // Atualiza estado localmente após sucesso
+      setLikedAnnouncements(prev => ({ ...prev, [announcementId]: !isLiked }))
+      setSelectedNotification(prev => {
+        if (!prev) return prev
+        if (prev.id !== announcementId) return prev
+        const currentLikes = prev.stats?.likes ?? 0
+        const newLikes = isLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1
+        return ({ ...prev, stats: { ...prev.stats, likes: newLikes } } as Notification)
+      })
+    } catch (err) {
+      console.error('Erro ao curtir/descurtir aviso', err)
+      toast.error('Erro ao processar sua ação. Tente novamente.')
+    }
+  }
 
   // Usar conexões reais do backend ou mock se vazio
   let connections = notifications.connections || [];
@@ -1032,9 +1070,13 @@ export default function NotificacoesPage() {
                     <div className="flex items-center gap-4 mt-10 max-w-[698px] max-md:max-w-full">
                       <button
                         onClick={() => {
-                          // Ação de promover
+                          if (selectedNotification && selectedNotification.id && selectedNotification.community?.id) {
+                            toggleAnnouncementLike(selectedNotification.id, selectedNotification.community.id)
+                          }
                         }}
-                        className="flex items-center gap-2 px-6 py-3 text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer rounded"
+                        disabled={postActionLoading || authLoading}
+                        aria-disabled={postActionLoading || authLoading}
+                        className={`flex items-center gap-2 px-6 py-3 text-gray-600 transition-colors cursor-pointer rounded ${postActionLoading || authLoading ? 'opacity-60 pointer-events-none' : 'hover:bg-gray-200'}`}
                       >
                         <ArrowUp className="h-4 w-4" />
                         <span>Promover</span>
