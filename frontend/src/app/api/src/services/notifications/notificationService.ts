@@ -18,36 +18,39 @@ export const fetchCampaigns = async (token: string): Promise<CampaignNotificatio
 
     const data: PostsListFeed = await response.json()
 
-    return data.items.map((post: PostResponse) => ({
-        id: post.id,
-        type: 'Campanha',
-        title: post.title,
-        author: {
-            id: post.user.id,
-            name: post.user.name,
-            username: post.user.username || '',
-            profile_picture: post.user.profile_picture,
-            role: post.user.role // Adiciona a role do backend
-        },
-        community: {
-            id: post.community.id,
-            name: post.community.name
-        },
-        date: new Date(post.created_at).toLocaleDateString('pt-BR'),
-        created_at: post.created_at,
-        updated_at: post.updated_at,
-        time: `${post.likes_count + post.comments_count}`,
-        description: post.content,
-        status: post.status === 'active' ? 'Ativa' : post.status === 'reported' ? 'Em análise' : 'Suspensa',
-        stats: {
-            published: new Date(post.created_at).toLocaleDateString('pt-BR'),
-            accesses: (post as any).accesses ?? 0, // Usar campo real se existir
-            participants: (post as any).participants ?? 0, // Usar campo real se existir
-            likes: post.likes_count,
-            comments: post.comments_count
-        },
-        image_url: post.image_url || undefined
-    }))
+    // Garantir que retornamos apenas posts do tipo "campaign" (por precaução caso o endpoint retorne itens mistos)
+    return data.items
+        .filter((post: PostResponse) => post.type_post === 'campaign')
+        .map((post: PostResponse) => ({
+            id: post.id,
+            type: 'Campanha',
+            title: post.title,
+            author: {
+                id: post.user.id,
+                name: post.user.name,
+                username: post.user.username || '',
+                profile_picture: post.user.profile_picture,
+                role: post.user.role // Adiciona a role do backend
+            },
+            community: {
+                id: post.community.id,
+                name: post.community.name
+            },
+            date: new Date(post.created_at).toLocaleDateString('pt-BR'),
+            created_at: post.created_at,
+            updated_at: post.updated_at,
+            time: `${post.likes_count + post.comments_count}`,
+            description: post.content,
+            status: post.status === 'active' ? 'Ativa' : post.status === 'reported' ? 'Em análise' : 'Suspensa',
+            stats: {
+                published: new Date(post.created_at).toLocaleDateString('pt-BR'),
+                accesses: (post as any).accesses ?? 0, // Usar campo real se existir
+                participants: (post as any).participants ?? 0, // Usar campo real se existir
+                likes: post.likes_count,
+                comments: post.comments_count
+            },
+            image_url: post.image_url || undefined
+        }))
 }
 
 // Buscar avisos oficiais (posts do tipo announcement)
@@ -66,36 +69,39 @@ export const fetchAnnouncements = async (token: string): Promise<AnnouncementNot
 
     const data: PostsListFeed = await response.json()
 
-    return data.items.map((post: PostResponse) => ({
-        id: post.id,
-        type: 'Anúncio',
-        title: post.title,
-        author: {
-            id: post.user.id,
-            name: post.user.name,
-            username: post.user.username || '',
-            profile_picture: post.user.profile_picture,
-            role: post.user.role // Adiciona a role do backend
-        },
-        community: {
-            id: post.community.id,
-            name: post.community.name
-        },
-        date: new Date(post.created_at).toLocaleDateString('pt-BR'),
-        created_at: post.created_at,
-        updated_at: post.updated_at,
-        time: `${post.likes_count + post.comments_count}`,
-        description: post.content,
-        image_url: post.image_url || undefined,
-        stats: {
-            published: new Date(post.created_at).toLocaleDateString('pt-BR'),
-            accesses: (post as any).accesses ?? 0,
-            participants: (post as any).participants ?? 0,
-            likes: post.likes_count,
-            comments: post.comments_count
-        },
-        actions: ['Promover', 'Comentar']
-    }))
+    // Garantir que retornamos apenas posts do tipo "announcement"
+    return data.items
+        .filter((post: PostResponse) => post.type_post === 'announcement')
+        .map((post: PostResponse) => ({
+            id: post.id,
+            type: 'Anúncio',
+            title: post.title,
+            author: {
+                id: post.user.id,
+                name: post.user.name,
+                username: post.user.username || '',
+                profile_picture: post.user.profile_picture,
+                role: post.user.role // Adiciona a role do backend
+            },
+            community: {
+                id: post.community.id,
+                name: post.community.name
+            },
+            date: new Date(post.created_at).toLocaleDateString('pt-BR'),
+            created_at: post.created_at,
+            updated_at: post.updated_at,
+            time: `${post.likes_count + post.comments_count}`,
+            description: post.content,
+            image_url: post.image_url || undefined,
+            stats: {
+                published: new Date(post.created_at).toLocaleDateString('pt-BR'),
+                accesses: (post as any).accesses ?? 0,
+                participants: (post as any).participants ?? 0,
+                likes: post.likes_count,
+                comments: post.comments_count
+            },
+            actions: ['Promover', 'Comentar']
+        }))
 }
 
 // Buscar conexões (simulado até ter endpoint real)
