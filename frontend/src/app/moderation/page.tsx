@@ -175,6 +175,7 @@ type Poll = {
     votes?: number;
     description?: string;
     options?: { id: string; answer: string; votes_count: number }[];
+    image?: string;
     likes?: number;
     comments?: number;
 };
@@ -1105,6 +1106,7 @@ export default function ModerationPage() {
             answer: opt.answer,
             votes_count: opt.votes_count
         })) : [],
+        image: post.image_url || "/publication-image.jpg",
         likes: post.likes_count ?? 0,
         comments: post.comments_count ?? 0,
     });
@@ -1934,6 +1936,11 @@ export default function ModerationPage() {
                                                             {selectedReport.description || "Investigar denúncia"}
                                                         </span>
                                                     </div>
+                                                    <img
+                                                        src={selectedReport.image || "/publication-image.jpg"}
+                                                        alt={selectedReport.title || "Imagem da denúncia"}
+                                                        className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
+                                                    />
                                                 </div>
                                             </div>
                                         </header>
@@ -2066,8 +2073,8 @@ export default function ModerationPage() {
                                                     </div>
                                                 </div>
                                                 <img
-                                                    src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/506828c0ec32c591f29f197ff573cb0d9d6761c1?placeholderIfAbsent=true"
-                                                    alt="Poll illustration"
+                                                    src={selectedPoll.image || "/publication-image.jpg"}
+                                                    alt={selectedPoll.title || "Ilustração da enquete"}
                                                     className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
                                                 />
                                             </div>
