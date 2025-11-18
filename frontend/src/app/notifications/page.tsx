@@ -671,7 +671,7 @@ export default function NotificacoesPage() {
                 {currentNotifications.map((notification, index) => (
                   <article
                     key={notification.id}
-                    className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${selectedNotification?.id === notification.id ? 'bg-zinc-200' : 'bg-white'
+                    className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${selectedNotification?.id === notification.id ? 'bg-gray-100 hover:bg-zinc-100' : 'bg-white'
                       }`}
                     onClick={() => setSelectedNotification(notification)}
                   >
@@ -737,7 +737,7 @@ export default function NotificacoesPage() {
                 {currentNotifications.map((notification, index) => (
                   <article
                     key={notification.id}
-                    className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${selectedNotification?.id === notification.id ? 'bg-zinc-200' : 'bg-white'
+                    className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${selectedNotification?.id === notification.id ? 'bg-gray-100 hover:bg-zinc-100' : 'bg-white'
                       }`}
                     onClick={() => setSelectedNotification(notification)}
                   >
