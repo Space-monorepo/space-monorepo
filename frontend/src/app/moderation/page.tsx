@@ -280,7 +280,7 @@ export default function ModerationPage() {
                                             Motivo:
                                         </span>
                                         <span className="self-stretch my-auto text-neutral-800">
-                                            {report.reason}
+                                            {report.reason ? report.reason.charAt(0).toUpperCase() + report.reason.slice(1) : ''}
                                         </span>
                                     </div>
                                     <div className="mt-4 w-full flex flex-col items-start gap-2">
