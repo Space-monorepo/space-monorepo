@@ -1,3 +1,4 @@
+import logging
 from typing import List
 from uuid import UUID
 
@@ -18,6 +19,7 @@ from app.api.comment.schema import (
 )
 from app.api.communities.schema import CommunityMemberResponse
 from app.api.communities.service import CommunityService
+from app.api.notifications.service import NotificationService
 from app.api.post.exceptions import PostNotFoundError
 from app.api.reputation.schema import POPULARITY_POINTS, PopularityActionEnum
 from app.api.reputation.service import ReputationService
@@ -91,8 +93,9 @@ class CommentService:
     def create_comment(self, comment_create: CommentCreate) -> CommentResponse:
         self._get_post(comment_create.post_id)
 
+        parent_comment = None
         if comment_create.parent_id:
-            self._get_comment(comment_create.parent_id)
+            parent_comment = self._get_comment(comment_create.parent_id)
 
         try:
             comment = Comment(**comment_create.model_dump())
@@ -108,6 +111,36 @@ class CommentService:
                 commenter_member.id, post_author_member.id
             )
             self.post_repo.save(post)
+
+            try:
+                notification_service = NotificationService(self.tm)
+                actor = self.tm.get_user_repository().get_by_id(comment_create.user_id)
+                post_author = post.user
+
+                if post_author and post_author.id != actor.id:
+                    notification_service.create_interaction_notification(
+                        recipient=post_author,
+                        actor=actor,
+                        interaction_type='comment',
+                        post_title=post.title or 'sua publicação',
+                        comment_content=comment_create.content,
+                    )
+
+                if parent_comment:
+                    parent_author = parent_comment.user
+                    if parent_author and parent_author.id not in {
+                        actor.id,
+                        post_author.id,
+                    }:
+                        notification_service.create_interaction_notification(
+                            recipient=parent_author,
+                            actor=actor,
+                            interaction_type='reply',
+                            post_title=post.title or 'sua publicação',
+                            comment_content=comment_create.content,
+                        )
+            except Exception as e:
+                logging.warning(f'Falha ao criar notificação de comentário: {e}')
 
             return self._map_comment_to_response(comment_saved)
         except Exception as e:
@@ -262,6 +295,28 @@ class CommentService:
             like = CommentLikes(comment_id=comment_id, member_id=member_id)
             self.comment_likes_repo.save(like)
             comment = self.comment_repo.save(comment)
+
+            try:
+                notification_service = NotificationService(self.tm)
+                recipient = comment.user
+                actor = self.tm.get_user_repository().get_by_id(member_id)
+
+                if recipient and actor and recipient.id != actor.id:
+                    notification_service.create_interaction_notification(
+                        recipient=recipient,
+                        actor=actor,
+                        interaction_type='like',
+                        post_title=comment.post.title or 'seu comentário',
+                    )
+            except Exception as e:
+                logging.warning(f'Falha ao criar notificação de like em comentário: {e}')
+                comment_author_member = self.community_service.get_member(
+                    comment.member_id
+                )
+                self.reputation_service.award_comment_like(
+                    member_id, comment_author_member.id
+                )
+
             comment_author_member = self.community_service.get_member(comment.member_id)
             self.reputation_service.award_comment_like(
                 member_id, comment_author_member.id

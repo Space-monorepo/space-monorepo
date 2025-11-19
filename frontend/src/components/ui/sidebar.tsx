@@ -10,6 +10,7 @@ import { Button } from "./button";
 import { toast } from "react-toastify";
 import Cookies from "js-cookie";
 import { cn } from "@/lib/utils";
+import { getSidebarPermissions } from "@/lib/sidebarPermissions";
 
 type SidebarProps = {
   variant?: "hover" | "static";
@@ -19,6 +20,8 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const pathname = usePathname();
   const { user, loading } = useCheckTokenValidity();
+
+  const sidebarPermissions = getSidebarPermissions(user);
 
   const isOpen = variant === "static" || isHovered;
 
@@ -41,13 +44,14 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
     <aside
       className={cn(
         "bg-gray-100 text-gray-900 flex flex-col h-screen border-r fixed border-gray-200 transition-all duration-300 ease-in-out",
+        "max-md:hidden", // Esconde a sidebar em telas menores que md
         isOpen ? "w-64" : "w-26"
       )}
       onMouseEnter={() => variant === "hover" && setIsHovered(true)}
       onMouseLeave={() => variant === "hover" && setIsHovered(false)}
     >
       {/* Logo */}
-      <div className="p-9 flex items-center gap-3 border-b border-gray-200">
+      <div className="p-9 flex items-center gap-3 border-gray-200">
         <Link href="/home" className="flex items-center space-x-2">
           <Image src="/Vector.svg" alt="Space Logo" width={24} height={24} />
           <Image
@@ -66,7 +70,7 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
       </div>
 
       {/* Navegação principal */}
-      <div className="mt-8 px-6 flex-1">
+      <div className="mt-8 px-6 flex-1 flex flex-col overflow-y-auto">
         <div
           className={cn(
             "text-xs font-medium text-zinc-500 mb-4 transition-opacity duration-200",
@@ -78,55 +82,57 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
           GENERAL
         </div>
 
-        <nav className="space-y-4">
-          <SidebarItem
-            icon={<Events size={20} />}
-            label="Comunidades"
-            href="/communities"
-            active={isActive("/communities")}
-            isOpen={isOpen}
-          />
-          <SidebarItem
-            icon={<Notification size={20} />}
-            label="Notificações"
-            href="/notifications"
-            active={isActive("/notifications")}
-            isOpen={isOpen}
-          />
-          <SidebarItem
-            icon={<ChatLaunch size={20} />}
-            label="Mensagens"
-            href="/messages"
-            active={isActive("/messages")}
-            isOpen={isOpen}
-          />
-          <SidebarItem
-            icon={<Security size={20} />}
-            label="Moderação"
-            href="/moderation"
-            active={isActive("/moderation")}
-            isOpen={isOpen}
-          />
-          <SidebarItem
-            icon={<User size={20} />}
-            label="Administração"
-            href="/administration"
-            active={isActive("/security")}
-            isOpen={isOpen}
-          />
+        <nav className="space-y-4 flex-1 flex flex-col">
+          <div className="space-y-4">
+            <SidebarItem
+              icon={<Events size={20} />}
+              label="Comunidades"
+              href="/communities"
+              active={isActive("/communities")}
+              isOpen={isOpen}
+            />
+            <SidebarItem
+              icon={<Notification size={20} />}
+              label="Notificações"
+              href="/notifications"
+              active={isActive("/notifications")}
+              isOpen={isOpen}
+            />
+            <SidebarItem
+              icon={<ChatLaunch size={20} />}
+              label="Mensagens"
+              href="/messages"
+              active={isActive("/messages")}
+              isOpen={isOpen}
+            />
+            <SidebarItem
+              icon={<Security size={20} />}
+              label="Moderação"
+              href="/moderation"
+              active={isActive("/moderation")}
+              isOpen={isOpen}
+            />
+            <SidebarItem
+              icon={<User size={20} />}
+              label="Administrador"
+              href="/administration"
+              active={isActive("/administration")}
+              isOpen={isOpen}
+            />
+          </div>
+          <div className="mt-auto">
+            <SidebarItem
+              icon={<Settings size={20} />}
+              label="Configurações"
+              href="/settings"
+              active={isActive("/settings")}
+              isOpen={isOpen}
+            />
+          </div>
         </nav>
       </div>
 
-      {/* Configurações */}
-      <div className="px-6 mb-4 border-gray-200">
-        <SidebarItem
-          icon={<Settings size={20} />}
-          label="Configurações"
-          href="/settings"
-          active={isActive("/settings")}
-          isOpen={isOpen}
-        />
-      </div>
+
 
       {/* Perfil e logout */}
       <div className="p-7 py-4 border-gray-200">

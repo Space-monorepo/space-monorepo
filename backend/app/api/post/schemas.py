@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from app.api.communities.schema import CommunityMemberRoleEnum
 
@@ -12,6 +12,7 @@ class CommunityRelated(BaseModel):
     name: str = Field(
         ..., min_length=1, max_length=255, description='Name of the community'
     )
+    image_url: HttpUrl | None = Field(None, description='The image URL of the community')
 
 
 class PostAuthor(BaseModel):

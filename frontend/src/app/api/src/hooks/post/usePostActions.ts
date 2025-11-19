@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "react-toastify";
 import axios from "axios";
 import { API_URL, cloudinary_link } from "@/config"; // Certifique-se que este é o URL base correto da sua API
 import { fetchUserProfile } from "@/app/api/src/services/userService";
@@ -128,12 +129,12 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
 
 
       const response = await axios.post(
-        `${API_URL}/posts/${communityIdForPost}/create-post`, // Endpoint genérico
+        `${API_URL}/posts/${communityIdForPost}/create-announcement`, // Endpoint correto no backend
         finalPayload, // Enviando JSON
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json", // Mudado para JSON
+            "Content-Type": "application/json",
           },
         }
       );
@@ -142,6 +143,14 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
       return response.data;
     } catch (error) {
       console.error("Erro ao criar anúncio:", error);
+      // Tratamento específico para erro 403 (não autorizado na comunidade)
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para publicar nesta comunidade.");
+      }
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para publicar nesta comunidade.");
+        return;
+      }
       onError?.(error);
       throw error;
     } finally {
@@ -189,6 +198,10 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
       return response.data;
     } catch (error) {
       console.error("Erro ao criar campanha:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para publicar nesta comunidade.");
+        return;
+      }
       onError?.(error);
       throw error; // Re-throw para que o componente possa tratar se necessário
     } finally {
@@ -240,6 +253,10 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
       return response.data;
     } catch (error) {
       console.error("Erro ao criar enquete:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para publicar nesta comunidade.");
+        return;
+      }
       onError?.(error);
       throw error;
     } finally {
@@ -288,6 +305,10 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
       return response.data;
     } catch (error) {
       console.error("Erro ao criar reclamação:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast.error("Você não tem permissão para publicar nesta comunidade.");
+        return;
+      }
       onError?.(error);
       throw error;
     } finally {
@@ -295,6 +316,58 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
     }
   };
 
+
+  // Curtir comentário
+  const likeComment = async (communityId: string, commentId: string) => {
+    setIsLoading(true);
+    try {
+      const token = getTokenFromCookies();
+      if (!token) throw new Error("Token não encontrado nos cookies");
+      const response = await axios.post(
+        `${API_URL}/comments/${communityId}/comment/${commentId}/like`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      onSuccess?.(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao curtir comentário:", error);
+      onError?.(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Descurtir comentário
+  const unlikeComment = async (communityId: string, commentId: string) => {
+    setIsLoading(true);
+    try {
+      const token = getTokenFromCookies();
+      if (!token) throw new Error("Token não encontrado nos cookies");
+      const response = await axios.post(
+        `${API_URL}/comments/${communityId}/comment/${commentId}/unlike`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      onSuccess?.(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao descurtir comentário:", error);
+      onError?.(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
     isLoading,
@@ -411,8 +484,6 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
       // Placeholder: implementar quando rota existir no backend
       alert("Funcionalidade de compartilhamento ainda não implementada no backend.");
     },
-
-    // Listar comentários de um post
     listComments: async (communityId: string, postId: string) => {
       setIsLoading(true);
       try {
@@ -424,6 +495,7 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
             headers: {
               Authorization: `Bearer ${token}`,
             },
+            // Removido o filtro por status 'reported' para buscar todos os comentários ativos
           }
         );
         onSuccess?.(response.data);
@@ -436,8 +508,6 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
         setIsLoading(false);
       }
     },
-
-    // Responder a um comentário (comentário filho)
     replyComment: async (communityId: string, postId: string, parentCommentId: string, content: string) => {
       setIsLoading(true);
       try {
@@ -472,6 +542,8 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
         setIsLoading(false);
       }
     },
+    likeComment,
+    unlikeComment,
   };
 };
 

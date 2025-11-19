@@ -14,6 +14,7 @@ def test_get_community_by_id_route(authenticate_client, community_on_db):
     assert response_data['name'] == community_on_db.name
     assert response_data['description'] == community_on_db.description
     assert response_data['type_community'] == community_on_db.type_community
+    assert response_data['image_url'] == community_on_db.image_url
 
 
 @pytest.mark.integration
@@ -51,6 +52,7 @@ def test_update_community_route(
         == 'This is an updated description for the community'
     )
     assert response_data['type_community'] == community_on_db.type_community
+    assert response_data['image_url'] == 'https://example.com/updated-image.jpg'
 
 
 @pytest.mark.integration
@@ -108,6 +110,7 @@ def test_list_user_communities_route(
     assert len(response_data['items']) > 0
     assert response_data['items'][0]['id'] == str(community_on_db.id)
     assert response_data['items'][0]['name'] == community_on_db.name
+    assert response_data['items'][0]['image_url'] == community_on_db.image_url
 
 
 @pytest.mark.integration

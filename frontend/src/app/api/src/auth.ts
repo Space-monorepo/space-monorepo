@@ -29,20 +29,20 @@ export const registerUser = async (data: {
   profile_image_url?: string;
 }) => {
   try {
-    const response = await axios.post(`${API_URL}/users/signup`, {
+    // Derive a username from the email (part before @), fallback to name without spaces
+    const rawUsername = data.email ? data.email.split('@')[0] : data.name.replace(/\s+/g, '').toLowerCase();
+    const username = rawUsername.slice(0, 50);
+
+    // Send only the fields expected by the backend's `UserCreate` schema
+    const payload = {
+      username,
       name: data.name,
       email: data.email,
       hashed_password: data.password,
       profile_image_url: data.profile_image_url || null,
-      reputation_level: 0,
-      badges: [],
-      communities: [],
-      saved_posts: [],
-      connections: [],
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    } as const;
+
+    const response = await axios.post(`${API_URL}/users/signup`, payload);
     return response.data;
   } catch (err: unknown) {
     if (axios.isAxiosError(err)) {

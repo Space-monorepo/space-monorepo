@@ -47,7 +47,7 @@ export const importUsersToCommunitya = async (
   emails: string[]
 ): Promise<CommunityMemberResponse[]> => {
   console.log("Importing users to community:", { communityId, emails });
-  
+
   const response = await fetch(`${API_URL}/admin/${communityId}/users/add-users`, {
     method: 'POST',
     headers: {
@@ -60,8 +60,8 @@ export const importUsersToCommunitya = async (
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ 
-      message: 'Erro ao importar usuários' 
+    const errorData = await response.json().catch(() => ({
+      message: 'Erro ao importar usuários'
     }));
     throw new Error(errorData.message || 'Erro ao importar usuários');
   }
@@ -80,14 +80,14 @@ export const listAllMembersFromCommunity = async (
   }
 ): Promise<PaginationResponse<CommunityMemberResponse>> => {
   console.log("Listing community members:", { communityId, params });
-  
+
   const searchParams = new URLSearchParams();
   if (params?.offset) searchParams.append('offset', params.offset.toString());
   if (params?.limit) searchParams.append('limit', params.limit.toString());
   if (params?.name) searchParams.append('name', params.name);
 
   const url = `${API_URL}/admin/${communityId}/users/list-all${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
-  
+
   const response = await fetch(url, {
     method: 'GET',
     headers: {
@@ -97,8 +97,8 @@ export const listAllMembersFromCommunity = async (
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ 
-      message: 'Erro ao listar membros' 
+    const errorData = await response.json().catch(() => ({
+      message: 'Erro ao listar membros'
     }));
     throw new Error(errorData.message || 'Erro ao listar membros');
   }
@@ -115,8 +115,8 @@ export const updateMemberRole = async (
   newRole: 'admin' | 'moderator' | 'member'
 ): Promise<CommunityMemberResponse> => {
   console.log("Updating member role:", { communityId, id, memberId, newRole });
-  
-  const response = await fetch(`${API_URL}/admin/${communityId}/users/${id}/update-role`, {
+
+  const response = await fetch(`${API_URL}/admin/${communityId}/users/${memberId}/update-role`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -128,8 +128,8 @@ export const updateMemberRole = async (
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ 
-      message: 'Erro ao atualizar role do membro' 
+    const errorData = await response.json().catch(() => ({
+      message: 'Erro ao atualizar role do membro'
     }));
     throw new Error(errorData.message || 'Erro ao atualizar role do membro');
   }
@@ -144,7 +144,7 @@ export const removeMemberFromCommunity = async (
   memberId: string
 ): Promise<void> => {
   console.log("Removing member from community:", { communityId, memberId });
-  
+
   const response = await fetch(`${API_URL}/admin/${communityId}/users/${memberId}/remove`, {
     method: 'DELETE',
     headers: {
@@ -154,8 +154,8 @@ export const removeMemberFromCommunity = async (
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ 
-      message: 'Erro ao remover membro' 
+    const errorData = await response.json().catch(() => ({
+      message: 'Erro ao remover membro'
     }));
     throw new Error(errorData.message || 'Erro ao remover membro');
   }

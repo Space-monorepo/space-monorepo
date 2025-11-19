@@ -16,7 +16,9 @@ export default function LoginForm({ onSubmit }: { onSubmit: (data: LoginFormData
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <form className="flex flex-col gap-6 items-start w-full" onSubmit={handleSubmit(onSubmit)}>
+    <form className="flex flex-col gap-6 items-start w-full" onSubmit={handleSubmit(onSubmit)} autoComplete="on">
+      {/* Campo oculto para ajudar o navegador a identificar login */}
+      <input type="text" name="username" autoComplete="username" style={{ display: 'none' }} tabIndex={-1} />
       <div className="flex flex-col items-start w-full">
         <div className="box-border flex gap-2.5 items-center px-4 py-2 w-full bg-zinc-100">
           <input
@@ -46,7 +48,7 @@ export default function LoginForm({ onSubmit }: { onSubmit: (data: LoginFormData
           <button
             type="button"
             tabIndex={-1}
-            className="ml-2 text-xs text-zinc-600 hover:text-zinc-900 focus:outline-none"
+            className="ml-2 cursor-pointer text-xs text-zinc-600 hover:text-zinc-900 focus:outline-none"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
             disabled={isSubmitting}
@@ -59,7 +61,7 @@ export default function LoginForm({ onSubmit }: { onSubmit: (data: LoginFormData
       </div>
       <Button
         type="submit"
-        className="box-border mt-20 font-normal flex gap-2.5 items-center px-4 pt-3 pb-4 w-full justify-start bg-neutral-800 hover:bg-neutral-900 transition-colors rounded-none"
+        className="box-border cursor-pointer mt-20 font-normal flex gap-2.5 items-center px-4 pt-3 pb-4 w-full justify-start bg-neutral-800 hover:bg-neutral-900 transition-colors rounded-none"
         disabled={isSubmitting}
       >
         <div className="text-base leading-6 text-gray-200">

@@ -47,6 +47,8 @@ from app.core.database import Base, get_db, get_mongo_db
 from app.core.transaction import TransactionManager
 from app.core.websocket.auth import WebSocketAuth
 from app.core.websocket.auth import websocket_auth as global_websocket_auth
+from app.api.notifications.model import Notification, NotificationTypeEnum
+from app.api.notifications.service import NotificationService
 from app.main import app
 
 
@@ -203,6 +205,7 @@ def community_on_db(session_sql):
         name='Test Community',
         description='Test Description',
         type_community=CommunityTypeEnum.UNIVERSITY,
+        image_url='https://example.com/test-community-image.jpg',
     )
 
     session_sql.add(community)
@@ -842,3 +845,57 @@ def websocket_auth():
     auth._active_sessions.clear()
     auth._started = False
     return auth
+
+@pytest.fixture
+def test_notification(session_sql: Session, user_on_db: User) -> Notification:
+    notification = Notification(
+        user_id=user_on_db.id,
+        type=NotificationTypeEnum.INTERACTION,
+        read=False,
+        data={
+            "interaction_type": "like",
+            "actor_name": "Test Actor",
+            "post_title": "seu post de teste"
+        }
+    )
+    session_sql.add(notification)
+    session_sql.commit()
+    session_sql.refresh(notification)
+    return notification
+
+@pytest.fixture
+def test_notification_campaign(session_sql: Session, user_on_db: User) -> Notification:
+    notification = Notification(
+        user_id=user_on_db.id,
+        type=NotificationTypeEnum.CAMPAIGN,
+        read=False,
+        data={
+            "community_name": "Campanha Teste",
+            "campaign_title": "Participe!"
+        }
+    )
+    session_sql.add(notification)
+    session_sql.commit()
+    session_sql.refresh(notification)
+    return notification
+
+
+@pytest.fixture
+def mock_tm():
+    tm = MagicMock()
+    tm.get_notification_repository.return_value = MagicMock()
+    return tm
+
+@pytest.fixture
+def notification_service(mock_tm: MagicMock) -> NotificationService:
+    return NotificationService(mock_tm)
+
+@pytest.fixture
+def mock_user() -> User:
+    user = User(id=uuid.uuid4(), name="Usuário Receptor")
+    return user
+
+@pytest.fixture
+def mock_actor() -> User:
+    actor = User(id=uuid.uuid4(), name="Usuário Ator")
+    return actor
