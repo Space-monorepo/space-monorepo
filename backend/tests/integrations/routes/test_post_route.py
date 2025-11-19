@@ -382,10 +382,37 @@ def test_vote_poll_change_vote_route(
 
 
 @pytest.mark.integration
-def test_get_user_feed_route(authenticate_client, community_member_on_db, post_on_db):
+def test_get_user_feed_route(authenticate_client, community_member_on_db, approved_campaign_post_on_db):
     response = authenticate_client.get('/posts/feed')
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()['items'][0]['id'] == str(post_on_db.id)
+    assert len(response.json()['items']) > 0
+    assert response.json()['items'][0]['id'] == str(approved_campaign_post_on_db.id)
+
+
+@pytest.mark.integration
+def test_get_user_feed_route_excludes_non_approved_campaigns(
+    authenticate_client, community_member_on_db, campaign_post_on_db, announcement_post_on_db
+):
+    """
+    Testa que o feed do usuário exclui campanhas não aprovadas.
+    
+    Scenario:
+    - Given uma campanha com status PENDING e um post de anúncio
+    - When o usuário busca o feed
+    - Then apenas o post de anúncio deve aparecer, a campanha PENDING não deve aparecer
+    """
+    response = authenticate_client.get('/posts/feed')
+    assert response.status_code == status.HTTP_200_OK
+    
+    items = response.json()['items']
+    # Deve retornar apenas o announcement_post_on_db
+    assert len(items) == 1
+    assert items[0]['id'] == str(announcement_post_on_db.id)
+    assert items[0]['type_post'] == PostTypeEnum.ANNOUNCEMENT
+    
+    # Verificar que a campanha PENDING não está no feed
+    campaign_ids = [item['id'] for item in items if item['type_post'] == PostTypeEnum.CAMPAIGN]
+    assert str(campaign_post_on_db.post_id) not in campaign_ids
 
 
 @pytest.mark.integration

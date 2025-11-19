@@ -362,6 +362,44 @@ def campaign_participants_on_db(
 
 
 @pytest.fixture
+def approved_campaign_post_on_db(session_sql, community_on_db, user_on_db, community_member_on_db):
+    """
+    Cria um post do tipo CAMPAIGN com status APPROVED.
+    Útil para testes que precisam verificar campanhas aprovadas no feed.
+    """
+    # Criar post de campanha
+    post = Post(
+        community_id=community_on_db.id,
+        user_id=user_on_db.id,
+        user_role_in_community=community_member_on_db.role,
+        type_post=PostTypeEnum.CAMPAIGN,
+        title='Approved Campaign Post',
+        content='Test Approved Campaign Content',
+        image_url=None,
+    )
+    
+    session_sql.add(post)
+    session_sql.flush()
+    session_sql.refresh(post)
+    
+    # Criar registro de campanha com status APPROVED
+    campaign_post = CampaignPost(
+        post_id=post.id,
+        target_participants=100,
+        current_participants=0,
+        status_campaign=CampaignStatusEnum.APPROVED,
+    )
+    
+    session_sql.add(campaign_post)
+    session_sql.flush()
+    session_sql.refresh(campaign_post)
+    
+    # Retornar o post com o campaign_post como atributo
+    post.campaign = campaign_post
+    return post
+
+
+@pytest.fixture
 def complaint_post_on_db(session_sql, post_on_db):
     complaint_post = ComplaintPost(
         post_id=post_on_db.id,
