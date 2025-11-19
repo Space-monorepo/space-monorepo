@@ -21,6 +21,7 @@ from app.api.post.repository import (
     PostRepository,
     PollVotesRepository,
 )
+from app.api.notifications.repository import NotificationRepository
 from app.api.rating.repository import RatingRepository
 from app.api.reports.repository import (
     ModerationVotesRepository,
@@ -141,3 +142,6 @@ class TransactionManager:
     
     def get_poll_votes_repository(self):
         return PollVotesRepository(self._session)
+    
+    def get_notification_repository(self) -> NotificationRepository:
+        return NotificationRepository(self._session)

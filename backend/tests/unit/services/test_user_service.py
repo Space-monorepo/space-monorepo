@@ -267,7 +267,7 @@ def test_request_connection_service_success():
 
     service = UserService(mock_tm)
     service.connection_repo = mock_connection_repo
-    service.get_user = Mock(side_effect=[fake_requester, fake_addressee])
+    service.get_user = Mock(side_effect=lambda uid: fake_requester if str(uid) == str(fake_requester_id) else fake_addressee)
 
     # Act
     result = service.request_connection(fake_requester_id, fake_addressee_id)
@@ -343,7 +343,7 @@ def test_request_connection_service_already_exists_error():
 
     service = UserService(mock_tm)
     service.connection_repo = mock_connection_repo
-    service.get_user = Mock(side_effect=[fake_requester, fake_addressee])
+    service.get_user = Mock(side_effect=lambda uid: fake_requester if str(uid) == str(fake_requester_id) else fake_addressee)
 
     # Act & Assert
     with pytest.raises(ConnectionAlreadyExistsError) as exc_info:
@@ -377,7 +377,7 @@ def test_request_connection_service_cooldown_error():
 
     service = UserService(mock_tm)
     service.connection_repo = mock_connection_repo
-    service.get_user = Mock(side_effect=[fake_requester, fake_addressee])
+    service.get_user = Mock(side_effect=lambda uid: fake_requester if str(uid) == str(fake_requester_id) else fake_addressee)
 
     # Act & Assert
     with pytest.raises(ConnectionCooldownError) as exc_info:

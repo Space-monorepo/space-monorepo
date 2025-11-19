@@ -13,6 +13,7 @@ from app.api.chat.websocket.routes import router as chat_websocket_router
 from app.api.comment.routes import router as comment_router
 from app.api.communities.routes import router as communities_router
 from app.api.moderation.routes import router as moderation_router
+from app.api.notifications.routes import router as notifications_router
 from app.api.post.routes import router as post_router
 from app.api.rating.routes import router as rating_router
 from app.api.reports.routes import router as reports_router
@@ -50,6 +51,7 @@ routes = [
     rating_router,
     search_router,
     reputation_router,
+    notifications_router,
 ]
 
 for route in routes:
