@@ -1,6 +1,8 @@
+import logging
 from uuid import UUID
 
 from app.api.communities.schema import CommunityResponse
+from app.api.notifications.service import NotificationService
 from app.api.users.exceptions import (
     ConnectionAlreadyExistsError,
     ConnectionCooldownError,
@@ -94,6 +96,11 @@ class UserService:
         _ = self.get_user(requester_id)  # Validate user exists
         _ = self.get_user(addressee_id)  # Validate user exists
 
+        addressee_user = self.get_user(addressee_id)  # noqa: F841
+
+        actor = self.get_user(requester_id)
+        recipient = self.get_user(addressee_id)
+
         if str(requester_id) == str(addressee_id):
             raise SelfConnectionError('Cannot send connection request to yourself')
 
@@ -111,9 +118,22 @@ class UserService:
             )
 
         try:
-            return self.connection_repo.create_connection_request(
+            new_connection = self.connection_repo.create_connection_request(
                 requester_id, addressee_id
             )
+            try:
+                notification_service = NotificationService(self.tm)
+                if recipient and actor and recipient.id != actor.id:
+                    notification_service.create_connection_notification(
+                        recipient=recipient,
+                        actor=actor,
+                        connection_type='request_received',
+                    )
+            except Exception as e:
+                logging.warning(f'Falha ao criar notificação de pedido de conexão: {e}')
+
+            return new_connection
+
         except Exception as e:
             raise UnexpectedConnectionError(
                 'Unexpected error creating connection request'
@@ -127,6 +147,20 @@ class UserService:
                 raise ConnectionNotFoundError(
                     'Connection not found or you are not authorized to accept this request'
                 )
+            try:
+                notification_service = NotificationService(self.tm)
+                actor = self.user_repo.get_by_id(user_id)
+                recipient = self.user_repo.get_by_id(connection.requester_id)
+
+                if recipient and actor and recipient.id != actor.id:
+                    notification_service.create_connection_notification(
+                        recipient=recipient,
+                        actor=actor,
+                        connection_type='request_accepted',
+                    )
+            except Exception as e:
+                logging.warning(f'Falha ao criar notificação de aceite de conexão: {e}')
+
             return connection
         except ConnectionNotFoundError:
             raise
