@@ -91,18 +91,8 @@ class PostRepository(BaseRepository[Post]):
             .subquery()
         )
 
-        query = (
-            self.session.query(Post)
-            .outerjoin(CampaignPost, Post.id == CampaignPost.post_id)
-            .filter(Post.community_id.in_(select(subscribed_community_ids)))
-        )
-
-        query = query.filter(
-            (Post.type_post != 'campaign')
-            | (
-                (Post.type_post == 'campaign')
-                & (CampaignPost.status_campaign == 'approved')
-            )
+        query = self.session.query(Post).filter(
+            Post.community_id.in_(select(subscribed_community_ids))
         )
 
         if params.name:
