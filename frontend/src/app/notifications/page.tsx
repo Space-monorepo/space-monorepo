@@ -14,6 +14,7 @@ import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import { translateUserRole } from "@/lib/roleTranslations";
 import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { getRelativeTime } from "@/lib/relativeTime";
+import { API_URL } from "@/config";
 import {
   PendenteBadge,
   EmAnaliseBadge,
@@ -516,82 +517,160 @@ export default function NotificacoesPage() {
     }
   }
 
-  // Usar conexões reais do backend ou mock se vazio
-  let connections = notifications.connections || [];
-  if (connections.length === 0) {
-    connections = [
-      {
-        id: 'mock-1',
-        type: 'connections',
-        title: 'Convite para se conectar com João Silva',
-        connection_status: 'pending',
-        date: new Date().toLocaleDateString('pt-BR'),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        author: { id: 'user-1', name: 'João Silva', username: 'joaosilva', profile_picture: '/ProfilePic1.svg', role: 'member' },
-        community: { id: 'comm-1', name: 'Space Devs' }
-      },
-      {
-        id: 'mock-2',
-        type: 'connections',
-        title: 'Conexão aceita com Maria Oliveira',
-        connection_status: 'accepted',
-        date: new Date().toLocaleDateString('pt-BR'),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        author: { id: 'user-2', name: 'Maria Oliveira', username: 'mariaoliveira', profile_picture: '/ProfilePic2.svg', role: 'member' },
-        community: { id: 'comm-2', name: 'Space Writers' }
-      }
-    ];
-  }
-  const pendingCount = connections.filter(conn => conn.connection_status === 'pending').length;
+  // Estado para controlar conexões que foram processadas localmente
+  const [processedConnections, setProcessedConnections] = useState<Record<string, 'accepted' | 'rejected'>>({})
 
-  // Usar interações reais do backend ou mock se vazio
-  let interactions = notifications.interactions || [];
-  if (interactions.length === 0) {
-    interactions = [
-      {
-        id: 'mock-int-1',
-        type: 'interactions',
-        title: 'Comentário em sua publicação',
-        interaction_type: 'comment',
-        date: new Date().toLocaleDateString('pt-BR'),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        author: { id: 'user-3', name: 'Carlos Souza', username: 'carlossouza', profile_picture: '/ProfilePic1.svg', role: 'member' },
-        community: { id: 'comm-1', name: 'Space Devs' }
-      },
-      {
-        id: 'mock-int-2',
-        type: 'interactions',
-        title: 'Nova curtida recebida',
-        interaction_type: 'like',
-        date: new Date().toLocaleDateString('pt-BR'),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        author: { id: 'user-4', name: 'Ana Paula', username: 'anapaula', profile_picture: '/ProfilePic2.svg', role: 'member' },
-        community: { id: 'comm-2', name: 'Space Writers' }
-      }
-    ];
-  }
-  const interactionsCount = interactions.length;
+  // Usar conexões reais do backend
+  const connections = notifications.connections || [];
 
-  // Funções para aceitar/rejeitar conexão usando API (exemplo básico)
-  const handleConnect = async (id: string) => {
+  // Filtrar apenas conexões pendentes onde o usuário atual pode aceitar/rejeitar
+  const pendingConnections = connections.filter(conn => conn.connection_status === 'pending');
+  const pendingCount = pendingConnections.length;
+
+  // Usar interações reais do backend
+  const interactions = notifications.interactions || [];
+  const interactionsCount = interactions.length;  // Funções para aceitar/rejeitar conexão usando API real
+  const handleConnect = async (connection: any) => {
     try {
-      await fetch(`/api/users/connections/${id}/accept`, { method: 'PUT' });
-      // Ideal: atualizar lista de conexões após sucesso
+      console.log('Tentando conectar com:', connection);
+
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('token='))
+        ?.split('=')[1];
+
+      if (!token) {
+        toast.error('Você precisa estar logado para aceitar conexões');
+        return;
+      }
+
+      // Primeiro, verificar o status atual da conexão
+      console.log('Buscando status da conexão para actor_id:', connection.author.id);
+      const statusResponse = await fetch(`${API_URL}/users/connections/status/${connection.author.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Status response:', statusResponse.status);
+
+      if (!statusResponse.ok) {
+        const errorData = await statusResponse.text();
+        console.error('Erro na busca de status:', errorData);
+        throw new Error('Erro ao buscar status da conexão');
+      }
+
+      const connectionData = await statusResponse.json();
+      console.log('Connection data recebida:', connectionData);
+
+      if (!connectionData || !connectionData.id) {
+        throw new Error('Conexão não encontrada');
+      }
+
+      // Verificar se a conexão ainda está pendente
+      if (connectionData.status !== 'pending') {
+        toast.info(`Esta conexão já foi ${connectionData.status === 'accepted' ? 'aceita' : 'rejeitada'}.`);
+        return;
+      }
+
+      // Agora aceitar usando o connection_id correto
+      console.log('Tentando aceitar connection_id:', connectionData.id);
+      const response = await fetch(`${API_URL}/users/connections/${connectionData.id}/accept`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Accept response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Erro ao aceitar:', errorData);
+        throw new Error(errorData.message || 'Erro ao aceitar conexão');
+      }
+
+      toast.success('Conexão aceita com sucesso!');
+
+      // Atualizar estado local para mostrar status "aceito" imediatamente
+      setProcessedConnections(prev => ({ ...prev, [connection.id]: 'accepted' }));
+
+      // Opcional: recarregar após um delay para mostrar o feedback visual
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (e) {
       console.error('Erro ao aceitar conexão', e);
+      toast.error(e instanceof Error ? e.message : 'Erro ao aceitar conexão. Tente novamente.');
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleReject = async (connection: any) => {
     try {
-      await fetch(`/api/users/connections/${id}/reject`, { method: 'PUT' });
-      // Ideal: atualizar lista de conexões após sucesso
+      const token = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('token='))
+        ?.split('=')[1];
+
+      if (!token) {
+        toast.error('Você precisa estar logado para rejeitar conexões');
+        return;
+      }
+
+      // Primeiro, verificar o status atual da conexão
+      const statusResponse = await fetch(`${API_URL}/users/connections/status/${connection.author.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!statusResponse.ok) {
+        throw new Error('Erro ao buscar status da conexão');
+      }
+
+      const connectionData = await statusResponse.json();
+
+      if (!connectionData || !connectionData.id) {
+        throw new Error('Conexão não encontrada');
+      }
+
+      // Verificar se a conexão ainda está pendente
+      if (connectionData.status !== 'pending') {
+        toast.info(`Esta conexão já foi ${connectionData.status === 'accepted' ? 'aceita' : 'rejeitada'}.`);
+        return;
+      }
+
+      // Agora rejeitar usando o connection_id correto
+      const response = await fetch(`${API_URL}/users/connections/${connectionData.id}/reject`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao rejeitar conexão');
+      }
+
+      toast.info('Conexão rejeitada');
+
+      // Atualizar estado local para mostrar status "rejeitado" imediatamente
+      setProcessedConnections(prev => ({ ...prev, [connection.id]: 'rejected' }));
+
+      // Opcional: recarregar após um delay para mostrar o feedback visual
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (e) {
       console.error('Erro ao rejeitar conexão', e);
+      toast.error(e instanceof Error ? e.message : 'Erro ao rejeitar conexão. Tente novamente.');
     }
   };
 
@@ -1153,25 +1232,50 @@ export default function NotificacoesPage() {
                             <p className="flex-1 shrink text-base text-black basis-8 max-md:max-w-full">
                               {connection.title}
                             </p>
-                            {connection.connection_status === 'pending' && (
-                              <>
-                                <button
-                                  onClick={() => handleConnect(connection.id)}
-                                  className="flex gap-8 items-center px-4 py-2 text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100 hover:bg-neutral-700 transition-colors"
-                                >
-                                  <span className="self-stretch my-auto text-zinc-100">
-                                    Conectar-se
-                                  </span>
-                                </button>
-                                <button
-                                  onClick={() => handleReject(connection.id)}
-                                  className="flex gap-8 items-center px-4 py-3 w-12 bg-neutral-200 hover:bg-neutral-300 transition-colors"
-                                  aria-label="Rejeitar conexão"
-                                >
-                                  <Close className="object-contain self-stretch my-auto w-4 aspect-square" aria-label="Fechar" />
-                                </button>
-                              </>
-                            )}
+
+                            {/* Status badge */}
+                            <div className="flex items-center gap-2">
+                              {/* Verificar se foi processado localmente primeiro */}
+                              {processedConnections[connection.id] === 'accepted' ? (
+                                <div className="flex gap-2 items-center px-4 py-2 text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100">
+                                  <CheckmarkFilled className="w-4 h-4" />
+                                  <span className="self-stretch my-auto text-zinc-100">Aceito</span>
+                                </div>
+                              ) : processedConnections[connection.id] === 'rejected' ? (
+                                <div className="flex gap-2 items-center px-4 py-2 text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100">
+                                  <Close className="w-4 h-4" />
+                                  <span className="self-stretch my-auto text-zinc-100">Rejeitado</span>
+                                </div>
+                              ) : connection.connection_status === 'pending' ? (
+                                <>
+                                  <button
+                                    onClick={() => handleConnect(connection)}
+                                    className="flex gap-8 items-center px-4 py-2 text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100 hover:bg-neutral-700 transition-colors"
+                                  >
+                                    <span className="self-stretch my-auto text-zinc-100">
+                                      Conectar-se
+                                    </span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleReject(connection)}
+                                    className="flex gap-8 items-center px-4 py-3 w-12 bg-neutral-200 hover:bg-neutral-300 transition-colors"
+                                    aria-label="Rejeitar conexão"
+                                  >
+                                    <Close className="object-contain self-stretch my-auto w-4 aspect-square" aria-label="Fechar" />
+                                  </button>
+                                </>
+                              ) : connection.connection_status === 'accepted' ? (
+                                <div className="flex gap-2 items-center px-4 py-2 text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100">
+                                  <CheckmarkFilled className="w-4 h-4" />
+                                  <span className="self-stretch my-auto text-zinc-100">Aceito</span>
+                                </div>
+                              ) : connection.connection_status === 'rejected' ? (
+                                <div className="flex gap-2 items-center px-4 py-2 text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100">
+                                  <Close className="w-4 h-4" />
+                                  <span className="self-stretch my-auto text-zinc-100">Rejeitado</span>
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
                           <p className="mt-1 text-xs leading-loose text-neutral-600 max-md:max-w-full">
                             @{connection.author?.username}
