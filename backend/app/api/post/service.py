@@ -1,7 +1,9 @@
+import logging
 from uuid import UUID
 
 from app.api.communities.schema import CommunityMemberResponse
 from app.api.communities.service import CommunityService
+from app.api.notifications.service import NotificationService
 from app.api.post.exceptions import (
     ComplaintNotFoundError,
     PollOptionNotFoundError,
@@ -237,6 +239,22 @@ class PostService:
         try:
             self.post_likes_repo.save(PostLikes(post_id=post_id, member_id=member_id))
             post = self.post_repo.save(post)
+
+            try:
+                notification_service = NotificationService(self.tm)
+                recipient = post.user
+
+                actor = self.community_service.get_member(member_id)
+
+                if recipient and actor and recipient.id != actor.id:
+                    notification_service.create_interaction_notification(
+                        recipient=recipient,
+                        actor=actor,
+                        interaction_type='like',
+                        post_title=post.title or 'sua publicação',
+                    )
+            except Exception as e:
+                logging.warning(f'Falha ao criar notificação de like: {e}')
 
             author_post = self.community_service.get_member_association(
                 post.user_id, post.community_id

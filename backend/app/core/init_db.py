@@ -23,6 +23,7 @@ from app.api.reports.model import (
     ReportComment,
     ModerationVotes,
 )
+from app.api.notifications.model import Notification
 
 
 Base.metadata.create_all(bind=engine)
