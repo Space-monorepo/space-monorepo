@@ -253,28 +253,64 @@ export default function CommunityAdminPage({
     };
   };
 
-  const convertPostToReport = (post: PostResponse): Report => ({
-    id: parseInt(post.id) || 0,
-    title: post.title,
-    reporter: post.user.name,
-    user: {
-      id: post.user.id,
-      name: post.user.name,
-      profile_picture: post.user.profile_picture,
-      role: post.user.role,
-    },
-    reported: "Usuário Denunciado", // Placeholder - ajustar conforme API
-    date: new Date(post.created_at).toLocaleDateString("pt-BR"),
-    status: post.status === "active" ? "Em análise" : "Resolvido",
-    description: post.content,
-    category: "Comportamento", // Placeholder - ajustar conforme API
-    severity: "Moderada" as const, // Placeholder - ajustar conforme API
-    confirmations: post.report_count || 0,
-    image: post.image_url || undefined,
-    likes: post.likes_count || 0,
-    comments: post.comments_count || 0,
-    accesses: 0,
-  });
+  const convertPostToReport = (post: PostResponse, index: number): Report => {
+    // Mapear level_complaint do backend (low, medium, high) para o frontend (Leve, Moderada, Crítica)
+    const mapSeverity = (level?: string): "Crítica" | "Moderada" | "Leve" => {
+      if (!level) return "Leve";
+      switch (level.toLowerCase()) {
+        case "high":
+        case "critical":
+          return "Crítica";
+        case "medium":
+        case "moderate":
+          return "Moderada";
+        case "low":
+        default:
+          return "Leve";
+      }
+    };
+
+    // Mapear status_complaint do backend para o frontend
+    const mapComplaintStatus = (statusComplaint?: string): "Em análise" | "Resolvido" | "Arquivado" => {
+      if (!statusComplaint) return "Em análise";
+      switch (statusComplaint.toLowerCase()) {
+        case "resolved":
+        case "completed":
+          return "Resolvido";
+        case "archived":
+        case "dismissed":
+          return "Arquivado";
+        case "under_analysis":
+        case "active":
+        case "pending":
+        default:
+          return "Em análise";
+      }
+    };
+
+    return {
+      id: parseInt(post.id) || index,
+      title: post.title,
+      reporter: post.user.name,
+      user: {
+        id: post.user.id,
+        name: post.user.name,
+        profile_picture: post.user.profile_picture,
+        role: post.user.role,
+      },
+      reported: "Usuário Denunciado", // Placeholder - ajustar conforme API
+      date: new Date(post.created_at).toLocaleDateString("pt-BR"),
+      status: mapComplaintStatus(post.status_complaint),
+      description: post.content,
+      category: "Comportamento", // Placeholder - ajustar conforme API
+      severity: mapSeverity(post.level_complaint),
+      confirmations: post.report_count || 0,
+      image: post.image_url || undefined,
+      likes: post.likes_count || 0,
+      comments: post.comments_count || 0,
+      accesses: 0,
+    };
+  };
 
   const convertPostToAnnouncement = (post: PostResponse): Announcement => ({
     id: parseInt(post.id) || 0,
@@ -296,7 +332,7 @@ export default function CommunityAdminPage({
   });
   // Converter dados da API para o formato esperado pelos componentes
   const campaigns: Campaign[] = apiCampaigns.map(convertPostToCampaign);
-  const reports: Report[] = apiReports.map(convertPostToReport);
+  const reports: Report[] = apiReports.map((post, index) => convertPostToReport(post, index));
   const announcements: Announcement[] = apiAnnouncements.map(
     convertPostToAnnouncement
   );
@@ -892,7 +928,7 @@ export default function CommunityAdminPage({
             </div>
           )}
           {/* Right Section - Details */}
-          <div className="flex-1 bg-gray-100 px-6 py-8 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
+          <div className="flex-1 bg-gray-100 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             {/* Loading State for Details */}
             {postsLoading && activeTab !== "Usuários" && activeTab !== "Comunidade" && (
               <div className="bg-white p-6 text-center">
