@@ -1932,19 +1932,30 @@ export default function ModerationPage() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="mt-6 w-full text-sm leading-6 max-md:max-w-full">
-                                                    <div className="flex flex-wrap gap-4 items-center w-full text-neutral-800 max-md:max-w-full">
-                                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
-                                                            Motivo:
+                                                <div className="flex flex-col mt-6 w-full max-md:max-w-full">
+                                                    <div className="flex gap-2 items-center self-start whitespace-nowrap">
+                                                        <span className="self-stretch my-auto text-sm font-semibold leading-none text-neutral-800">
+                                                            Nível:
                                                         </span>
-                                                        <span className="self-stretch my-auto text-neutral-800">
-                                                            {selectedReport.category}
-                                                        </span>
+                                                        <div className="flex gap-2.5 items-start self-stretch my-auto">
+                                                            {getSeverityBadge(selectedReport.severity)}
+                                                        </div>
                                                     </div>
-                                                    <div className="mt-2 w-full max-md:max-w-full">
-                                                        <span className="self-stretch my-auto text-neutral-800 leading-6">
-                                                            {selectedReport.description || "Investigar denúncia"}
-                                                        </span>
+                                                    <div className="flex flex-wrap gap-4 items-center mt-2 w-full text-sm text-neutral-800 max-md:max-w-full">
+                                                        <h2 className="self-stretch my-auto font-semibold leading-6 text-neutral-800">
+                                                            Título:
+                                                        </h2>
+                                                        <p className="self-stretch my-auto leading-8 text-neutral-800">
+                                                            {selectedReport.title}
+                                                        </p>
+                                                    </div>
+                                                    <div className="mt-2 w-full text-sm text-neutral-800 max-md:max-w-full">
+                                                        <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                                                            Descrição:
+                                                        </h3>
+                                                        <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                                                            {selectedReport.description || "Descrição não disponível."}
+                                                        </p>
                                                     </div>
                                                     <img
                                                         src={selectedReport.image || "/publication-image.jpg"}
@@ -1958,42 +1969,64 @@ export default function ModerationPage() {
                                         <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                                             <div className="w-full leading-none max-md:max-w-full">
                                                 <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                                                    <div className="flex flex-col">
+                                                    <div className="flex flex-col items-start">
                                                         <div className="flex gap-2 items-center">
                                                             <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                                Número de reportes:
-                                                            </span>
-                                                            <span className="self-stretch my-auto text-neutral-500">
-                                                                {selectedReport.confirmations} reportes
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex gap-2 items-center self-start mt-4">
-                                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                                Data de entrada:
+                                                                Data publicada:
                                                             </span>
                                                             <span className="self-stretch my-auto text-neutral-500">
                                                                 {selectedReport.date}
                                                             </span>
                                                         </div>
-                                                    </div>
-                                                    <div className="flex flex-col grow shrink w-[182px]">
-                                                        <div className="flex gap-2 items-center self-start">
+                                                        <div className="flex gap-2 items-center self-stretch mt-4">
                                                             <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                                Status:
+                                                                Número de acessos:
                                                             </span>
                                                             <span className="self-stretch my-auto text-neutral-500">
-                                                                {selectedReport.status}
+                                                                {selectedReport.accesses || 0} acessos
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex gap-2 items-center mt-4">
+                                                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                                Confirmações:
+                                                            </span>
+                                                            <span className="self-stretch my-auto text-neutral-500">
+                                                                {selectedReport.confirmations} pessoas
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col w-[198px]">
+                                                        <div className="flex gap-2 items-center self-start">
+                                                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                                Curtidas:
+                                                            </span>
+                                                            <span className="self-stretch my-auto text-neutral-500">
+                                                                {selectedReport.likes || 0} curtidas
                                                             </span>
                                                         </div>
                                                         <div className="flex gap-2 items-center mt-4 w-full">
                                                             <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                                Popularidade:
+                                                                Comentários:
                                                             </span>
                                                             <span className="self-stretch my-auto text-neutral-500">
-                                                                {selectedReport.accesses || 0} visualizações
+                                                                {selectedReport.comments || 0} comentários
                                                             </span>
                                                         </div>
                                                     </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2 items-center self-start mt-10 text-neutral-800">
+                                                <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
+                                                    Status:
+                                                </span>
+                                                <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-2 my-auto text-xs leading-none rounded-sm bg-zinc-100">
+                                                    <Search
+                                                        className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square text-neutral-800"
+                                                        aria-label="Status"
+                                                    />
+                                                    <span className="self-stretch my-auto text-neutral-800">
+                                                        {selectedReport.status}
+                                                    </span>
                                                 </div>
                                             </div>
 
