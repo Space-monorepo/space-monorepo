@@ -431,24 +431,34 @@ type NotificationType = "Campanhas" | "Avisos oficiais" | "Conexões" | "Intera�
 export default function NotificacoesPage() {
   // Função para mapear status da API para status do frontend
   const mapApiStatusToFrontendStatus = (apiStatus: string): "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada" => {
-    switch (apiStatus.toLowerCase()) {
+    const s = (apiStatus || '').toLowerCase();
+    switch (s) {
+      // Pendência inicial
+      case 'pending':
+        return "Pendente";
+      // Backend usa 'under_analysis' para campanha em análise
+      case 'under_analysis':
+      // Algumas rotas antigas podem usar 'active' como estado de revisão
       case 'active':
         return "Em análise";
+      // Aprovação / reprovação explícita
       case 'approved':
         return "Aprovado";
       case 'rejected':
         return "Rejeitado";
-      case 'pending':
-        return "Pendente";
+      // Em execução
       case 'in_progress':
         return "Em progresso";
+      // Cancelado (aceita ambas grafias vindas de fontes externas)
+      case 'canceled':
       case 'cancelled':
         return "Cancelada";
-      case 'completed':
+      // Finalizado
       case 'finished':
+      case 'completed':
         return "Finalizada";
       default:
-        return "Em análise";
+        return "Pendente";
     }
   };
 

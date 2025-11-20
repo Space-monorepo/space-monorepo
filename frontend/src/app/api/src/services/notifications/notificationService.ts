@@ -52,8 +52,7 @@ export const fetchCampaigns = async (token: string, communityId: string): Promis
             updated_at: post.updated_at,
             time: `${post.likes_count + post.comments_count}`,
             description: post.content,
-            status: campaign.status_campaign === 'active' ? 'Ativa' :
-                campaign.status_campaign === 'reported' ? 'Em análise' : 'Suspensa',
+            status: campaign.status_campaign,
             stats: {
                 published: new Date(post.created_at).toLocaleDateString('pt-BR'),
                 accesses: 0,
