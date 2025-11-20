@@ -34,6 +34,11 @@ class NotificationService:
             post_title = data.get('post_title', 'sua publicação')
             comment_content = data.get('comment_content', 'um comentário')
             community_name = data.get('community_name', 'uma comunidade')
+
+            campaign_title = data.get('campaign_title', 'Uma campanha')
+            raw_feedback = data.get('feedback_content')
+            feedback_text = f': "{raw_feedback}"' if raw_feedback else '.'
+
             truncated_comment = NotificationService._get_truncated_content(
                 comment_content, NOTIFICATION_CONTENT_TRUNCATE_LENGTH
             )
@@ -45,17 +50,20 @@ class NotificationService:
                     'comment_like': f'{actor_name} curtiu seu comentário: "{truncated_comment}"',
                 },
                 NotificationTypeEnum.CONNECTION: {
-                    'new_member': f'{actor_name} entrou na comunidade {community_name}.',
                     'badge': f'Você recebeu um novo emblema: {data.get("badge_name", "Novo Emblema")}',
-                    'follow_request': f'{actor_name} quer te seguir.',
-                    'follow_accepted': f'{actor_name} aceitou sua solicitação de conexão.',
-                    'request_received': f'{actor_name} quer se conectar com você.',
+                    'request_received': f'{actor_name} enviou um pedido de conexão.',
+                    'request_accepted': f'{actor_name} aceitou seu pedido de conexão.',
                 },
                 NotificationTypeEnum.CAMPAIGN: {
-                    'default': f'Nova campanha em {community_name}: {data.get("campaign_title", "Participe!")}'
+                    'default': f'Nova campanha em {community_name}: {campaign_title}',
+                    'target_reached': f'A campanha "{campaign_title}" atingiu a meta! Agora está em análise.',
+                    'approved': f'Boas notícias! A campanha "{campaign_title}" foi aprovada{feedback_text}',
+                    'rejected': f'A campanha "{campaign_title}" não foi aprovada{feedback_text}',
+                    'in_progress': f'A campanha "{campaign_title}" entrou em progresso.',
+                    'finished': f'A campanha "{campaign_title}" foi finalizada com sucesso!',
                 },
                 NotificationTypeEnum.OFFICIAL_NOTICE: {
-                    'default': f'Aviso do Space: {data.get("notice_title", "Temos novidades")}'
+                    'default': f'Aviso: {data.get("notice_title", "Temos novidades")}'
                 },
             }
 
@@ -65,9 +73,11 @@ class NotificationService:
 
             subtype_key = 'default'
             if notif_type == NotificationTypeEnum.INTERACTION:
-                subtype_key = data.get('interaction_type')
+                subtype_key = data.get('interaction_type', 'default')
             elif notif_type == NotificationTypeEnum.CONNECTION:
-                subtype_key = data.get('connection_type')
+                subtype_key = data.get('connection_type', 'default')
+            elif notif_type == NotificationTypeEnum.CAMPAIGN:
+                subtype_key = data.get('campaign_status_type', 'default')
 
             return type_map.get(subtype_key, 'Você tem uma nova notificação.')
 
@@ -84,16 +94,8 @@ class NotificationService:
         type: NotificationTypeEnum,
         data: Dict[str, Any],
     ) -> Notification:
-        logging.warning(
-            f'!!!!!!!!! TENTANDO CRIAR NOTIFICACAO DO TIPO: {type} PARA O USUARIO: {user_id} !!!!!!!!!'
-        )
-
-        # CORREÇÃO: O model agora espera um str (as_uuid=False)
         notification_data = {'user_id': str(user_id), 'type': type, 'data': data}
-
-        db_notification = self.notification_repo.create(obj_in=notification_data)
-
-        return db_notification
+        return self.notification_repo.create(obj_in=notification_data)
 
     def create_interaction_notification(
         self,
@@ -137,10 +139,6 @@ class NotificationService:
     def get_user_notifications(
         self, *, user: User, notification_type: Optional[NotificationTypeEnum] = None
     ) -> List[schema.NotificationRead]:
-        logging.warning(
-            f'!!!!!!!!! TENTANDO LER NOTIFICACOES PARA O USUARIO: {user.id} !!!!!!!!!'
-        )
-
         db_notifications = self.notification_repo.get_by_user_id(
             user_id=user.id, notification_type=notification_type
         )
@@ -148,7 +146,6 @@ class NotificationService:
         response_notifications = []
         for notif in db_notifications:
             message = self._format_notification_message(notif)
-            # CORREÇÃO: Usar model_validate (ou from_orm) para converter o modelo
             response = schema.NotificationRead.model_validate(notif)
             response.message = message
             response_notifications.append(response)
@@ -164,7 +161,6 @@ class NotificationService:
 
         if db_notification:
             message = self._format_notification_message(db_notification)
-            # CORREÇÃO: Usar model_validate (ou from_orm) para converter o modelo
             response = schema.NotificationRead.model_validate(db_notification)
             response.message = message
             return response
