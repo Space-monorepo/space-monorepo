@@ -42,6 +42,13 @@ def login(
         return token_data
 
 
+@router.get('/user/{user_id}', response_model=UserResponse, status_code=status.HTTP_200_OK)
+def get_user_by_id(user_id: str, session: Session = Depends(get_db)) -> UserResponse:
+    with TransactionManager(session) as tm:
+        user = UserService(tm).get_user(user_id)
+        return UserResponse.model_validate(user)
+
+
 @router.get('/me', response_model=UserResponse, status_code=status.HTTP_200_OK)
 def get_user(
     session: Session = Depends(get_db),
