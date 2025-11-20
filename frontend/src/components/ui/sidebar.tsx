@@ -23,6 +23,9 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
 
   const sidebarPermissions = getSidebarPermissions(user);
 
+  // Verifica se o usuário é admin ou moderador em alguma comunidade
+  const isAdminOrModerator = user?.hasAdminOrModeratorRole === true;
+
   const isOpen = variant === "static" || isHovered;
 
   const handleLogout = () => {
@@ -105,20 +108,25 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
               active={isActive("/messages")}
               isOpen={isOpen}
             />
-            <SidebarItem
-              icon={<Security size={20} />}
-              label="Moderação"
-              href="/moderation"
-              active={isActive("/moderation")}
-              isOpen={isOpen}
-            />
-            <SidebarItem
-              icon={<User size={20} />}
-              label="Administrador"
-              href="/administration"
-              active={isActive("/administration")}
-              isOpen={isOpen}
-            />
+            {/* Só mostra Moderação e Administrador se for admin ou moderador */}
+            {isAdminOrModerator && (
+              <>
+                <SidebarItem
+                  icon={<Security size={20} />}
+                  label="Moderação"
+                  href="/moderation"
+                  active={isActive("/moderation")}
+                  isOpen={isOpen}
+                />
+                <SidebarItem
+                  icon={<User size={20} />}
+                  label="Administrador"
+                  href="/administration"
+                  active={isActive("/administration")}
+                  isOpen={isOpen}
+                />
+              </>
+            )}
           </div>
           <div className="mt-auto">
             <SidebarItem
