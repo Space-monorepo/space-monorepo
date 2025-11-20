@@ -501,7 +501,7 @@ export default function PostList() {
           location: item.community.name,
           type: translatePostType(item.type_post),
           time: getRelativeTime(item.created_at),
-          image: item.image_url || "/publication-image.jpg",
+          image: item.image_url || "",
           likes: item.likes_count,
           comments: item.comments_count,
           shares: item.report_count,

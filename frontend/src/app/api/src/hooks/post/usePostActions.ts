@@ -163,13 +163,11 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
     try {
       const { token, userId } = await getBasePostData();
 
-      if (!data.files || data.files.length === 0) {
-        throw new Error("Uma imagem é obrigatória para a campanha.");
+      // Se houver arquivos, fazer upload e adicionar image_url; caso contrário permitir sem imagem
+      let imageUrl: string | null = null;
+      if (data.files && data.files.length > 0) {
+        imageUrl = await uploadToCloudinary(data.files[0]);
       }
-
-      // 1. Fazer upload do arquivo para obter a image_url
-      //    Usaremos data.files[0] como a imagem da campanha.
-      const imageUrl = await uploadToCloudinary(data.files[0]);
 
       // 2. Preparar o payload JSON para o backend
       const payload: PostCreatePayload = {
@@ -178,7 +176,7 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
         type_post: PostTypeEnum.CAMPAIGN,
         title: data.title,
         content: data.content,
-        image_url: imageUrl, // URL da imagem obtida do upload
+        image_url: imageUrl, // enviar null quando não houver imagem
         status: PostStatusEnum.ACTIVE, // Ou outro status se necessário
       };
 
@@ -227,6 +225,7 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
           type_post: PostTypeEnum.POLL,
           title: data.title,
           content: data.content,
+          image_url: null,
           status: PostStatusEnum.ACTIVE,
         },
         question: data.pollQuestion,
@@ -280,6 +279,7 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
         type_post: PostTypeEnum.COMPLAINT,
         title: data.title,
         content: data.content,
+        image_url: null,
         status: PostStatusEnum.ACTIVE,
       };
 
