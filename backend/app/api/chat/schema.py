@@ -36,6 +36,9 @@ class MessageAttachmentCreate(BaseModel):
         ..., min_length=1, max_length=100, description='The MIME type'
     )
     file_url: str = Field(..., min_length=1, max_length=500, description='The file URL')
+    public_id: str | None = Field(
+        None, max_length=255, description='The Cloudinary public ID'
+    )
     thumbnail_url: str | None = Field(
         None, max_length=500, description='The thumbnail URL'
     )
@@ -55,8 +58,9 @@ class MessageAttachmentResponse(MessageAttachmentCreate):
                 'file_name': 'document.pdf',
                 'file_size': 1024000,
                 'file_type': 'application/pdf',
-                'file_url': 'https://storage.example.com/files/document.pdf',
-                'thumbnail_url': 'https://storage.example.com/thumbnails/document.jpg',
+                'file_url': 'https://res.cloudinary.com/demo/image/upload/v1234567890/chat/images/document.pdf',
+                'public_id': 'chat/images/document',
+                'thumbnail_url': 'https://res.cloudinary.com/demo/image/upload/c_fill,h_300,w_300/v1234567890/chat/images/document.jpg',
                 'created_at': '2021-01-01T00:00:00Z',
             }
         },

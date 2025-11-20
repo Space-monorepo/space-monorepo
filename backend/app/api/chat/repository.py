@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import List, Tuple
 from uuid import UUID
 
@@ -59,7 +59,6 @@ class ConversationRepository(BaseRepository[Conversation]):
 
     def create_conversation(self, user1_id: UUID, user2_id: UUID) -> Conversation:
         """Create a new conversation between two users - uses BaseRepository.save()"""
-        # Ensure consistent ordering (smaller ID first)
         if str(user1_id) < str(user2_id):
             conversation = Conversation(user1_id=str(user1_id), user2_id=str(user2_id))
         else:
@@ -73,7 +72,6 @@ class ConversationRepository(BaseRepository[Conversation]):
         """List conversations for a user with search and pagination - custom query for complex joins"""
         user_id_str = str(user_id)
 
-        # Base query for conversations where user participates
         query = (
             self.session.query(Conversation)
             .options(
@@ -89,7 +87,6 @@ class ConversationRepository(BaseRepository[Conversation]):
             )
         )
 
-        # Search by participant name
         if params.name:
             other_user_alias = self.session.query(User).subquery()
             query = query.join(
@@ -108,7 +105,6 @@ class ConversationRepository(BaseRepository[Conversation]):
 
         total = query.count()
 
-        # Order by last activity (updated_at) descending
         conversations = (
             query.order_by(desc(Conversation.updated_at))
             .offset(params.offset or 0)
@@ -138,7 +134,7 @@ class ConversationRepository(BaseRepository[Conversation]):
                 Conversation.id == conversation_id
             ).update({
                 'last_message_id': str(message_id),
-                'updated_at': datetime.utcnow(),
+                'updated_at': datetime.now(UTC),
             })
             self.session.flush()
 
@@ -195,6 +191,9 @@ class MessageRepository(BaseRepository[Message]):
         self, conversation_id: UUID, params: MessageSearchParams
     ) -> Tuple[List[Message], int]:
         """List messages in a conversation with pagination - custom query for eager loading and reverse pagination"""
+        is_string_column = isinstance(Message.conversation_id.type, String)
+        conv_id = str(conversation_id) if is_string_column else conversation_id
+
         query = (
             self.session.query(Message)
             .options(
@@ -202,10 +201,9 @@ class MessageRepository(BaseRepository[Message]):
                 joinedload(Message.reply_to_message).joinedload(Message.sender),
                 joinedload(Message.attachments),
             )
-            .filter(Message.conversation_id == conversation_id)
+            .filter(Message.conversation_id == conv_id)
         )
 
-        # Support for reverse pagination (before_message_id)
         if params.before_message_id:
             before_message = self.get_by_id(params.before_message_id)
             if before_message:
@@ -213,7 +211,6 @@ class MessageRepository(BaseRepository[Message]):
 
         total = query.count()
 
-        # Order by created_at descending (newest first)
         messages = (
             query.order_by(desc(Message.created_at))
             .offset(params.offset or 0)
@@ -246,7 +243,6 @@ class MessageRepository(BaseRepository[Message]):
         if not message:
             return False
 
-        # Only allow marking as read if user is not the sender
         if str(message.sender_id) == str(user_id):
             return False
 
@@ -263,7 +259,6 @@ class MessageRepository(BaseRepository[Message]):
         """Mark multiple messages as read, returns count of successfully marked messages"""
         user_id_str = str(user_id)
 
-        # Update messages where user is not the sender
         updated_count = (
             self.session.query(Message)
             .filter(
@@ -282,18 +277,45 @@ class MessageRepository(BaseRepository[Message]):
     def count_unread_messages(self, conversation_id: UUID, user_id: UUID) -> int:
         """Count unread messages in a conversation for a specific user"""
         user_id_str = str(user_id)
+        # Handle UUID vs String comparison for test environment
+        is_string_column = isinstance(Message.conversation_id.type, String)
+        conv_id = str(conversation_id) if is_string_column else conversation_id
 
         return (
             self.session.query(Message)
             .filter(
                 and_(
-                    Message.conversation_id == conversation_id,
+                    Message.conversation_id == conv_id,
                     Message.sender_id != user_id_str,
                     Message.is_read.is_(False),
                 )
             )
             .count()
         )
+
+    def get_unread_message_ids(
+        self, conversation_id: UUID, user_id: UUID, up_to_message_id: UUID | None = None
+    ) -> List[UUID]:
+        """Get IDs of unread messages in a conversation for a specific user"""
+        user_id_str = str(user_id)
+        # Handle UUID vs String comparison for test environment
+        is_string_column = isinstance(Message.conversation_id.type, String)
+        conv_id = str(conversation_id) if is_string_column else conversation_id
+
+        query = self.session.query(Message.id).filter(
+            and_(
+                Message.conversation_id == conv_id,
+                Message.sender_id != user_id_str,
+                Message.is_read.is_(False),
+            )
+        )
+        if up_to_message_id:
+            up_to_message = self.get_by_id(up_to_message_id)
+            if up_to_message:
+                query = query.filter(Message.created_at <= up_to_message.created_at)
+
+        result = query.all()
+        return [UUID(str(row[0])) for row in result]
 
     def get_latest_messages_in_conversations(
         self, conversation_ids: List[UUID]
@@ -354,6 +376,7 @@ class MessageAttachmentRepository(BaseRepository[MessageAttachment]):
         file_size: int,
         file_type: str,
         file_url: str,
+        public_id: str | None = None,
         thumbnail_url: str | None = None,
     ) -> MessageAttachment:
         """Create a new message attachment - uses BaseRepository.save()"""
@@ -363,6 +386,7 @@ class MessageAttachmentRepository(BaseRepository[MessageAttachment]):
             file_size=file_size,
             file_type=file_type,
             file_url=file_url,
+            public_id=public_id,
             thumbnail_url=thumbnail_url,
         )
 
@@ -413,12 +437,16 @@ class MessageAttachmentRepository(BaseRepository[MessageAttachment]):
         self, conversation_id: UUID, file_type: str
     ) -> List[MessageAttachment]:
         """Get all attachments of a specific type in a conversation"""
+        # Handle UUID vs String comparison for test environment
+        is_string_column = isinstance(Message.conversation_id.type, String)
+        conv_id = str(conversation_id) if is_string_column else conversation_id
+
         return (
             self.session.query(MessageAttachment)
             .join(Message, MessageAttachment.message_id == Message.id)
             .filter(
                 and_(
-                    Message.conversation_id == conversation_id,
+                    Message.conversation_id == conv_id,
                     MessageAttachment.file_type.startswith(file_type),
                 )
             )
