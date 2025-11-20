@@ -43,6 +43,14 @@ def test_get_user_by_id_route(authenticate_client, user_on_db):
 
 
 @pytest.mark.integration
+def test_get_user_by_user_id_route(client_sql, user_on_db):
+    response = client_sql.get(f'/users/user/{user_on_db.id}')
+    assert response.status_code == status.HTTP_200_OK
+    user_response = UserResponse.model_validate(user_on_db)
+    assert response.json() == user_response.model_dump(mode='json', by_alias=True)
+
+
+@pytest.mark.integration
 def test_get_user_by_email_route(client_sql, user_on_db):
     response = client_sql.get(f'/users/{user_on_db.email}')
     assert response.status_code == status.HTTP_200_OK
