@@ -3,8 +3,10 @@ import { PostsListFeed, PostResponse } from '@/app/api/src/types/posts/Post'
 import { NotificationsResponse, CampaignNotification, AnnouncementNotification, ConnectionNotification, InteractionNotification } from '@/app/api/src/types/notifications/Notification'
 
 // Buscar campanhas (posts do tipo campaign)
-export const fetchCampaigns = async (token: string): Promise<CampaignNotification[]> => {
-    const response = await fetch(`${API_URL}/posts/feed?type=campaign`, {
+export const fetchCampaigns = async (token: string, communityId: string): Promise<CampaignNotification[]> => {
+    const url = `${API_URL}/admin/${communityId}/post/list-all-campaigns`;
+
+    const response = await fetch(url, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -13,15 +15,24 @@ export const fetchCampaigns = async (token: string): Promise<CampaignNotificatio
     })
 
     if (!response.ok) {
-        throw new Error('Erro ao carregar campanhas')
+        const errorText = await response.text();
+        throw new Error(`Erro ao carregar campanhas: ${response.status} ${response.statusText}`);
     }
 
-    const data: PostsListFeed = await response.json()
+    const data = await response.json()
 
-    // Garantir que retornamos apenas posts do tipo "campaign" (por precaução caso o endpoint retorne itens mistos)
-    return data.items
-        .filter((post: PostResponse) => post.type_post === 'campaign')
-        .map((post: PostResponse) => ({
+    if (!data.items || !Array.isArray(data.items)) {
+        return [];
+    }
+
+    return data.items.map((campaign: any) => {
+        const post = campaign.post;
+
+        if (!post) {
+            return null;
+        }
+
+        return {
             id: post.id,
             type: 'Campanha',
             title: post.title,
@@ -30,7 +41,7 @@ export const fetchCampaigns = async (token: string): Promise<CampaignNotificatio
                 name: post.user.name,
                 username: post.user.username || '',
                 profile_picture: post.user.profile_picture,
-                role: post.user.role // Adiciona a role do backend
+                role: post.user.role
             },
             community: {
                 id: post.community.id,
@@ -41,21 +52,29 @@ export const fetchCampaigns = async (token: string): Promise<CampaignNotificatio
             updated_at: post.updated_at,
             time: `${post.likes_count + post.comments_count}`,
             description: post.content,
-            status: post.status === 'active' ? 'Ativa' : post.status === 'reported' ? 'Em análise' : 'Suspensa',
+            status: campaign.status_campaign === 'active' ? 'Ativa' :
+                campaign.status_campaign === 'reported' ? 'Em análise' : 'Suspensa',
             stats: {
                 published: new Date(post.created_at).toLocaleDateString('pt-BR'),
-                accesses: (post as any).accesses ?? 0, // Usar campo real se existir
-                participants: (post as any).participants ?? 0, // Usar campo real se existir
+                accesses: 0,
+                participants: campaign.current_participants || 0,
                 likes: post.likes_count,
                 comments: post.comments_count
             },
-            image_url: post.image_url || undefined
-        }))
+            image_url: post.image_url || undefined,
+            target_participants: campaign.target_participants || 0,
+            current_participants: campaign.current_participants || 0
+        }
+    }).filter(Boolean);
 }
 
 // Buscar avisos oficiais (posts do tipo announcement)
-export const fetchAnnouncements = async (token: string): Promise<AnnouncementNotification[]> => {
-    const response = await fetch(`${API_URL}/posts/feed?type=announcement`, {
+export const fetchAnnouncements = async (token: string, communityId?: string): Promise<AnnouncementNotification[]> => {
+    if (!communityId) {
+        return [];
+    }
+
+    const response = await fetch(`${API_URL}/moderation/${communityId}/list-all-announcements`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -69,7 +88,6 @@ export const fetchAnnouncements = async (token: string): Promise<AnnouncementNot
 
     const data: PostsListFeed = await response.json()
 
-    // Garantir que retornamos apenas posts do tipo "announcement"
     return data.items
         .filter((post: PostResponse) => post.type_post === 'announcement')
         .map((post: PostResponse) => ({
@@ -81,7 +99,7 @@ export const fetchAnnouncements = async (token: string): Promise<AnnouncementNot
                 name: post.user.name,
                 username: post.user.username || '',
                 profile_picture: post.user.profile_picture,
-                role: post.user.role // Adiciona a role do backend
+                role: post.user.role
             },
             community: {
                 id: post.community.id,
@@ -121,16 +139,11 @@ export const fetchConnections = async (token: string): Promise<ConnectionNotific
 
         const notifications = await response.json()
 
-        console.log('Notificações de conexão recebidas:', notifications);
-
-        // Criar um mapa para armazenar o status mais recente de cada ator
         const actorStatusMap: { [actorId: string]: ConnectionNotification } = {}
 
         const connectionNotifications = await Promise.all(notifications.map(async (n: any) => {
             const d = n.data || {}
-            console.log('Processando notificação:', n.id, 'connection_type:', d.connection_type);
 
-            // Para cada notificação, buscar o status atual da conexão
             let actualStatus: 'pending' | 'accepted' | 'rejected' = 'pending'
 
             try {
@@ -146,12 +159,9 @@ export const fetchConnections = async (token: string): Promise<ConnectionNotific
                     const connectionData = await statusResponse.json();
                     if (connectionData && connectionData.status) {
                         actualStatus = connectionData.status;
-                        console.log(`Status real para ${d.actor_id}:`, actualStatus);
                     }
                 }
             } catch (err) {
-                console.warn('Erro ao buscar status da conexão:', err);
-                // Fallback para o connection_type da notificação
                 if (d.connection_type === 'request_received') {
                     actualStatus = 'pending'
                 } else if (d.connection_type === 'request_accepted') {
@@ -161,7 +171,6 @@ export const fetchConnections = async (token: string): Promise<ConnectionNotific
                 }
             }
 
-            // Gerar título apropriado baseado no status real
             let title = 'Nova conexão'
             if (actualStatus === 'pending') {
                 title = `Convite para se conectar com ${d.actor_name || 'alguém'}`
@@ -200,7 +209,6 @@ export const fetchConnections = async (token: string): Promise<ConnectionNotific
             } as ConnectionNotification
         }))
 
-        // Filtrar para manter apenas a notificação mais recente por ator
         connectionNotifications.forEach(conn => {
             const actorId = conn.author.id
             if (!actorStatusMap[actorId] || new Date(conn.created_at) > new Date(actorStatusMap[actorId].created_at)) {
@@ -210,7 +218,6 @@ export const fetchConnections = async (token: string): Promise<ConnectionNotific
 
         return Object.values(actorStatusMap)
     } catch (error) {
-        console.error('Erro ao buscar conexões:', error)
         return []
     }
 }
@@ -235,10 +242,8 @@ export const fetchInteractions = async (token: string): Promise<InteractionNotif
         return notifications.map((n: any) => {
             const d = n.data || {}
 
-            // Determinar tipo de interação
             const interactionType = d.interaction_type || 'comment'
 
-            // Gerar título apropriado
             let title = 'Nova interação'
             const postTitle = d.post_title || 'sua publicação'
             const commentContent = d.comment_content || ''
@@ -285,17 +290,18 @@ export const fetchInteractions = async (token: string): Promise<InteractionNotif
             } as InteractionNotification
         })
     } catch (error) {
-        console.error('Erro ao buscar interações:', error)
         return []
     }
 }
 
 // Buscar todas as notificações
-export const fetchNotifications = async (token: string): Promise<NotificationsResponse> => {
+export const fetchNotifications = async (token: string, communityId?: string): Promise<NotificationsResponse> => {
     try {
+        const campaignsPromise = communityId ? fetchCampaigns(token, communityId) : Promise.resolve([]);
+
         const [campaigns, announcements, connections, interactions] = await Promise.all([
-            fetchCampaigns(token),
-            fetchAnnouncements(token),
+            campaignsPromise,
+            fetchAnnouncements(token, communityId),
             fetchConnections(token),
             fetchInteractions(token)
         ])
@@ -307,7 +313,6 @@ export const fetchNotifications = async (token: string): Promise<NotificationsRe
             interactions
         }
     } catch (error) {
-        console.error('Erro ao buscar notificações:', error)
         throw error
     }
 }
