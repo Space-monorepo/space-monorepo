@@ -502,7 +502,8 @@ class CloudinaryUploadService:
         """Initialize the upload service and ensure Cloudinary is configured"""
         configure_cloudinary()
 
-    def _get_file_size(self, file: UploadFile) -> int:
+    @staticmethod
+    def _get_file_size(file: UploadFile) -> int:
         """Get the size of an uploaded file"""
         file.file.seek(0, 2)  # Seek to end
         size = file.file.tell()
@@ -511,7 +512,7 @@ class CloudinaryUploadService:
 
     def _validate_file_size(self, file: UploadFile) -> None:
         """Validate that file size is within limits"""
-        file_size = self._get_file_size(file)
+        file_size = CloudinaryUploadService._get_file_size(file)
         if file_size > self.MAX_FILE_SIZE:
             raise FileSizeExceededError(
                 f'File size ({file_size} bytes) exceeds maximum allowed size ({self.MAX_FILE_SIZE} bytes)'
@@ -550,8 +551,9 @@ class CloudinaryUploadService:
         }
         return folder_map.get(message_type, self.CHAT_IMAGES_FOLDER)
 
+    @staticmethod
     def _get_resource_type(
-        self, message_type: MessageTypeEnum
+        message_type: MessageTypeEnum,
     ) -> Literal['image', 'video', 'raw', 'auto']:
         """Get the appropriate Cloudinary resource type"""
         if message_type == MessageTypeEnum.image:
@@ -587,7 +589,7 @@ class CloudinaryUploadService:
         try:
             # Get upload parameters
             folder = self._get_folder_by_type(message_type)
-            resource_type = self._get_resource_type(message_type)
+            resource_type = CloudinaryUploadService._get_resource_type(message_type)
 
             # Read file content
             file.file.seek(0)
@@ -630,7 +632,8 @@ class CloudinaryUploadService:
         except Exception as e:
             raise FileUploadError(f'Failed to upload file: {str(e)}') from e
 
-    def delete_file(self, public_id: str, resource_type: str = 'auto') -> bool:
+    @staticmethod
+    def delete_file(public_id: str, resource_type: str = 'auto') -> bool:
         """
         Delete a file from Cloudinary
 
