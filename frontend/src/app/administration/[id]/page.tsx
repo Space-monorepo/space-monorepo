@@ -198,49 +198,60 @@ export default function CommunityAdminPage({
 
   // Função para mapear status da API para status do frontend
   const mapApiStatusToFrontendStatus = (apiStatus: string): "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada" => {
-    if (!apiStatus) return 'Em análise';
+    if (!apiStatus) return 'Pendente';
     switch (apiStatus.toLowerCase()) {
-      case 'under_analysis':
+      // Pendência inicial
       case 'pending':
+        return 'Pendente';
+      // Backend usa 'under_analysis' para campanha em análise
+      case 'under_analysis':
+      // Algumas rotas antigas podem usar 'active' como estado de revisão
+      case 'active':
         return 'Em análise';
+      // Aprovação / reprovação explícita
       case 'approved':
         return 'Aprovado';
       case 'rejected':
         return 'Rejeitado';
+      // Em execução
       case 'in_progress':
         return 'Em progresso';
+      // Cancelado (aceita ambas grafias vindas de fontes externas)
       case 'canceled':
       case 'cancelled':
         return 'Cancelada';
+      // Finalizado
       case 'finished':
       case 'completed':
         return 'Finalizada';
       default:
-        return 'Em análise';
+        return 'Pendente';
     }
   };
 
   // Funções auxiliares para converter dados da API para o formato do componente
-  const convertPostToCampaign = (post: PostResponse): Campaign => ({
-    id: post.id,
-    title: post.title,
-    leader: post.user.name,
-    user: {
-      id: post.user.id,
-      name: post.user.name,
-      profile_picture: post.user.profile_picture,
-      role: post.user.role,
-    },
-    participants: 0, // Zerar participantes temporariamente
-    date: new Date(post.created_at).toLocaleDateString("pt-BR"),
-    // Preferir o status da campanha quando disponível (via admin endpoint normalizado)
-    status: mapApiStatusToFrontendStatus((post as any).status_campaign || post.status),
-    description: post.content,
-    accesses: 0,
-    likes: post.likes_count || 0,
-    comments: post.comments_count || 0,
-    image: post.image_url || undefined,
-  });
+  const convertPostToCampaign = (post: PostResponse): Campaign => {
+    return {
+      id: post.id,
+      title: post.title,
+      leader: post.user.name,
+      user: {
+        id: post.user.id,
+        name: post.user.name,
+        profile_picture: post.user.profile_picture,
+        role: post.user.role,
+      },
+      participants: post.current_participants || 0, // Usar participantes reais do backend
+      date: new Date(post.created_at).toLocaleDateString("pt-BR"),
+      // Usar status_campaign do backend se existir, igual ao notifications
+      status: mapApiStatusToFrontendStatus(post.status_campaign ?? post.status),
+      description: post.content,
+      accesses: 0, // Backend não fornece esse campo ainda
+      likes: post.likes_count || 0,
+      comments: post.comments_count || 0,
+      image: post.image_url || undefined,
+    };
+  };
 
   const convertPostToReport = (post: PostResponse): Report => ({
     id: parseInt(post.id) || 0,
@@ -1039,26 +1050,24 @@ export default function CommunityAdminPage({
                           getCampaignStatusBadge(selectedCampaign.status)
                         )}
                       </div>
-                      {selectedCampaign.status === "Em análise" && (
-                        <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
-                          <button
-                            onClick={() => setIsRejectModalOpen(true)}
-                            className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
-                          >
-                            <span className="self-stretch my-auto text-neutral-800">
-                              Rejeitar
-                            </span>
-                          </button>
-                          <button
-                            onClick={() => setIsApproveModalOpen(true)}
-                            className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
-                          >
-                            <span className="self-stretch my-auto text-zinc-100">
-                              Aprovar
-                            </span>
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                        <button
+                          onClick={() => setIsRejectModalOpen(true)}
+                          className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                        >
+                          <span className="self-stretch my-auto text-neutral-800">
+                            Rejeitar
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => setIsApproveModalOpen(true)}
+                          className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                        >
+                          <span className="self-stretch my-auto text-zinc-100">
+                            Aprovar
+                          </span>
+                        </button>
+                      </div>
                     </section>
                   </article>
                 </div>

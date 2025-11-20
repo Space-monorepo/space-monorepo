@@ -76,10 +76,15 @@ export const fetchCommunityCampaigns = async (token: string, communityId: string
 
   const data = await response.json();
   // O endpoint de admin retorna CampaignResponse dentro de items. Normalizamos para o formato esperado
-  // transformando cada item para incluir os campos do `post` e `status_campaign` diretamente.
+  // transformando cada item para incluir os campos do `post` e os campos específicos da campanha
   const normalized = {
     ...data,
-    items: (data.items || []).map((c: any) => ({ ...(c.post || {}), status_campaign: c.status_campaign }))
+    items: (data.items || []).map((c: any) => ({
+      ...(c.post || {}),
+      status_campaign: c.status_campaign,
+      target_participants: c.target_participants,
+      current_participants: c.current_participants
+    }))
   };
   return normalized;
 };
