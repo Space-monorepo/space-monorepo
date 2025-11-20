@@ -1112,7 +1112,7 @@ export default function ModerationPage() {
             answer: opt.answer,
             votes_count: opt.votes_count
         })) : [],
-        image: post.image_url || "/publication-image.jpg",
+        image: post.image_url || undefined,
         likes: post.likes_count ?? 0,
         comments: post.comments_count ?? 0,
     });
@@ -1986,11 +1986,13 @@ export default function ModerationPage() {
                                                             {selectedReport.description || "Descrição não disponível."}
                                                         </p>
                                                     </div>
-                                                    <img
-                                                        src={selectedReport.image || "/publication-image.jpg"}
-                                                        alt={selectedReport.title || "Imagem da denúncia"}
-                                                        className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
-                                                    />
+                                                    {selectedReport.image && (
+                                                        <img
+                                                            src={selectedReport.image}
+                                                            alt={selectedReport.title || "Imagem da denúncia"}
+                                                            className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
+                                                        />
+                                                    )}
                                                 </div>
                                             </div>
                                         </header>
@@ -2144,11 +2146,13 @@ export default function ModerationPage() {
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <img
-                                                    src={selectedPoll.image || "/publication-image.jpg"}
-                                                    alt={selectedPoll.title || "Ilustração da enquete"}
-                                                    className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
-                                                />
+                                                {selectedPoll.image && (
+                                                    <img
+                                                        src={selectedPoll.image}
+                                                        alt={selectedPoll.title || "Ilustração da enquete"}
+                                                        className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
+                                                    />
+                                                )}
                                             </div>
                                         </article>
 
