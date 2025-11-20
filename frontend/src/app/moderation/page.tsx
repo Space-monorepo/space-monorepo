@@ -790,6 +790,7 @@ export default function ModerationPage() {
         removePost,
         removeComment,
         tolerateReport,
+        getReportVotes,
     } = useModerationReports();
 
     // Estados existentes
@@ -1410,6 +1411,34 @@ export default function ModerationPage() {
     // Alinha com o backend (REPORT_VOTES_THRESHOLD = 2)
     const VOTE_THRESHOLD = 2;
     const [voteCounts, setVoteCounts] = useState<Record<string, { tolerate: number; suspend: number }>>({});
+    // Buscar contagem de votos do backend ao carregar reportes
+    useEffect(() => {
+        async function fetchVotesCounts() {
+            if (!selectedCommunity) return;
+            const allReports = [
+                ...userReports.map(r => r.id),
+                ...postReports.map(r => r.id),
+                ...commentReports.map(r => r.id),
+            ];
+            const newCounts: Record<string, { tolerate: number; suspend: number }> = {};
+            await Promise.all(
+                allReports.map(async (reportId) => {
+                    const data = await getReportVotes(selectedCommunity.id, reportId);
+                    newCounts[reportId] = {
+                        tolerate: data.tolerate ?? 0,
+                        suspend: data.suspend ?? 0,
+                    };
+                })
+            );
+            setVoteCounts(newCounts);
+        }
+        fetchVotesCounts();
+    }, [
+        selectedCommunity,
+        userReports.map(r => r.id).join(','),
+        postReports.map(r => r.id).join(','),
+        commentReports.map(r => r.id).join(',')
+    ]);
     const handleActuallyTolerate = async (report: UserReport | PostReport | CommentReport) => {
         if (!selectedCommunity || !user || !currentUserMemberId) {
             if (!currentUserMemberId) {
