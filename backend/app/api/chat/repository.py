@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import List, Tuple
 from uuid import UUID
 
@@ -138,7 +138,7 @@ class ConversationRepository(BaseRepository[Conversation]):
                 Conversation.id == conversation_id
             ).update({
                 'last_message_id': str(message_id),
-                'updated_at': datetime.utcnow(),
+                'updated_at': datetime.now(UTC),
             })
             self.session.flush()
 
@@ -295,6 +295,27 @@ class MessageRepository(BaseRepository[Message]):
             .count()
         )
 
+    def get_unread_message_ids(
+        self, conversation_id: UUID, user_id: UUID, up_to_message_id: UUID | None = None
+    ) -> List[UUID]:
+        """Get IDs of unread messages in a conversation for a specific user"""
+        user_id_str = str(user_id)
+
+        query = self.session.query(Message.id).filter(
+            and_(
+                Message.conversation_id == conversation_id,
+                Message.sender_id != user_id_str,
+                Message.is_read.is_(False),
+            )
+        )
+        if up_to_message_id:
+            up_to_message = self.get_by_id(up_to_message_id)
+            if up_to_message:
+                query = query.filter(Message.created_at <= up_to_message.created_at)
+
+        result = query.all()
+        return [UUID(str(row[0])) for row in result]
+
     def get_latest_messages_in_conversations(
         self, conversation_ids: List[UUID]
     ) -> List[Message]:
@@ -354,6 +375,7 @@ class MessageAttachmentRepository(BaseRepository[MessageAttachment]):
         file_size: int,
         file_type: str,
         file_url: str,
+        public_id: str | None = None,
         thumbnail_url: str | None = None,
     ) -> MessageAttachment:
         """Create a new message attachment - uses BaseRepository.save()"""
@@ -363,6 +385,7 @@ class MessageAttachmentRepository(BaseRepository[MessageAttachment]):
             file_size=file_size,
             file_type=file_type,
             file_url=file_url,
+            public_id=public_id,
             thumbnail_url=thumbnail_url,
         )
 

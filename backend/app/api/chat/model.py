@@ -132,11 +132,12 @@ class MessageAttachment(Base):
     message_id = Column(
         UUIDColumn, ForeignKey('messages.id'), nullable=False, index=True
     )
-    filename = Column(String, nullable=False)
-    original_filename = Column(String, nullable=False)
-    file_path = Column(String, nullable=False)
+    file_name = Column(String, nullable=False)
     file_size = Column(Integer, nullable=False)
-    content_type = Column(String, nullable=False)
+    file_type = Column(String, nullable=False)
+    file_url = Column(String, nullable=False)
+    public_id = Column(String(255), nullable=True)
+    thumbnail_url = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False, default=func.now())
 
     # Relationships
@@ -145,5 +146,5 @@ class MessageAttachment(Base):
     # Constraints
     __table_args__ = (
         CheckConstraint('file_size > 0', name='positive_file_size'),
-        CheckConstraint('file_size <= 52428800', name='max_file_size_50mb'),  # 50MB
+        CheckConstraint('file_size <= 10485760', name='max_file_size_10mb'),  # 10MB
     )

@@ -1,10 +1,17 @@
-from typing import List
+from typing import List, Literal
 from uuid import UUID
 
+from cloudinary import uploader as cloudinary_uploader
+from fastapi import UploadFile
+
 from app.api.chat.exceptions import (
+    CannotCreateSelfConversationError,
     ConversationAlreadyExistsError,
     ConversationNotFoundError,
     FileNotFoundError,
+    FileSizeExceededError,
+    FileUploadError,
+    InvalidFileTypeError,
     InvalidMessageTypeError,
     MessageNotFoundError,
     MessageTooLongError,
@@ -24,12 +31,12 @@ from app.api.chat.schema import (
     MessageTypeEnum,
 )
 from app.api.users.service import UserService
+from app.core.config import configure_cloudinary
 from app.core.transaction import TransactionManager
 from app.utils.schema import PaginationResponse
 
 
 class ChatService:
-    # Chat configuration constants
     MAX_MESSAGE_LENGTH = 2000
     RATE_LIMIT_MESSAGES_PER_MINUTE = 60
 
@@ -39,18 +46,18 @@ class ChatService:
         self.message_repo = tm.get_message_repository()
         self.attachment_repo = tm.get_message_attachment_repository()
         self.user_service = UserService(tm)
-
-    # Conversation methods
+        self.upload_service = CloudinaryUploadService()
 
     def create_conversation(
         self, user_id: UUID, participant_user_id: UUID
     ) -> ConversationResponse:
         """Create a new conversation between two users"""
-        # Validate users exist
+        if user_id == participant_user_id:
+            raise CannotCreateSelfConversationError(
+                'Cannot create a conversation with yourself'
+            )
         self.user_service.get_user(user_id)
         self.user_service.get_user(participant_user_id)
-
-        # Check if users are connected
         connection = self.user_service.get_connection_status(
             user_id, participant_user_id
         )
@@ -58,8 +65,6 @@ class ChatService:
             raise UsersNotConnectedError(
                 'Users must be connected to start a conversation'
             )
-
-        # Check if conversation already exists
         existing_conversation = self.conversation_repo.find_conversation_between_users(
             user_id, participant_user_id
         )
@@ -67,14 +72,10 @@ class ChatService:
             raise ConversationAlreadyExistsError(
                 'Conversation already exists between these users'
             )
-
         try:
-            # Create conversation
             conversation = self.conversation_repo.create_conversation(
                 user_id, participant_user_id
             )
-
-            # Return response with participants
             unread_count = self.message_repo.count_unread_messages(
                 UUID(str(conversation.id)), user_id
             )
@@ -88,9 +89,7 @@ class ChatService:
         self, conversation_id: UUID, user_id: UUID
     ) -> ConversationResponse:
         """Get conversation details"""
-        # Validate conversation exists and user participates
         conversation = self._get_conversation_with_validation(conversation_id, user_id)
-
         unread_count = self.message_repo.count_unread_messages(
             UUID(str(conversation.id)), user_id
         )
@@ -106,7 +105,6 @@ class ChatService:
             conversations, total = self.conversation_repo.list_user_conversations(
                 user_id, params
             )
-
             conversation_responses = []
             for conv in conversations:
                 unread_count = self.message_repo.count_unread_messages(
@@ -117,7 +115,6 @@ class ChatService:
                         conv, user_id, unread_count
                     )
                 )
-
             return PaginationResponse(
                 items=conversation_responses,
                 total=total,
@@ -128,8 +125,6 @@ class ChatService:
         except Exception as e:
             raise UnexpectedChatError('Unexpected error listing conversations') from e
 
-    # Message methods
-
     def send_message(
         self,
         conversation_id: UUID,
@@ -138,10 +133,7 @@ class ChatService:
         reply_to_message_id: UUID | None = None,
     ) -> MessageResponse:
         """Send a text message"""
-        # Validate conversation and user participation
         self._get_conversation_with_validation(conversation_id, sender_id)
-
-        # Validate message content
         if not content or not content.strip():
             raise InvalidMessageTypeError('Text messages must have content')
 
@@ -150,10 +142,6 @@ class ChatService:
                 f'Message content cannot exceed {self.MAX_MESSAGE_LENGTH} characters'
             )
 
-        # Check rate limit
-        self._check_rate_limit(sender_id)
-
-        # Validate reply message if provided
         if reply_to_message_id:
             reply_message = self.message_repo.get_by_id(reply_to_message_id)
             if not reply_message or str(reply_message.conversation_id) != str(
@@ -162,9 +150,7 @@ class ChatService:
                 raise MessageNotFoundError(
                     'Reply message not found in this conversation'
                 )
-
         try:
-            # Create message
             message = self.message_repo.create_message(
                 conversation_id=conversation_id,
                 sender_id=sender_id,
@@ -172,13 +158,9 @@ class ChatService:
                 message_type=MessageTypeEnum.text.value,
                 reply_to_message_id=reply_to_message_id,
             )
-
-            # Update conversation's last message
             self.conversation_repo.update_last_message(
                 conversation_id, UUID(str(message.id))
             )
-
-            # Get message with details for response
             message_with_details = self.message_repo.get_message_with_details(
                 UUID(str(message.id))
             )
@@ -191,27 +173,15 @@ class ChatService:
         self,
         conversation_id: UUID,
         sender_id: UUID,
+        file: UploadFile,
         message_type: MessageTypeEnum,
-        file_name: str,
-        file_size: int,
-        file_type: str,
-        file_url: str,
-        thumbnail_url: str | None = None,
         content: str | None = None,
         reply_to_message_id: UUID | None = None,
     ) -> MessageResponse:
         """Send a message with file attachment"""
-        # Validate conversation and user participation
         self._get_conversation_with_validation(conversation_id, sender_id)
-
-        # Validate message type
         if message_type == MessageTypeEnum.text:
             raise InvalidMessageTypeError('Use send_message for text messages')
-
-        # Check rate limit
-        self._check_rate_limit(sender_id)
-
-        # Validate reply message if provided
         if reply_to_message_id:
             reply_message = self.message_repo.get_by_id(reply_to_message_id)
             if not reply_message or str(reply_message.conversation_id) != str(
@@ -220,9 +190,8 @@ class ChatService:
                 raise MessageNotFoundError(
                     'Reply message not found in this conversation'
                 )
-
         try:
-            # Create message
+            upload_result = self.upload_service.upload_file(file, message_type)
             message = self.message_repo.create_message(
                 conversation_id=conversation_id,
                 sender_id=sender_id,
@@ -230,28 +199,26 @@ class ChatService:
                 message_type=message_type.value,
                 reply_to_message_id=reply_to_message_id,
             )
-
-            # Create attachment
             self.attachment_repo.create_attachment(
                 message_id=UUID(str(message.id)),
-                file_name=file_name,
-                file_size=file_size,
-                file_type=file_type,
-                file_url=file_url,
-                thumbnail_url=thumbnail_url,
+                file_name=file.filename or 'attachment',
+                file_size=int(upload_result['size']),
+                file_type=file.content_type or 'application/octet-stream',
+                file_url=str(upload_result['url']),
+                public_id=str(upload_result['public_id']),
+                thumbnail_url=str(upload_result['thumbnail_url'])
+                if upload_result.get('thumbnail_url')
+                else None,
             )
-
-            # Update conversation's last message
             self.conversation_repo.update_last_message(
                 conversation_id, UUID(str(message.id))
             )
-
-            # Get message with details for response
             message_with_details = self.message_repo.get_message_with_details(
                 UUID(str(message.id))
             )
-
             return ChatService._map_message_to_response(message_with_details)
+        except (InvalidFileTypeError, FileUploadError):
+            raise
         except Exception as e:
             raise UnexpectedChatError(
                 'Unexpected error sending message with attachment'
@@ -261,18 +228,14 @@ class ChatService:
         self, conversation_id: UUID, user_id: UUID, params: MessageSearchParams
     ) -> PaginationResponse[MessageResponse]:
         """Get messages in a conversation with pagination"""
-        # Validate conversation and user participation
         self._get_conversation_with_validation(conversation_id, user_id)
-
         try:
             messages, total = self.message_repo.list_conversation_messages(
                 conversation_id, params
             )
-
             message_responses = [
                 ChatService._map_message_to_response(msg) for msg in messages
             ]
-
             return PaginationResponse(
                 items=message_responses,
                 total=total,
@@ -287,19 +250,15 @@ class ChatService:
 
     def mark_message_as_read(self, message_id: UUID, user_id: UUID) -> bool:
         """Mark a message as read by the current user"""
-        # Get message and validate access
         message = self.message_repo.get_by_id(message_id)
         if not message:
             raise MessageNotFoundError('Message not found')
-
-        # Validate user participates in conversation
         if not self.conversation_repo.validate_user_participation(
             UUID(str(message.conversation_id)), user_id
         ):
             raise UnauthorizedMessageAccessError(
                 'You do not have access to this message'
             )
-
         try:
             return self.message_repo.mark_message_as_read(message_id, user_id)
         except Exception as e:
@@ -309,20 +268,16 @@ class ChatService:
         """Mark multiple messages as read"""
         if not message_ids:
             return 0
-
-        # Validate all messages exist and user has access
         for message_id in message_ids:
             message = self.message_repo.get_by_id(message_id)
             if not message:
                 raise MessageNotFoundError(f'Message {message_id} not found')
-
             if not self.conversation_repo.validate_user_participation(
                 UUID(str(message.conversation_id)), user_id
             ):
                 raise UnauthorizedMessageAccessError(
                     f'You do not have access to message {message_id}'
                 )
-
         try:
             return self.message_repo.bulk_mark_as_read(message_ids, user_id)
         except Exception as e:
@@ -332,26 +287,40 @@ class ChatService:
 
     def get_unread_count(self, conversation_id: UUID, user_id: UUID) -> int:
         """Get count of unread messages in a conversation for the user"""
-        # Validate conversation and user participation
         self._get_conversation_with_validation(conversation_id, user_id)
-
         try:
             return self.message_repo.count_unread_messages(conversation_id, user_id)
         except Exception as e:
             raise UnexpectedChatError('Unexpected error getting unread count') from e
 
+    def mark_conversation_messages_as_read(
+        self, conversation_id: UUID, user_id: UUID, up_to_message_id: UUID | None = None
+    ) -> int:
+        """Mark all unread messages in a conversation as read (up to a specific message if provided)"""
+        self._get_conversation_with_validation(conversation_id, user_id)
+        try:
+            message_ids = self.message_repo.get_unread_message_ids(
+                conversation_id, user_id, up_to_message_id
+            )
+            if not message_ids:
+                return 0
+            return self.message_repo.bulk_mark_as_read(message_ids, user_id)
+        except Exception as e:
+            raise UnexpectedChatError(
+                'Unexpected error marking conversation messages as read'
+            ) from e
+
     def delete_message(self, message_id: UUID, user_id: UUID) -> bool:
         """Delete a message (only by sender)"""
-        # Validate message ownership
-        if not self.message_repo.validate_message_ownership(message_id, user_id):
+        message = self.message_repo.get_by_id(message_id)
+        if not message:
+            raise MessageNotFoundError('Message not found')
+        if str(message.sender_id) != str(user_id):
             raise UnauthorizedMessageAccessError('You can only delete your own messages')
-
         try:
             return self.message_repo.delete_message(message_id)
         except Exception as e:
             raise UnexpectedChatError('Unexpected error deleting message') from e
-
-    # Attachment methods
 
     def get_attachment(
         self, attachment_id: UUID, user_id: UUID
@@ -360,8 +329,6 @@ class ChatService:
         attachment = self.attachment_repo.get_attachment_with_message(attachment_id)
         if not attachment:
             raise FileNotFoundError('Attachment not found')
-
-        # Validate user has access to the conversation
         conversation_id = UUID(str(attachment.message.conversation_id))
         if not self.conversation_repo.validate_user_participation(
             conversation_id, user_id
@@ -369,7 +336,6 @@ class ChatService:
             raise UnauthorizedMessageAccessError(
                 'You do not have access to this attachment'
             )
-
         return MessageAttachmentResponse.model_validate(attachment)
 
     def delete_attachment(self, attachment_id: UUID, user_id: UUID) -> bool:
@@ -377,19 +343,19 @@ class ChatService:
         attachment = self.attachment_repo.get_attachment_with_message(attachment_id)
         if not attachment:
             raise FileNotFoundError('Attachment not found')
-
-        # Validate user owns the message
         if str(attachment.message.sender_id) != str(user_id):
             raise UnauthorizedMessageAccessError(
                 'You can only delete attachments from your own messages'
             )
-
         try:
+            if attachment.public_id:
+                resource_type = self.upload_service.get_resource_type_from_public_id(
+                    attachment.public_id
+                )
+                self.upload_service.delete_file(attachment.public_id, resource_type)
             return self.attachment_repo.delete_attachment(attachment_id)
         except Exception as e:
             raise UnexpectedChatError('Unexpected error deleting attachment') from e
-
-    # Private helper methods
 
     def _get_conversation_with_validation(
         self, conversation_id: UUID, user_id: UUID
@@ -415,24 +381,17 @@ class ChatService:
         conversation: Conversation, current_user_id: UUID, unread_count: int
     ) -> ConversationResponse:
         """Map conversation model to response schema"""
-        # Get participants
         user1 = ConversationParticipant.model_validate(conversation.user1)
         user2 = ConversationParticipant.model_validate(conversation.user2)
-
-        # Determine other participant
         if str(current_user_id) == str(conversation.user1_id):
             other_participant = user2
         else:
             other_participant = user1
-
-        # Map last message if exists
         last_message = None
         if conversation.last_message:
             last_message = ChatService._map_message_to_response(
                 conversation.last_message
             )
-
-        # Create response using model_validate to handle SQLAlchemy columns
         conversation_dict = {
             'id': UUID(str(conversation.id)),
             'user1_id': UUID(str(conversation.user1_id)),
@@ -448,22 +407,17 @@ class ChatService:
             'unread_count': unread_count,
             'other_participant': other_participant,
         }
-
         return ConversationResponse.model_validate(conversation_dict)
 
     @staticmethod
     def _map_message_to_response(message: Message) -> MessageResponse:
         """Map message model to response schema"""
-        # Map sender
         sender = ConversationParticipant.model_validate(message.sender)
-
-        # Map reply message if exists
         reply_to_message = None
         if message.reply_to_message:
             reply_sender = ConversationParticipant.model_validate(
                 message.reply_to_message.sender
             )
-
             reply_dict = {
                 'id': UUID(str(message.reply_to_message.id)),
                 'conversation_id': UUID(str(message.reply_to_message.conversation_id)),
@@ -483,16 +437,11 @@ class ChatService:
                 'reply_to_message': None,  # Avoid deep nesting
                 'attachments': [],
             }
-
             reply_to_message = MessageResponse.model_validate(reply_dict)
-
-        # Map attachments
         attachments = [
             MessageAttachmentResponse.model_validate(attachment)
             for attachment in message.attachments
         ]
-
-        # Create response using model_validate to handle SQLAlchemy columns
         message_dict = {
             'id': UUID(str(message.id)),
             'conversation_id': UUID(str(message.conversation_id)),
@@ -508,23 +457,215 @@ class ChatService:
             'reply_to_message': reply_to_message,
             'attachments': attachments,
         }
-
         return MessageResponse.model_validate(message_dict)
-
-    def _check_rate_limit(self, user_id: UUID) -> None:
-        """Check if user has exceeded rate limit for sending messages"""
-        # For now, implement a simple time-based check
-        # In production, this would use Redis or similar cache
-
-        # This is a simplified implementation
-        # In a real system, you'd track message counts per user per minute
-        # For the scope of this implementation, we'll skip the actual rate limiting
-        # but keep the method for future implementation
-        pass
-
-    # Connection validation integration
 
     def validate_users_can_chat(self, user1_id: UUID, user2_id: UUID) -> bool:
         """Validate that two users can chat (are connected)"""
         connection = self.user_service.get_connection_status(user1_id, user2_id)
         return connection is not None and str(connection.status) == 'accepted'
+
+
+class CloudinaryUploadService:
+    """Service for handling file uploads to Cloudinary"""
+
+    # File size limits
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+    # Allowed MIME types by category
+    ALLOWED_IMAGE_TYPES = {
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+    }
+
+    ALLOWED_VIDEO_TYPES = {
+        'video/mp4',
+        'video/quicktime',
+        'video/x-msvideo',  # AVI
+        'video/webm',
+    }
+
+    ALLOWED_DOCUMENT_TYPES = {
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    }
+
+    # Cloudinary folders
+    CHAT_IMAGES_FOLDER = 'chat/images'
+    CHAT_VIDEOS_FOLDER = 'chat/videos'
+    CHAT_DOCUMENTS_FOLDER = 'chat/documents'
+
+    def __init__(self):
+        """Initialize the upload service and ensure Cloudinary is configured"""
+        configure_cloudinary()
+
+    def _get_file_size(self, file: UploadFile) -> int:
+        """Get the size of an uploaded file"""
+        file.file.seek(0, 2)  # Seek to end
+        size = file.file.tell()
+        file.file.seek(0)  # Reset to beginning
+        return size
+
+    def _validate_file_size(self, file: UploadFile) -> None:
+        """Validate that file size is within limits"""
+        file_size = self._get_file_size(file)
+        if file_size > self.MAX_FILE_SIZE:
+            raise FileSizeExceededError(
+                f'File size ({file_size} bytes) exceeds maximum allowed size ({self.MAX_FILE_SIZE} bytes)'
+            )
+
+    def _validate_file_type(
+        self, file: UploadFile, message_type: MessageTypeEnum
+    ) -> None:
+        """Validate that file type matches the message type"""
+        content_type = file.content_type or ''
+
+        if message_type == MessageTypeEnum.image:
+            if content_type not in self.ALLOWED_IMAGE_TYPES:
+                raise InvalidFileTypeError(
+                    f'Invalid image type: {content_type}. Allowed types: {", ".join(self.ALLOWED_IMAGE_TYPES)}'
+                )
+        elif message_type == MessageTypeEnum.video:
+            if content_type not in self.ALLOWED_VIDEO_TYPES:
+                raise InvalidFileTypeError(
+                    f'Invalid video type: {content_type}. Allowed types: {", ".join(self.ALLOWED_VIDEO_TYPES)}'
+                )
+        elif message_type == MessageTypeEnum.document:
+            if content_type not in self.ALLOWED_DOCUMENT_TYPES:
+                raise InvalidFileTypeError(
+                    f'Invalid document type: {content_type}. Allowed types: {", ".join(self.ALLOWED_DOCUMENT_TYPES)}'
+                )
+        else:
+            raise InvalidFileTypeError(f'Unsupported message type: {message_type}')
+
+    def _get_folder_by_type(self, message_type: MessageTypeEnum) -> str:
+        """Get the appropriate Cloudinary folder based on message type"""
+        folder_map = {
+            MessageTypeEnum.image: self.CHAT_IMAGES_FOLDER,
+            MessageTypeEnum.video: self.CHAT_VIDEOS_FOLDER,
+            MessageTypeEnum.document: self.CHAT_DOCUMENTS_FOLDER,
+        }
+        return folder_map.get(message_type, self.CHAT_IMAGES_FOLDER)
+
+    def _get_resource_type(
+        self, message_type: MessageTypeEnum
+    ) -> Literal['image', 'video', 'raw', 'auto']:
+        """Get the appropriate Cloudinary resource type"""
+        if message_type == MessageTypeEnum.image:
+            return 'image'
+        elif message_type == MessageTypeEnum.video:
+            return 'video'
+        elif message_type == MessageTypeEnum.document:
+            return 'raw'
+        return 'auto'
+
+    def upload_file(
+        self, file: UploadFile, message_type: MessageTypeEnum
+    ) -> dict[str, str | int]:
+        """
+        Upload a file to Cloudinary
+
+        Args:
+            file: The file to upload
+            message_type: Type of message (image, video, document)
+
+        Returns:
+            dict with keys: url, public_id, format, size, thumbnail_url (for images)
+
+        Raises:
+            FileSizeExceededError: If file is too large
+            InvalidFileTypeError: If file type is not allowed
+            FileUploadError: If upload fails
+        """
+        # Validate file
+        self._validate_file_size(file)
+        self._validate_file_type(file, message_type)
+
+        try:
+            # Get upload parameters
+            folder = self._get_folder_by_type(message_type)
+            resource_type = self._get_resource_type(message_type)
+
+            # Read file content
+            file.file.seek(0)
+            file_content = file.file.read()
+
+            # Upload to Cloudinary
+            upload_params = {
+                'folder': folder,
+                'resource_type': resource_type,
+                'use_filename': True,
+                'unique_filename': True,
+            }
+
+            # For images, generate a thumbnail
+            if message_type == MessageTypeEnum.image:
+                upload_params['eager'] = [
+                    {'width': 300, 'height': 300, 'crop': 'fill', 'quality': 'auto'}
+                ]
+                upload_params['eager_async'] = False
+
+            result = cloudinary_uploader.upload(file_content, **upload_params)
+
+            # Prepare response data
+            response_data = {
+                'url': result['secure_url'],
+                'public_id': result['public_id'],
+                'format': result.get('format', ''),
+                'size': result.get('bytes', 0),
+            }
+
+            # Add thumbnail URL for images
+            if message_type == MessageTypeEnum.image and 'eager' in result:
+                if result['eager']:
+                    response_data['thumbnail_url'] = result['eager'][0]['secure_url']
+
+            return response_data
+
+        except (FileSizeExceededError, InvalidFileTypeError):
+            raise
+        except Exception as e:
+            raise FileUploadError(f'Failed to upload file: {str(e)}') from e
+
+    def delete_file(self, public_id: str, resource_type: str = 'auto') -> bool:
+        """
+        Delete a file from Cloudinary
+
+        Args:
+            public_id: The Cloudinary public ID of the file
+            resource_type: Type of resource (image, video, raw, auto)
+
+        Returns:
+            True if deletion was successful
+
+        Raises:
+            FileUploadError: If deletion fails
+        """
+        try:
+            result = cloudinary_uploader.destroy(
+                public_id, resource_type=resource_type, invalidate=True
+            )
+            return result.get('result') == 'ok'
+        except Exception as e:
+            raise FileUploadError(f'Failed to delete file: {str(e)}') from e
+
+    def get_resource_type_from_public_id(self, public_id: str) -> str:
+        """
+        Determine resource type from public_id folder structure
+
+        Args:
+            public_id: The Cloudinary public ID
+
+        Returns:
+            Resource type (image, video, raw)
+        """
+        if public_id.startswith(self.CHAT_IMAGES_FOLDER):
+            return 'image'
+        elif public_id.startswith(self.CHAT_VIDEOS_FOLDER):
+            return 'video'
+        elif public_id.startswith(self.CHAT_DOCUMENTS_FOLDER):
+            return 'raw'
+        return 'auto'
