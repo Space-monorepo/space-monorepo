@@ -11,12 +11,14 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.badges.model import Badge as BadgeModel
 from app.api.badges.model import MemberBadge as MemberBadgeModel
-from app.api.chat.model import Conversation
+from app.api.chat.model import Conversation, Message, MessageAttachment
 from app.api.chat.websocket.handlers import ChatEventHandler
 from app.api.comment.model import Comment, CommentLikes
 from app.api.comment.schema import CommentStatusEnum
 from app.api.communities.model import Community, CommunityMember
 from app.api.communities.schema import CommunityMemberRoleEnum, CommunityTypeEnum
+from app.api.notifications.model import Notification, NotificationTypeEnum
+from app.api.notifications.service import NotificationService
 from app.api.post.model import (
     CampaignParticipants,
     CampaignPost,
@@ -39,7 +41,7 @@ from app.api.reports.model import (
     ReportPost,
 )
 from app.api.reports.schema import ReportReasonEnum, ReportTypeEnum
-from app.api.users.model import User
+from app.api.users.model import User, UserConnection
 from app.api.users.schema import UserCreate
 from app.api.users.service import UserService
 from app.core.config import settings
@@ -47,8 +49,6 @@ from app.core.database import Base, get_db, get_mongo_db
 from app.core.transaction import TransactionManager
 from app.core.websocket.auth import WebSocketAuth
 from app.core.websocket.auth import websocket_auth as global_websocket_auth
-from app.api.notifications.model import Notification, NotificationTypeEnum
-from app.api.notifications.service import NotificationService
 from app.main import app
 
 
@@ -787,6 +787,186 @@ def sample_conversation_id(conversation_on_db):
 
 
 @pytest.fixture
+def user_connection_on_db(session_sql, user_on_db, secondary_user_on_db):
+    """Create an accepted connection between users for testing."""
+    connection = UserConnection(
+        requester_id=str(user_on_db.id),
+        addressee_id=str(secondary_user_on_db.id),
+        status='accepted',
+    )
+
+    session_sql.add(connection)
+    session_sql.commit()
+    session_sql.refresh(connection)
+    return connection
+
+
+@pytest.fixture
+def message_on_db(session_sql, conversation_on_db, user_on_db):
+    """Create a message in the database for testing."""
+    message = Message(
+        conversation_id=str(conversation_on_db.id),
+        sender_id=str(user_on_db.id),
+        content='Test message content',
+        message_type='text',
+        is_read=False,
+    )
+
+    session_sql.add(message)
+    session_sql.commit()
+    session_sql.refresh(message)
+    return message
+
+
+@pytest.fixture
+def messages_on_db(session_sql, conversation_on_db, user_on_db, secondary_user_on_db):
+    """Create multiple messages in the database for testing."""
+    messages = []
+    for i in range(3):
+        sender_id = str(user_on_db.id) if i % 2 == 0 else str(secondary_user_on_db.id)
+        message = Message(
+            conversation_id=str(conversation_on_db.id),
+            sender_id=sender_id,
+            content=f'Test message {i}',
+            message_type='text',
+            is_read=False,
+        )
+        session_sql.add(message)
+        messages.append(message)
+
+    session_sql.commit()
+    for message in messages:
+        session_sql.refresh(message)
+    return messages
+
+
+@pytest.fixture
+def message_attachment_on_db(session_sql, message_on_db):
+    """Create a message attachment in the database for testing."""
+    attachment = MessageAttachment(
+        message_id=str(message_on_db.id),
+        file_name='test_file.jpg',
+        file_size=1024,
+        file_type='image/jpeg',
+        file_url='https://example.com/test_file.jpg',
+    )
+
+    session_sql.add(attachment)
+    session_sql.commit()
+    session_sql.refresh(attachment)
+    return attachment
+
+
+@pytest.fixture
+def message_factory(session_sql):
+    """Factory fixture for creating messages with custom parameters."""
+    created_messages = []
+
+    def _create_message(
+        conversation_id,
+        sender_id,
+        content='Test message',
+        message_type='text',
+        is_read=False,
+        reply_to_message_id=None,
+    ):
+        message = Message(
+            conversation_id=str(conversation_id),
+            sender_id=str(sender_id),
+            content=content,
+            message_type=message_type,
+            is_read=is_read,
+            reply_to_message_id=str(reply_to_message_id)
+            if reply_to_message_id
+            else None,
+        )
+        session_sql.add(message)
+        session_sql.commit()
+        session_sql.refresh(message)
+        created_messages.append(message)
+        return message
+
+    yield _create_message
+
+    for message in reversed(created_messages):
+        try:
+            session_sql.refresh(message)
+            session_sql.delete(message)
+        except Exception:
+            pass
+    try:
+        session_sql.commit()
+    except Exception:
+        session_sql.rollback()
+
+
+@pytest.fixture
+def attachment_factory(session_sql):
+    """Factory fixture for creating message attachments with custom parameters."""
+    created_attachments = []
+
+    def _create_attachment(
+        message_id,
+        file_name='test_file.jpg',
+        file_size=1024,
+        file_type='image/jpeg',
+        file_url='https://example.com/test_file.jpg',
+        public_id=None,
+        thumbnail_url=None,
+    ):
+        attachment = MessageAttachment(
+            message_id=str(message_id),
+            file_name=file_name,
+            file_size=file_size,
+            file_type=file_type,
+            file_url=file_url,
+            public_id=public_id,
+            thumbnail_url=thumbnail_url,
+        )
+        session_sql.add(attachment)
+        session_sql.commit()
+        session_sql.refresh(attachment)
+        created_attachments.append(attachment)
+        return attachment
+
+    yield _create_attachment
+
+    for attachment in created_attachments:
+        try:
+            session_sql.refresh(attachment)
+            session_sql.delete(attachment)
+        except Exception:
+            pass
+    try:
+        session_sql.commit()
+    except Exception:
+        session_sql.rollback()
+
+
+@pytest.fixture
+def mock_cloudinary_upload(monkeypatch):
+    """Mock cloudinary upload for testing file attachments without real cloud storage."""
+
+    def mock_upload(file_content, **kwargs):
+        """Mock cloudinary.uploader.upload function."""
+        return {
+            'secure_url': 'https://res.cloudinary.com/test/image/upload/test_image.jpg',
+            'public_id': 'chat_attachments/test_image_123',
+            'format': 'jpg',
+            'bytes': len(file_content) if isinstance(file_content, bytes) else 1024,
+            'eager': [
+                {
+                    'secure_url': 'https://res.cloudinary.com/test/image/upload/c_fill,h_300,w_300/test_image.jpg'
+                }
+            ],
+        }
+
+    monkeypatch.setattr('app.api.chat.service.cloudinary_uploader.upload', mock_upload)
+
+    return mock_upload
+
+
+@pytest.fixture
 def sample_room_data():
     """Sample room data for testing."""
     return {
@@ -845,6 +1025,7 @@ def websocket_auth():
     auth._started = False
     return auth
 
+
 @pytest.fixture
 def test_notification(session_sql: Session, user_on_db: User) -> Notification:
     notification = Notification(
@@ -852,15 +1033,16 @@ def test_notification(session_sql: Session, user_on_db: User) -> Notification:
         type=NotificationTypeEnum.INTERACTION,
         read=False,
         data={
-            "interaction_type": "like",
-            "actor_name": "Test Actor",
-            "post_title": "seu post de teste"
-        }
+            'interaction_type': 'like',
+            'actor_name': 'Test Actor',
+            'post_title': 'seu post de teste',
+        },
     )
     session_sql.add(notification)
     session_sql.commit()
     session_sql.refresh(notification)
     return notification
+
 
 @pytest.fixture
 def test_notification_campaign(session_sql: Session, user_on_db: User) -> Notification:
@@ -868,10 +1050,7 @@ def test_notification_campaign(session_sql: Session, user_on_db: User) -> Notifi
         user_id=user_on_db.id,
         type=NotificationTypeEnum.CAMPAIGN,
         read=False,
-        data={
-            "community_name": "Campanha Teste",
-            "campaign_title": "Participe!"
-        }
+        data={'community_name': 'Campanha Teste', 'campaign_title': 'Participe!'},
     )
     session_sql.add(notification)
     session_sql.commit()
@@ -885,16 +1064,25 @@ def mock_tm():
     tm.get_notification_repository.return_value = MagicMock()
     return tm
 
+
 @pytest.fixture
 def notification_service(mock_tm: MagicMock) -> NotificationService:
     return NotificationService(mock_tm)
 
+
 @pytest.fixture
-def mock_user() -> User:
-    user = User(id=uuid.uuid4(), name="Usuário Receptor")
+def mock_notification_user() -> User:
+    user = User(id=uuid.uuid4(), name='Usuário Receptor')
     return user
+
+
+@pytest.fixture
+def mock_notification_actor() -> User:
+    actor = User(id=uuid.uuid4(), name='Usuário Ator')
+    return actor
+
 
 @pytest.fixture
 def mock_actor() -> User:
-    actor = User(id=uuid.uuid4(), name="Usuário Ator")
+    actor = User(id=uuid.uuid4(), name='Usuário Ator')
     return actor
