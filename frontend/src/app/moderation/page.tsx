@@ -915,6 +915,14 @@ export default function ModerationPage() {
     };
 
     // Funções auxiliares para converter dados da API para o formato do componente
+    // Normaliza um objeto de reporter vindo da API para o formato `UserInfo` usado no componente
+    const normalizeReporter = (r: any): UserInfo => ({
+        id: r?.id || r?.user_id || '',
+        name: r?.name || r?.username || r?.full_name || 'Desconhecido',
+        profile_picture: r?.profile_picture || r?.profile_image_url || r?.profile_image || undefined,
+        role: r?.role || r?.user_role || 'member',
+    });
+
     const convertPostToCampaign = (post: PostResponse): Campaign => ({
         id: post.id,
         title: post.title,
@@ -997,12 +1005,7 @@ export default function ModerationPage() {
             comments: apiPost.comments_count || 0,
             date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
         },
-        reporter: {
-            id: "community",
-            name: "Comunidade",
-            profile_picture: "/community-avatar.png",
-            role: "member",
-        },
+        reporter: normalizeReporter((apiPost as any).reporter || (apiPost as any).reports?.[0]?.reporter || apiPost.user || {}),
         reason: "Conteúdo inapropriado",
         description: "Publicação foi reportada pela comunidade por violar as diretrizes de conteúdo.",
         date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
@@ -1033,12 +1036,7 @@ export default function ModerationPage() {
         },
         // Mapear reporter real quando disponível. A API pode fornecer o reporter
         // diretamente ou dentro de um array de reports. Usar fallbacks amigáveis.
-        reporter: {
-            id: apiComment.reporter?.id || apiComment.reported_by?.id || apiComment.reports?.[0]?.reporter?.id || apiComment.reports?.[0]?.user?.id || "community",
-            name: apiComment.reporter?.name || apiComment.reported_by?.name || apiComment.reports?.[0]?.reporter?.name || apiComment.reports?.[0]?.user?.name || "Comunidade",
-            profile_picture: apiComment.reporter?.profile_picture || apiComment.reported_by?.profile_picture || apiComment.reports?.[0]?.reporter?.profile_picture || apiComment.reports?.[0]?.user?.profile_picture || "/community-avatar.png",
-            role: apiComment.reporter?.role || apiComment.reported_by?.role || apiComment.reports?.[0]?.reporter?.role || apiComment.reports?.[0]?.user?.role || "member",
-        },
+        reporter: normalizeReporter((apiComment as any).reporter || (apiComment as any).reported_by || (apiComment as any).reports?.[0]?.reporter || (apiComment as any).reports?.[0]?.user || {}),
         reason: apiComment.reason || apiComment.report_reason || apiComment.reports?.[0]?.reason || apiComment.reports?.[0]?.report_reason || "Linguagem inadequada",
         description: apiComment.description || apiComment.report_description || apiComment.reports?.[0]?.description || `Comentário reportado (id: ${apiComment.id})`,
         date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
@@ -1134,12 +1132,7 @@ export default function ModerationPage() {
                 profile_picture: apiUser.profile_picture,
                 role: apiUser.role || "member",
             },
-            reporter: {
-                id: "system",
-                name: "Sistema",
-                profile_picture: "/system-avatar.png",
-                role: "admin",
-            },
+            reporter: normalizeReporter((apiUser as any).reporter || (apiUser as any).reported_by || {}),
             reason: apiUser.suspension_reason || "Violação das diretrizes da comunidade",
             description: `Usuário reportado por comportamento inadequado. Status atual: ${apiUser.status}`,
             date: new Date(apiUser.created_at).toLocaleDateString("pt-BR"),
@@ -1173,12 +1166,7 @@ export default function ModerationPage() {
                 status_complaint: apiPost.status_complaint,
                 level_complaint: apiPost.level_complaint,
             },
-            reporter: {
-                id: "community",
-                name: "Comunidade",
-                profile_picture: "/community-avatar.png",
-                role: "member",
-            },
+            reporter: normalizeReporter((apiPost as any).reporter || (apiPost as any).reports?.[0]?.reporter || apiPost.user || {}),
             reason: "Conteúdo inapropriado",
             description: "Publicação foi reportada pela comunidade por violar as diretrizes de conteúdo.",
             date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
@@ -1205,12 +1193,7 @@ export default function ModerationPage() {
                 postTitle: apiComment.post?.title || "Post não encontrado",
                 likes: apiComment.likes_count || 0,
             },
-            reporter: {
-                id: "community",
-                name: "Comunidade",
-                profile_picture: "/community-avatar.png",
-                role: "member",
-            },
+            reporter: normalizeReporter((apiComment as any).reporter || (apiComment as any).reports?.[0]?.reporter || (apiComment as any).reports?.[0]?.user || {}),
             reason: "Linguagem inadequada",
             description: `Comentário reportado (id: ${apiComment.id})`,
             date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
@@ -2563,10 +2546,9 @@ function UserReportDetails({ reportId, onTolerate, onSuspend }: {
                                                 <h2 className="self-stretch my-auto text-sm text-neutral-800">
                                                     {report.reportedUser?.name}
                                                 </h2>
-                                                <img
-                                                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/0915c1f8d702c90f4deafed21adc581f37a91002?placeholderIfAbsent=true"
-                                                    alt="Role indicator"
-                                                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
+                                                <CheckmarkFilled
+                                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedUser?.role)}`}
+                                                    aria-label="Verificado"
                                                 />
                                                 <span className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-zinc-100">
                                                     {translateUserRole(report.reportedUser?.role || "member")}
