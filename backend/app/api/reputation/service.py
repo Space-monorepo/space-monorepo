@@ -1,6 +1,8 @@
 from uuid import UUID
 
 from app.api.communities.exceptions import CommunityMemberNotFoundError
+from app.api.communities.service import CommunityService
+from app.api.post.model import Post
 from app.api.reports.model import ReportComment, ReportMember, ReportPost
 from app.api.reports.schema import VoteTypeEnum
 from app.api.reputation.exceptions import (
@@ -35,6 +37,7 @@ class ReputationService:
         self.report_member_repo = tm.get_report_member_repository()
         self.report_comment_repo = tm.get_report_comment_repository()
         self.report_repo = tm.get_report_repository()
+        self.community_service = CommunityService(tm)
 
     def _calculate_level(self, reputation_points: int) -> str:
         if reputation_points >= self.LEVEL_THRESHOLDS[ReputationLevelEnum.LEADER]:
@@ -95,10 +98,10 @@ class ReputationService:
             'popularity': member.popularity,
         }
 
-    def award_campaign_creation(self, author_id: UUID) -> None:
+    def reward_campaign_creation_to_member(self, author_id: UUID) -> None:
         self._add_reputation_points(author_id, ReputationActionEnum.CREATE_CAMPAIGN)
 
-    def award_campaign_status_change(
+    def reward_campaign_status_change_to_member(
         self, author_id: UUID, old_status: str, new_status: str
     ) -> None:
         if old_status != 'approved' and new_status == 'approved':
@@ -110,21 +113,25 @@ class ReputationService:
                 author_id, ReputationActionEnum.CAMPAIGN_REJECTED
             )
 
-    def award_campaign_support(self, supporter_id: UUID) -> None:
+    def reward_campaign_support_to_member(self, supporter_id: UUID) -> None:
         self._add_reputation_points(supporter_id, ReputationActionEnum.CAMPAIGN_SUPPORT)
 
-    def award_post_creation(self, author_id: UUID) -> None:
+    def reward_post_creation_to_member(self, author_id: UUID) -> None:
         self._add_popularity_points(author_id, PopularityActionEnum.CREATE_POST)
 
-    def award_post_like(self, liker_id: UUID, post_author_id: UUID) -> None:
+    def reward_post_like_to_member(self, liker_id: UUID, post_author_id: UUID) -> None:
         self._add_popularity_points(liker_id, PopularityActionEnum.LIKE)
         self._add_popularity_points(post_author_id, PopularityActionEnum.RECEIVE_LIKE)
 
-    def award_comment_creation(self, commenter_id: UUID, post_author_id: UUID) -> None:
+    def reward_comment_creation_to_member(
+        self, commenter_id: UUID, post_author_id: UUID
+    ) -> None:
         self._add_popularity_points(commenter_id, PopularityActionEnum.COMMENT_POST)
         self._add_popularity_points(post_author_id, PopularityActionEnum.RECEIVE_COMMENT)
 
-    def award_comment_like(self, liker_id: UUID, comment_author_id: UUID) -> None:
+    def reward_comment_like_to_member(
+        self, liker_id: UUID, comment_author_id: UUID
+    ) -> None:
         self._add_popularity_points(liker_id, PopularityActionEnum.LIKE)
         self._add_popularity_points(comment_author_id, PopularityActionEnum.RECEIVE_LIKE)
 
@@ -212,18 +219,39 @@ class ReputationService:
         )
         self._apply_points_to_all_reporters(all_report_comments, VoteTypeEnum.TOLERATE)
 
-    def award_complaint_creation(self, author_id: UUID) -> None:
+    def reward_complaint_creation_to_member(self, author_id: UUID) -> None:
         self._add_reputation_points(author_id, ReputationActionEnum.CREATE_COMPLAINT)
         self._add_popularity_points(author_id, PopularityActionEnum.CREATE_COMPLAINT)
 
-    def award_complaint_confirmation(self, member_id: UUID) -> None:
+    def reward_complaint_confirmation_to_member(self, member_id: UUID) -> None:
         self._add_reputation_points(member_id, ReputationActionEnum.CONFIRM_COMPLAINT)
 
-    def award_complaint_resolution(self, author_id: UUID) -> None:
-        self._add_reputation_points(author_id, ReputationActionEnum.COMPLAINT_RESOLVED)
-        self._add_popularity_points(author_id, PopularityActionEnum.COMPLAINT_RESOLVED)
+    def reward_complaint_resolution_to_member(self, post: Post) -> None:
+        try:
+            author_member = self.community_service.get_member_association(
+                post.user.id, post.community.id
+            )
+        except Exception as e:
+            raise CommunityMemberNotFoundError(
+                'Unexpected error updating reputation'
+            ) from e
+        try:
+            self._add_reputation_points(
+                author_member.id, ReputationActionEnum.COMPLAINT_RESOLVED
+            )
+        except Exception as e:
+            raise ReputationUpdateError('Unexpected error updating reputation') from e
+        try:
+            self._add_popularity_points(
+                author_member.id, PopularityActionEnum.COMPLAINT_RESOLVED
+            )
+        except Exception as e:
+            raise PopularityUpdateError('Unexpected error updating popularity') from e
 
-    def award_complaint_resolution_by_moderator(self, moderator_id: UUID) -> None:
-        self._add_reputation_points(
-            moderator_id, ReputationActionEnum.RESOLVE_COMPLAINT_MODERATOR
-        )
+    def reward_complaint_resolution_to_moderator(self, moderator_id: UUID) -> None:
+        try:
+            self._add_reputation_points(
+                moderator_id, ReputationActionEnum.RESOLVE_COMPLAINT_MODERATOR
+            )
+        except Exception as e:
+            raise ReputationUpdateError('Unexpected error updating reputation') from e

@@ -106,7 +106,7 @@ class AdministrationService:
             member = self.community_service.get_member_association(
                 post.user_id, post.community_id
             )
-            self.reputation_service.award_campaign_status_change(
+            self.reputation_service.reward_campaign_status_change_to_member(
                 author_id=member.id,
                 old_status=old_status,
                 new_status=campaign_saved.status_campaign,
