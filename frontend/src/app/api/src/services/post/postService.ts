@@ -2,9 +2,9 @@ import { API_URL } from '@/config';
 import { PostsListFeed } from '../../types/posts/Post';
 
 // Adicionar nova função para buscar posts de uma comunidade específica
-export const fetchPostsByCommunity = async (token: string, communityId: string): Promise<PostsListFeed> => {
-  console.log(`Fetching posts for community ${communityId} with token:`, token);
-  const response = await fetch(`${API_URL}/posts/feed`, { // Ajustar endpoint conforme necessário
+export const fetchPostsByCommunity = async (token: string, communityId: string, limit: number = 9999): Promise<PostsListFeed> => {
+  const url = `${API_URL}/posts/feed?community_id=${communityId}&limit=${limit}`;
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -24,11 +24,10 @@ export const fetchPostsByCommunity = async (token: string, communityId: string):
 export const fetchPostsByType = async (
   token: string,
   communityId: string,
-  postType: string
+  postType: string,
+  limit: number = 9999
 ): Promise<PostsListFeed> => {
-  console.log(`Fetching ${postType} posts for community ${communityId}`);
-  const url = `${API_URL}/posts/feed?community_id=${communityId}&type=${postType}`;
-  console.log(`Request URL: ${url}`);
+  const url = `${API_URL}/posts/feed?community_id=${communityId}&type=${postType}&limit=${limit}`;
 
   const response = await fetch(url, {
     method: 'GET',
@@ -46,15 +45,12 @@ export const fetchPostsByType = async (
   }
 
   const data = await response.json();
-  console.log(`${postType} posts received:`, data.items?.length || 0, 'items');
-  console.log(`First ${postType} post type:`, data.items?.[0]?.type_post);
 
   return data;
 };
 
 // Funções específicas para cada tipo de post para administração
 export const fetchCommunityReports = async (token: string, communityId: string): Promise<PostsListFeed> => {
-  console.log('Calling fetchPostsByType with complaint type');
   return fetchPostsByType(token, communityId, 'complaint');
 };
 
@@ -75,8 +71,6 @@ export const fetchCommunityCampaigns = async (token: string, communityId: string
   }
 
   const data = await response.json();
-  // O endpoint de admin retorna CampaignResponse dentro de items. Normalizamos para o formato esperado
-  // transformando cada item para incluir os campos do `post` e os campos específicos da campanha
   const normalized = {
     ...data,
     items: (data.items || []).map((c: any) => ({
@@ -90,20 +84,16 @@ export const fetchCommunityCampaigns = async (token: string, communityId: string
 };
 
 export const fetchCommunityAnnouncements = async (token: string, communityId: string): Promise<PostsListFeed> => {
-  console.log('Calling fetchPostsByType with announcement type');
   return fetchPostsByType(token, communityId, 'announcement');
 };
 
 export const fetchCommunityPolls = async (token: string, communityId: string): Promise<PostsListFeed> => {
-  console.log('Calling fetchPostsByType with poll type');
   return fetchPostsByType(token, communityId, 'poll');
 };
 
 // Função para buscar detalhes de uma campanha específica
 export const fetchCampaignDetails = async (token: string, communityId: string, postId: string): Promise<any> => {
-  console.log(`Fetching campaign details for post ${postId} in community ${communityId}`);
   const url = `${API_URL}/posts/${communityId}/post/${postId}`;
-  console.log(`Request URL: ${url}`);
 
   const response = await fetch(url, {
     method: 'GET',
@@ -121,7 +111,6 @@ export const fetchCampaignDetails = async (token: string, communityId: string, p
   }
 
   const data = await response.json();
-  console.log('Campaign details received:', data);
 
   return data;
 };
