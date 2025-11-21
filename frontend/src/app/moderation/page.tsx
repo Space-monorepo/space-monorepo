@@ -1059,7 +1059,11 @@ export default function ModerationPage() {
         },
         reported: "Usuário Denunciado",
         date: new Date(post.created_at).toLocaleDateString("pt-BR"),
-        status: post.status === "active" ? "Em análise" : "Resolvido",
+        // Preferir o campo de status de denúncia quando disponível (ex: status_complaint)
+        // e usar o helper `mapComplaintStatusToFrontendStatus` para mapear corretamente
+        status: mapComplaintStatusToFrontendStatus(
+            (post as any).status_complaint ?? (post as any).statusComplaint ?? post.status
+        ),
         description: post.content,
         category: "Comportamento",
         severity: ["Crítica", "Moderada", "Leve"].includes(post.level_complaint as string)
@@ -1121,6 +1125,15 @@ export default function ModerationPage() {
     const reports: Report[] = (apiReports || []).map(convertPostToReport);
     const announcements: Announcement[] = (apiAnnouncements || []).map(convertPostToAnnouncement);
     const polls: Poll[] = (apiPolls || []).map(convertPostToPoll);
+
+    // Estado local para permitir updates pontuais sem refetch completo
+    const [localReports, setLocalReports] = useState<Report[] | null>(null);
+
+    useEffect(() => {
+        setLocalReports(reports);
+    }, [apiReports]);
+
+    const displayedReports = localReports ?? reports;
 
     // Dados reais de moderação convertidos dos dados da API
     const userReports: UserReport[] = (reportedUsers || []).map((apiUser): UserReport => {
@@ -1530,18 +1543,23 @@ export default function ModerationPage() {
         if (!selectedReport || !selectedCommunity) return;
         try {
             const response: any = await updateComplaintStatus(selectedCommunity.id, selectedReport.id, 'resolved');
+            let mapped = 'Em análise';
             if (response && response.status_complaint) {
-                const mapped = mapComplaintStatusToFrontendStatus(response.status_complaint);
-                setSelectedReport({ ...selectedReport, status: mapped });
+                mapped = mapComplaintStatusToFrontendStatus(response.status_complaint);
             } else {
-                setSelectedReport({ ...selectedReport, status: 'Resolvido' });
+                mapped = 'Resolvido';
             }
+
+            // Atualiza o detalhe selecionado
+            setSelectedReport({ ...selectedReport, status: mapped as any });
+
+            // Atualiza a lista local de reports (se presente)
+            setLocalReports(prev => {
+                if (!prev) return prev;
+                return prev.map(r => (r.id === selectedReport.id ? { ...r, status: mapped as any } : r));
+            });
+
             toast.success('Denúncia resolvida com sucesso!');
-            try {
-                if (selectedCommunity) await fetchCommunityPosts(selectedCommunity.id);
-            } catch (err) {
-                console.warn('Falha ao atualizar posts após resolver denúncia:', err);
-            }
         } catch (error: any) {
             toast.error(error?.message || 'Erro ao resolver denúncia');
         }
@@ -1552,18 +1570,23 @@ export default function ModerationPage() {
         try {
             // Usar 'resolved' no backend para arquivar/dissolver
             const response: any = await updateComplaintStatus(selectedCommunity.id, selectedReport.id, 'resolved');
+            let mapped = 'Em análise';
             if (response && response.status_complaint) {
-                const mapped = mapComplaintStatusToFrontendStatus(response.status_complaint);
-                setSelectedReport({ ...selectedReport, status: mapped });
+                mapped = mapComplaintStatusToFrontendStatus(response.status_complaint);
             } else {
-                setSelectedReport({ ...selectedReport, status: 'Arquivado' });
+                mapped = 'Arquivado';
             }
+
+            // Atualiza o detalhe selecionado
+            setSelectedReport({ ...selectedReport, status: mapped as any });
+
+            // Atualiza a lista local de reports (se presente)
+            setLocalReports(prev => {
+                if (!prev) return prev;
+                return prev.map(r => (r.id === selectedReport.id ? { ...r, status: mapped as any } : r));
+            });
+
             toast.success('Denúncia dissolvida com sucesso!');
-            try {
-                if (selectedCommunity) await fetchCommunityPosts(selectedCommunity.id);
-            } catch (err) {
-                console.warn('Falha ao atualizar posts após dissolver denúncia:', err);
-            }
         } catch (error: any) {
             toast.error(error?.message || 'Erro ao dissolver denúncia');
         }
@@ -1809,7 +1832,7 @@ export default function ModerationPage() {
 
                             {/* Exibir listas apenas nas abas Denúncias, Enquetes e Anúncios */}
                             {activeTab === "Denúncias" &&
-                                reports.map((report) => (
+                                displayedReports.map((report) => (
                                     <div
                                         key={report.id}
                                         className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""

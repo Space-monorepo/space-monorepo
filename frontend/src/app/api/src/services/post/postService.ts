@@ -51,7 +51,38 @@ export const fetchPostsByType = async (
 
 // Funções específicas para cada tipo de post para administração
 export const fetchCommunityReports = async (token: string, communityId: string): Promise<PostsListFeed> => {
-  return fetchPostsByType(token, communityId, 'complaint');
+  // Buscar denúncias do endpoint de moderação, que retorna `ComplaintResponse`
+  const url = `${API_URL}/moderation/${communityId}/list-all-complaints`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Erro ao carregar denúncias da comunidade' }));
+    throw new Error(errorData.message || 'Erro ao carregar denúncias da comunidade');
+  }
+
+  const data = await response.json();
+
+  // Normalizar para PostsListFeed: cada item será o `post` com campos extras de complaint
+  const normalized = {
+    ...data,
+    items: (data.items || []).map((c: any) => ({
+      ...(c.post || {}),
+      // campos adicionais provenientes do objeto de complaint
+      status_complaint: c.status_complaint,
+      level_complaint: c.level_complaint,
+      confirmations_count: c.confirmations_count,
+      // garantir que report_count reflita confirmações quando disponível
+      report_count: c.confirmations_count ?? (c.post && c.post.report_count) ?? 0,
+    }))
+  };
+
+  return normalized;
 };
 
 // Busca campanhas reais do endpoint específico de campanhas
