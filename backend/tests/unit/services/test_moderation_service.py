@@ -832,8 +832,8 @@ def test_update_complaint_status_service_success():
     mock_post_service.get_post.return_value = fake_post
 
     mock_reputation_service = Mock()
-    mock_reputation_service.award_complaint_resolution.return_value = None
-    mock_reputation_service.award_complaint_resolution_by_moderator.return_value = None
+    mock_reputation_service.reward_complaint_resolution_to_member.return_value = None
+    mock_reputation_service.reward_complaint_resolution_to_moderator.return_value = None
 
     service = ModerationService(mock_tm)
     service.complaint_repo = mock_complaint_repo

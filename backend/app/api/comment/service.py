@@ -107,7 +107,7 @@ class CommentService:
             post_author_member = self.community_service.get_member_association(
                 post.user_id, post.community_id
             )
-            self.reputation_service.award_comment_creation(
+            self.reputation_service.reward_comment_creation_to_member(
                 commenter_member.id, post_author_member.id
             )
             self.post_repo.save(post)
@@ -313,12 +313,12 @@ class CommentService:
                 comment_author_member = self.community_service.get_member(
                     comment.member_id
                 )
-                self.reputation_service.award_comment_like(
+                self.reputation_service.reward_comment_like_to_member(
                     member_id, comment_author_member.id
                 )
 
             comment_author_member = self.community_service.get_member(comment.member_id)
-            self.reputation_service.award_comment_like(
+            self.reputation_service.reward_comment_like_to_member(
                 member_id, comment_author_member.id
             )
             return self._map_comment_to_response(comment)

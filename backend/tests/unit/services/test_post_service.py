@@ -111,7 +111,7 @@ def test_create_post_service_success():
         fake_user_id, fake_community_id
     )
     mock_post_repo.save.assert_called_once()
-    mock_reputation_service.award_post_creation.assert_called_once_with(
+    mock_reputation_service.reward_post_creation_to_member.assert_called_once_with(
         fake_member_association.id
     )
     assert result is not None
