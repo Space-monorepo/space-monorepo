@@ -5,7 +5,7 @@ import { ArrowLeft, Filter, Eye } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
-import { CheckmarkFilled, Search } from "@carbon/icons-react";
+import { CheckmarkFilled, Search, ChevronDown, FilterEdit, ChevronSort, Email } from "@carbon/icons-react";
 // import removido, já existe acima
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
@@ -33,7 +33,6 @@ import ModalAnnouncement from "@/components/modals/posts/ModalAnnouncement";
 import RejectComplaintModal from "@/components/modals/community/RejectComplaintModal";
 import ApproveComplaintModal from "@/components/modals/community/ApproveComplaintModal";
 import ImportUserModal from "@/components/modals/community/ImportUserModal";
-import { ChevronSort, Email, FilterEdit } from "@carbon/icons-react";
 
 type UserInfo = {
   id: string;
@@ -157,6 +156,7 @@ export default function CommunityAdminPage({
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [newModeratorEmail, setNewModeratorEmail] = useState("");
   const [excludeUserEmail, setExcludeUserEmail] = useState("");
   // Estados para importação em lote
@@ -379,7 +379,7 @@ export default function CommunityAdminPage({
   };
 
   // Hook para aprovar/rejeitar campanha
-  const { approveCampaign, rejectCampaign, loading: adminActionLoading } = useCampaignAdminActions();
+  const { approveCampaign, rejectCampaign, changeCampaignStatus, loading: adminActionLoading } = useCampaignAdminActions();
 
   // Handler para aprovação real
   const handleApproveCampaign = async (subject: string, message: string) => {
@@ -435,6 +435,31 @@ export default function CommunityAdminPage({
       toast.error(error?.message || "Erro ao rejeitar campanha");
     } finally {
       setIsRejectModalOpen(false);
+    }
+  };
+
+  // Handler para mudança de status da campanha
+  const handleChangeStatus = async (newStatus: 'in_progress' | 'canceled' | 'finished') => {
+    if (!selectedCampaign) return;
+    try {
+      const response = await changeCampaignStatus(id, selectedCampaign.id, newStatus);
+      if (response && response.status_campaign) {
+        const mappedStatus = mapApiStatusToFrontendStatus(response.status_campaign);
+        setSelectedCampaign({ ...selectedCampaign, status: mappedStatus });
+      }
+      toast.success("Status da campanha atualizado com sucesso!");
+      try {
+        if (id) await fetchCommunityPosts(id);
+        if (id && selectedCampaign?.id) {
+          await fetchCampaignDetailsById(id, selectedCampaign.id as any);
+        }
+      } catch (err) {
+        console.warn("Falha ao atualizar posts após mudança de status:", err);
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao atualizar status da campanha");
+    } finally {
+      setIsStatusDropdownOpen(false);
     }
   };
 
@@ -643,13 +668,9 @@ export default function CommunityAdminPage({
           aria-haspopup="listbox"
         >
           <span className="self-stretch my-auto">{value}</span>
-          <img
-            src={variant === 'primary'
-              ? "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/d24654308878f16b516227be8c8c92bf44fa5a86?placeholderIfAbsent=true"
-              : "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/4522605e2ac1a433252df88a4bc4955a89e0cbd3?placeholderIfAbsent=true"
-            }
-            className="object-contain shrink-0 self-stretch my-auto w-6 aspect-square"
-            alt="Dropdown arrow"
+          <ChevronDown
+            className="object-contain shrink- w-6 aspect-square"
+            aria-label="Dropdown arrow"
           />
         </button>
 
@@ -1086,24 +1107,79 @@ export default function CommunityAdminPage({
                           getCampaignStatusBadge(selectedCampaign.status)
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
-                        <button
-                          onClick={() => setIsRejectModalOpen(true)}
-                          className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
-                        >
-                          <span className="self-stretch my-auto text-neutral-800">
-                            Rejeitar
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => setIsApproveModalOpen(true)}
-                          className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
-                        >
-                          <span className="self-stretch my-auto text-zinc-100">
-                            Aprovar
-                          </span>
-                        </button>
-                      </div>
+                      {/* Botões de Aprovar/Rejeitar para status Pendente */}
+                      {selectedCampaign.status === "Pendente" && (
+                        <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                          <button
+                            onClick={() => setIsRejectModalOpen(true)}
+                            className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                          >
+                            <span className="self-stretch my-auto text-neutral-800">
+                              Rejeitar
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => setIsApproveModalOpen(true)}
+                            className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                          >
+                            <span className="self-stretch my-auto text-zinc-100">
+                              Aprovar
+                            </span>
+                          </button>
+                        </div>
+                      )}
+                      {/* Botão Atualizar Status para status Aprovado e Em análise */}
+                      {(selectedCampaign.status === "Aprovado" || selectedCampaign.status === "Em análise" || selectedCampaign?.status === "Em progresso") && (
+                        <div className="relative mt-10 max-w-[698px]">
+                          <button
+                            onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                            disabled={adminActionLoading}
+                            className="flex gap-8 cursor-pointer items-center pt-4 pr-4 pb-6 pl-4 bg-neutral-800 text-zinc-100 w-full max-md:pr-5 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span className="flex-1 text-left text-zinc-100">
+                              Atualizar status
+                            </span>
+                            <ChevronDown
+                              className="object-contain shrink-0 w-6 aspect-square"
+                              aria-label="Dropdown arrow"
+                            />
+                          </button>
+                          {isStatusDropdownOpen && (
+                            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 shadow-lg z-10 w-full">
+                              <ul role="listbox" className="py-1">
+                                <li>
+                                  <button
+                                    className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
+                                    onClick={() => handleChangeStatus('in_progress')}
+                                    disabled={adminActionLoading}
+                                  >
+                                    Em progresso
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
+                                    onClick={() => handleChangeStatus('canceled')}
+                                    disabled={adminActionLoading}
+                                  >
+                                    Cancelar
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
+                                    onClick={() => handleChangeStatus('finished')}
+                                    disabled={adminActionLoading}
+                                  >
+                                    Finalizar
+                                  </button>
+                                </li>
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {/* Sem botões para status Finalizada, Cancelada e Rejeitada */}
                     </section>
                   </article>
                 </div>
