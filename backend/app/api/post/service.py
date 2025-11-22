@@ -318,7 +318,21 @@ class PostService:
             member = self.community_service.get_member_association(
                 created_post.user.id, created_post.community.id
             )
+            # Incrementar participantes diretamente no objeto salvo
+            campaign_saved.current_participants += 1
+            campaign_saved = self.campaign_repo.save(campaign_saved)
+
+            # Criar registro de participação
+            campaign_participants = CampaignParticipants(
+                campaign_id=created_post.id,
+                member_id=member.id,
+                user_id=member.user_id,
+            )
+            self.campaign_participants_repo.save(campaign_participants)
+
+            self.reputation_service.reward_campaign_support_to_member(member.id)
             self.reputation_service.reward_campaign_creation_to_member(member.id)
+
             return CampaignResponse(
                 post=self.get_post(created_post.id),
                 target_participants=campaign_saved.target_participants,
@@ -397,7 +411,13 @@ class PostService:
             member = self.community_service.get_member_association(
                 created_post.user.id, created_post.community.id
             )
+            # Incrementar confirmações diretamente no objeto salvo
+            complaint_saved.confirmations_count += 1
+            complaint_saved = self.complaint_repo.save(complaint_saved)
+
+            self.reputation_service.reward_complaint_confirmation_to_member(member.id)
             self.reputation_service.reward_complaint_creation_to_member(member.id)
+
             return ComplaintResponse(
                 post=self.get_post(created_post.id),
                 confirmations_count=complaint_saved.confirmations_count,

@@ -985,12 +985,13 @@ def test_create_campaign_service_success():
     Scenario:
     - Given a valid campaign post creation request
     - When the service creates the post and associated campaign
-    - Then it should return a campaign response with default values
+    - Then it should return a campaign response with creator as first participant
     """
     # Arrange
     fake_post_id = str(uuid4())
     fake_user_id = str(uuid4())
     fake_community_id = str(uuid4())
+    fake_member_id = str(uuid4())
     fake_title = 'Campaign Title'
     fake_content = 'Campaign content'
 
@@ -1030,29 +1031,45 @@ def test_create_campaign_service_success():
     fake_created_post_response.created_at = datetime.now(timezone.utc)
     fake_created_post_response.updated_at = datetime.now(timezone.utc)
 
-    # Mock da campanha criada
-    fake_campaign = Mock(spec=CampaignPost)
-    fake_campaign.post_id = fake_post_id
-    fake_campaign.target_participants = 100  # Valor padrão
-    fake_campaign.current_participants = 0  # Valor padrão
-    fake_campaign.status_campaign = CampaignStatusEnum.PENDING  # Valor padrão
+    # Mock da campanha inicial (sem participantes)
+    fake_campaign_for_participate = Mock(spec=CampaignPost)
+    fake_campaign_for_participate.post_id = fake_post_id
+    fake_campaign_for_participate.target_participants = 100
+    fake_campaign_for_participate.current_participants = 0
+    fake_campaign_for_participate.status_campaign = CampaignStatusEnum.PENDING
+
+    # Mock da campanha após participação do criador
+    fake_campaign_final = Mock(spec=CampaignPost)
+    fake_campaign_final.post_id = fake_post_id
+    fake_campaign_final.target_participants = 100
+    fake_campaign_final.current_participants = 1  # Criador participou
+    fake_campaign_final.status_campaign = CampaignStatusEnum.PENDING
 
     mock_tm = Mock()
     mock_campaign_repo = Mock()
-    mock_campaign_repo.save.return_value = fake_campaign
+    # save retorna o objeto atualizado com current_participants = 1
+    mock_campaign_repo.save.side_effect = [fake_campaign_for_participate, fake_campaign_final]
 
     fake_member_association = Mock()
-    fake_member_association.id = str(uuid4())
+    fake_member_association.id = fake_member_id
+    fake_member_association.user_id = fake_user_id
 
     mock_community_service = Mock()
     mock_community_service.get_member_association.return_value = fake_member_association
 
     mock_reputation_service = Mock()
 
+    mock_campaign_participants_repo = Mock()
+    fake_participant = Mock()
+    fake_participant.campaign_id = fake_post_id
+    fake_participant.member_id = fake_member_id
+    mock_campaign_participants_repo.save.return_value = fake_participant
+
     service = PostService(mock_tm)
     service.campaign_repo = mock_campaign_repo
     service.community_service = mock_community_service
     service.reputation_service = mock_reputation_service
+    service.campaign_participants_repo = mock_campaign_participants_repo
 
     # Mock dos métodos que create_campaign chama
     service.create_post = Mock(return_value=fake_created_post_response)
@@ -1063,16 +1080,37 @@ def test_create_campaign_service_success():
 
     # Assert
     service.create_post.assert_called_once_with(fake_post_create)
+    assert mock_campaign_repo.save.call_count == 2  # Uma no create, outra para incrementar participantes
+    
+    # Verificar que get_member_association foi chamado para pegar o membro criador
+    mock_community_service.get_member_association.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
+    
+    # Verificar que o participante foi salvo
+    mock_campaign_participants_repo.save.assert_called_once()
+    
+    # Verificar que reward_campaign_creation_to_member foi chamado
+    mock_reputation_service.reward_campaign_creation_to_member.assert_called_once_with(
+        fake_member_id
+    )
+    
+    # Verificar que reward_campaign_support_to_member foi chamado
+    mock_reputation_service.reward_campaign_support_to_member.assert_called_once_with(
+        fake_member_id
+    )
+    
+    # Verificar que get_post foi chamado uma vez (no final do create_campaign)
     service.get_post.assert_called_once_with(fake_post_id)
-    mock_campaign_repo.save.assert_called_once()
 
-    saved_campaign_call = mock_campaign_repo.save.call_args[0][0]
-    assert saved_campaign_call.post_id == fake_post_id
+    # Verificar o primeiro save (criação inicial)
+    first_save_call = mock_campaign_repo.save.call_args_list[0][0][0]
+    assert first_save_call.post_id == fake_post_id
 
     assert result is not None
     assert str(result.post.id) == fake_post_id
     assert result.target_participants == 100
-    assert result.current_participants == 0
+    assert result.current_participants == 1  # Criador já está participando
     assert result.status_campaign == CampaignStatusEnum.PENDING
 
 
@@ -1244,12 +1282,13 @@ def test_create_complaint_service_success():
     Scenario:
     - Given a valid complaint post creation request
     - When the service creates the post and associated complaint
-    - Then it should return a complaint response with default values
+    - Then it should return a complaint response with creator as first confirmation
     """
     # Arrange
     fake_post_id = str(uuid4())
     fake_user_id = str(uuid4())
     fake_community_id = str(uuid4())
+    fake_member_id = str(uuid4())
     fake_title = 'Complaint Title'
     fake_content = 'Complaint content'
 
@@ -1289,19 +1328,27 @@ def test_create_complaint_service_success():
     fake_created_post_response.created_at = datetime.now(timezone.utc)
     fake_created_post_response.updated_at = datetime.now(timezone.utc)
 
-    # Mock da reclamação criada
-    fake_complaint = Mock(spec=ComplaintPost)
-    fake_complaint.post_id = fake_post_id
-    fake_complaint.confirmations_count = 0  # Valor padrão
-    fake_complaint.status_complaint = ComplaintStatusEnum.PENDING  # Valor padrão
-    fake_complaint.level_complaint = ComplaintLevelEnum.LOW  # Valor padrão
+    # Mock da complaint inicial (sem confirmações)
+    fake_complaint_for_confirm = Mock(spec=ComplaintPost)
+    fake_complaint_for_confirm.post_id = fake_post_id
+    fake_complaint_for_confirm.confirmations_count = 0
+    fake_complaint_for_confirm.status_complaint = ComplaintStatusEnum.PENDING
+    fake_complaint_for_confirm.level_complaint = ComplaintLevelEnum.LOW
+
+    # Mock da complaint após confirmação do criador
+    fake_complaint_final = Mock(spec=ComplaintPost)
+    fake_complaint_final.post_id = fake_post_id
+    fake_complaint_final.confirmations_count = 1  # Criador confirmou
+    fake_complaint_final.status_complaint = ComplaintStatusEnum.PENDING
+    fake_complaint_final.level_complaint = ComplaintLevelEnum.LOW
 
     mock_tm = Mock()
     mock_complaint_repo = Mock()
-    mock_complaint_repo.save.return_value = fake_complaint
+    # save retorna o objeto atualizado com confirmations_count = 1
+    mock_complaint_repo.save.side_effect = [fake_complaint_for_confirm, fake_complaint_final]
 
     fake_member_association = Mock()
-    fake_member_association.id = str(uuid4())
+    fake_member_association.id = fake_member_id
 
     mock_community_service = Mock()
     mock_community_service.get_member_association.return_value = fake_member_association
@@ -1322,17 +1369,34 @@ def test_create_complaint_service_success():
 
     # Assert
     service.create_post.assert_called_once_with(fake_post_create)
+    assert mock_complaint_repo.save.call_count == 2  # Uma no create, outra para incrementar confirmações
+    
+    # Verificar que get_member_association foi chamado ANTES de incrementar confirmações
+    mock_community_service.get_member_association.assert_called_once_with(
+        fake_user_id, fake_community_id
+    )
+    
+    # Verificar que reward_complaint_creation_to_member foi chamado
+    mock_reputation_service.reward_complaint_creation_to_member.assert_called_once_with(
+        fake_member_id
+    )
+    
+    # Verificar que reward_complaint_confirmation_to_member foi chamado
+    mock_reputation_service.reward_complaint_confirmation_to_member.assert_called_once_with(
+        fake_member_id
+    )
+    
+    # Verificar que get_post foi chamado uma vez no final
     service.get_post.assert_called_once_with(fake_post_id)
-    mock_complaint_repo.save.assert_called_once()
 
-    # Verificar o ComplaintPost criado
-    saved_complaint_call = mock_complaint_repo.save.call_args[0][0]
-    assert saved_complaint_call.post_id == fake_post_id
+    # Verificar o primeiro save (criação inicial)
+    first_save_call = mock_complaint_repo.save.call_args_list[0][0][0]
+    assert first_save_call.post_id == fake_post_id
 
     # Verificar o resultado
     assert result is not None
     assert str(result.post.id) == fake_post_id
-    assert result.confirmations_count == 0
+    assert result.confirmations_count == 1  # Criador já confirmou
     assert result.status_complaint == ComplaintStatusEnum.PENDING
     assert result.level_complaint == ComplaintLevelEnum.LOW
 
