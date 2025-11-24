@@ -8,7 +8,8 @@ import { updateProfile } from "@/app/api/src/controllers/updateUserController";
 import { useCheckTokenValidity } from "@/app/api/src/controllers/authCheckToken";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
 import { useBypassAuth } from "@/app/api/src/hooks/useBypassAuth";
-import useUserComplaints from "@/app/api/src/hooks/post/useUserComplaints";
+// Importa o novo hook de posts
+import useUserPosts from "@/app/api/src/hooks/post/useUserPosts";
 import {
   Loader2,
   MessageSquare,
@@ -23,7 +24,7 @@ import {
 } from "lucide-react";
 import FilePicker from "@/components/ui/FilePicker";
 import Sidebar from "@/components/ui/sidebar";
-import EditProfileModal from "./components/EditProfileModal";
+import EditProfileModal from "../components/EditProfileModal";
 
 export interface User {
   username: string;
@@ -40,14 +41,16 @@ export default function ProfilePage() {
   const params = useParams();
   const username = params.username as string;
   const bypass = useBypassAuth();
-  const { loading, user: authUser } = useCheckTokenValidity(); // Obter o usuário do authCheckToken
+  const { loading, user: authUser } = useCheckTokenValidity();
   const [user, setUser] = useState<User | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Usa o novo hook
   const {
-    userComplaints,
-    loading: complaintsLoading,
-    fetchUserComplaints,
-  } = useUserComplaints();
+    userPosts,
+    loading: postsLoading,
+    fetchUserPosts,
+  } = useUserPosts();
 
   useEffect(() => {
     if (bypass) return;
@@ -63,80 +66,76 @@ export default function ProfilePage() {
         // Combinar dados do authUser com os dados do perfil
         const completeUserData = {
           ...userData,
-          username: authUser?.username || userData.username, // Usar username do authUser se disponível
+          username: authUser?.username || userData.username,
         };
 
         setUser(completeUserData);
-        await fetchUserComplaints(completeUserData);
+        // Chama a nova função para buscar TODOS os posts
+        await fetchUserPosts(completeUserData);
       } catch (err) {
         console.error("Erro ao carregar perfil:", err);
       }
     };
 
-    // Só carregar se temos o authUser ou se não precisamos dele
     if (authUser || bypass) {
       loadUserData();
     }
-  }, [bypass, username, fetchUserComplaints, authUser]);
+  }, [bypass, username, fetchUserPosts, authUser]);
 
-  // Temporariamente, assumir que é próprio perfil se:
-  // 1. O usuário está logado (user existe)
-  // 2. A URL é inválida (significa que acessou direto a rota dinâmica)
-  // 3. O username do authUser coincide com o username da URL
   const isOwnProfile =
     user &&
     (user?.username === username ||
       username === "[username]" ||
       username === "%5Busername%5D" ||
-      authUser?.username === username); // Debug logs para identificar o problema
+      authUser?.username === username);
+
+  // Debug logs
   console.log("DEBUG - URL username:", username);
   console.log("DEBUG - Auth user:", authUser);
   console.log("DEBUG - Profile user:", user);
   console.log("DEBUG - isOwnProfile:", isOwnProfile);
 
-  // Verificar se a URL é válida
   if (username === "[username]" || username === "%5Busername%5D") {
     console.warn(
       "URL inválida detectada! Você está acessando a rota dinâmica diretamente."
     );
     console.log(
       "Para testar seu próprio perfil, acesse: /profile/" +
-        (authUser?.username || "seu-username")
+      (authUser?.username || "seu-username")
     );
   }
 
-  // Redirecionamento automático se URL for inválida
   useEffect(() => {
-    if (
-      authUser?.username &&
-      (username === "[username]" || username === "%5Busername%5D")
-    ) {
-      console.log("Redirecionando para o perfil correto:", authUser.username);
-      window.location.href = `/profile/${authUser.username}`;
+    // Se temos um usuário logado...
+    if (authUser?.username) {
+      // E o username na URL é inválido OU está vazio (!username)
+      if (!username || username === "[username]" || username === "%5Busername%5D") {
+        console.log("Redirecionando para a URL correta do perfil...");
+        // Redireciona para /profile/space
+        window.location.href = `/profile/${authUser.username}`;
+      }
     }
   }, [authUser, username]);
+
   const handleImageChange = (newImageUrl: string) => {
-    // A função onImageChange é chamada pelo componente FilePicker após
-    // o upload para o Cloudinary e atualização do perfil na API
     setUser((prev) =>
       prev ? { ...prev, profile_image_url: newImageUrl } : null
     );
-  };  const handleSaveProfile = async (name: string, bio: string) => {
+  };
+
+  const handleSaveProfile = async (name: string, bio: string) => {
     const token = getTokenFromCookies();
     if (!token) throw new Error("Token não encontrado");
 
     try {
       const response = await updateProfile(token, name, bio);
-      
-      // Atualizar o estado local com os dados retornados da API
-      setUser((prev) => 
-        prev ? { 
-          ...prev, 
-          name: response.name || name, 
-          bio: response.bio || bio 
+      setUser((prev) =>
+        prev ? {
+          ...prev,
+          name: response.name || name,
+          bio: response.bio || bio
         } : null
       );
-      
       return response;
     } catch (error) {
       console.error("Erro ao salvar perfil:", error);
@@ -144,7 +143,7 @@ export default function ProfilePage() {
     }
   };
 
-  // Níveis de reputação para a barra de reputação
+  // Níveis de reputação
   const reputationLevels = [
     "Sob observação",
     "Ajudante",
@@ -152,7 +151,6 @@ export default function ProfilePage() {
     "Líder",
   ];
 
-  // Achievements para o perfil
   const achievements = [
     { icon: <Users className="h-5 w-5" />, name: "Líder" },
     { icon: <FileText className="h-5 w-5" />, name: "Ativo" },
@@ -160,11 +158,27 @@ export default function ProfilePage() {
     { icon: <Award className="h-5 w-5" />, name: "Efetivo" },
   ];
 
-  // Função para calcular a porcentagem de reputação
   const getReputationPercentage = (level?: string) => {
     const index = reputationLevels.indexOf(level || "Sob observação");
     const percentage = ((index + 1) / reputationLevels.length) * 100;
     return percentage;
+  };
+
+  // Função para traduzir os tipos de post
+  const traduzirTipoPost = (tipo?: string) => {
+    switch (tipo) {
+      case "complaint":
+        return "Denúncia";
+      case "poll":
+        return "Enquete";
+      case "campaign":
+        return "Campanha";
+      case "announcement":
+        return "Anúncio";
+      default:
+        if (!tipo) return "Publicação";
+        return tipo.charAt(0).toUpperCase() + tipo.slice(1);
+    }
   };
 
   if (loading && !bypass) {
@@ -178,18 +192,20 @@ export default function ProfilePage() {
       </div>
     );
   }
+
   return (
     <div className="flex bg-zinc-100 min-h-screen">
       <Sidebar variant="static" />
 
       <main className="flex-1 ml-66 max-md:ml-0 overflow-hidden">
-        {" "}
         <header className="pt-8 w-full bg-white border border-solid border-stone-300 max-md:pt-4">
           <div className="flex p-4 max-md:flex-col">
             <div className="max-md:ml-0 max-md:w-full">
               <div className="object-contain grow shrink-0 max-w-full aspect-[0.98] w-[180px] max-md:mt-6">
                 <FilePicker
-                  currentImageUrl={user?.profile_image_url}
+                  currentImageUrl={
+                    user?.profile_image_url || "/images/default-avatar.png" // Fallback de imagem
+                  }
                   onImageChange={handleImageChange}
                   isOwnProfile={!!isOwnProfile}
                 />
@@ -202,11 +218,13 @@ export default function ProfilePage() {
                     {user?.name || "Carregando..."}
                   </h1>
                   <p className="text-xs text-neutral-500">
-                    @{user?.username || "..."}
+                    @
+                    {user?.name
+                      ? user.name.toLowerCase().replace(/\s+/g, "") // Formatação do handle
+                      : "..."}
                   </p>
                 </div>
                 <div>
-                  {" "}
                   {isOwnProfile ? (
                     <button
                       onClick={() => setIsEditModalOpen(true)}
@@ -238,7 +256,7 @@ export default function ProfilePage() {
                     <div className="flex overflow-hidden gap-2 items-center py-2 w-full whitespace-nowrap">
                       <span className="self-stretch my-auto font-medium text-neutral-800">
                         Email:
-                      </span>{" "}
+                      </span>
                       <a
                         href={`mailto:${user?.email}`}
                         className="self-stretch my-auto underline text-neutral-600"
@@ -288,11 +306,10 @@ export default function ProfilePage() {
                           {reputationLevels.map((level, index) => (
                             <span
                               key={index}
-                              className={`self-stretch my-auto ${
-                                level === user?.reputation_level
+                              className={`self-stretch my-auto ${level === user?.reputation_level
                                   ? "text-blue-600 font-medium"
                                   : "text-neutral-500"
-                              }`}
+                                }`}
                             >
                               {level}
                             </span>
@@ -339,35 +356,35 @@ export default function ProfilePage() {
             </div>
 
             <div className="ml-5 w-[59%] max-md:ml-0 max-md:w-full">
-              {" "}
               <div className="flex flex-col items-center self-stretch my-auto w-full max-md:mt-10 max-md:max-w-full">
-                {complaintsLoading.complaints ? (
+
+                {postsLoading.posts ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-gray-500 mr-2" />
                     <span className="text-gray-500">
-                      Carregando denúncias...
+                      Carregando publicações...
                     </span>
                   </div>
-                ) : userComplaints.length === 0 ? (
+                ) : userPosts.length === 0 ? (
                   <>
                     <p className="text-base text-neutral-500">
                       {isOwnProfile
-                        ? "Você ainda não possui nenhuma denúncia..."
-                        : "Este usuário ainda não possui denúncias..."}
+                        ? "Você ainda não possui nenhuma publicação..."
+                        : "Este usuário ainda não possui publicações..."}
                     </p>
                     {isOwnProfile && (
-                      <div className="flex gap-8 items-center mt-4 max-w-full text-sm leading-none text-zinc-100 w-[180px]">
-                        <button className="gap-2.5 self-stretch py-2 pr-16 pl-3.5 my-auto rounded-sm bg-neutral-800 text-zinc-100 w-[180px] max-md:pr-5">
-                          Criar denúncia
+                      <div className="flex gap-8 items-center mt-4 max-w-full text-sm leading-none text-zinc-100 ">
+                        <button className="gap-2.5 self-stretch py-2 pr-16 pl-3.5 my-auto rounded-sm bg-neutral-800 text-zinc-100 smax-md:pr-5">
+                          Criar publicação
                         </button>
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="w-full space-y-4">
-                    {userComplaints.map((complaint) => (
+                    {userPosts.map((post) => (
                       <article
-                        key={complaint.id}
+                        key={post.id}
                         className="bg-white border border-neutral-300 rounded-sm"
                       >
                         <div className="p-4 border-b border-neutral-200">
@@ -377,7 +394,7 @@ export default function ProfilePage() {
                                 <img
                                   src={
                                     user?.profile_image_url ||
-                                    "/placeholder.svg?height=40&width=40&text=👤"
+                                    "/images/default-avatar.png" // Fallback de imagem nos posts
                                   }
                                   alt={user?.name || "Perfil"}
                                   className="w-full h-full object-cover"
@@ -394,11 +411,11 @@ export default function ProfilePage() {
                                   </span>
                                 </div>
                                 <div className="flex items-center text-xs text-neutral-500">
-                                  <span>Denúncia</span>
+                                  <span>{traduzirTipoPost(post.type_post)}</span>
                                   <span className="mx-1">•</span>
                                   <span>
                                     {new Date(
-                                      complaint.created_at
+                                      post.created_at
                                     ).toLocaleDateString("pt-BR")}
                                   </span>
                                 </div>
@@ -406,7 +423,7 @@ export default function ProfilePage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-neutral-500">
-                                {complaint.community.name}
+                                {post.community.name}
                               </span>
                               <button className="p-1 hover:bg-neutral-100 rounded">
                                 <BookmarkIcon className="h-5 w-5 text-neutral-500" />
@@ -418,17 +435,17 @@ export default function ProfilePage() {
                           </div>
 
                           <h2 className="text-xl font-medium mb-2">
-                            {complaint.title}
+                            {post.title}
                           </h2>
                           <p className="text-neutral-800 mb-4">
-                            {complaint.content}
+                            {post.content}
                           </p>
 
-                          {complaint.image_url && (
+                          {post.image_url && (
                             <div className="mb-4">
                               <img
-                                src={complaint.image_url}
-                                alt="Imagem da denúncia"
+                                src={post.image_url}
+                                alt="Imagem da publicação"
                                 className="w-full rounded-md max-h-96 object-cover"
                               />
                             </div>
@@ -438,19 +455,19 @@ export default function ProfilePage() {
                             <div className="flex items-center gap-1">
                               <ArrowUp className="h-4 w-4" />
                               <span className="text-sm">
-                                {complaint.likes_count}
+                                {post.likes_count}
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
                               <MessageSquare className="h-4 w-4" />
                               <span className="text-sm">
-                                {complaint.comments_count}
+                                {post.comments_count}
                               </span>
                             </div>
                             <div className="flex items-center gap-1">
                               <Activity className="h-4 w-4" />
                               <span className="text-sm">
-                                {complaint.report_count}
+                                {post.report_count}
                               </span>
                             </div>
                           </div>
@@ -468,11 +485,10 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
-          </div>{" "}
+          </div>
         </div>
       </main>
 
-      {/* Modal de Edição de Perfil */}
       {user && (
         <EditProfileModal
           isOpen={isEditModalOpen}

@@ -1,5 +1,5 @@
 import { Calendar, Mail } from "lucide-react";
-import { User } from "../page";
+import { User } from "../[username]/page";
 
 export default function UserInfo({ user }: { user: User | null }) {
   return (
