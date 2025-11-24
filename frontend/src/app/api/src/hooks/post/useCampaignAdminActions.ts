@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import getTokenFromCookies from '../../controllers/getTokenFromCookies';
-import { updateCampaignStatus } from '../../services/post/campaignAdminService';
+import { updateCampaignStatus, updateCampaign } from '../../services/post/campaignAdminService';
 
 export function useCampaignAdminActions() {
     const [loading, setLoading] = useState(false);
@@ -62,5 +62,30 @@ export function useCampaignAdminActions() {
         }
     };
 
-    return { loading, error, approveCampaign, rejectCampaign };
+    const changeCampaignStatus = async (
+        communityId: string,
+        postId: string,
+        status: 'in_progress' | 'canceled' | 'finished'
+    ) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const token = getTokenFromCookies();
+            if (!token) throw new Error('Token não encontrado. Usuário não autenticado.');
+            const data = await updateCampaign({
+                token,
+                communityId,
+                postId,
+                status_campaign: status,
+            });
+            return data;
+        } catch (err) {
+            setError(err as Error);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return { loading, error, approveCampaign, rejectCampaign, changeCampaignStatus };
 }

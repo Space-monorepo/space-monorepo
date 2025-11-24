@@ -5,7 +5,7 @@ import { ArrowLeft, Filter, Eye } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
-import { CheckmarkFilled, Search } from "@carbon/icons-react";
+import { CheckmarkFilled, Search, ChevronDown, FilterEdit, ChevronSort, Email } from "@carbon/icons-react";
 // import removido, já existe acima
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
@@ -33,7 +33,6 @@ import ModalAnnouncement from "@/components/modals/posts/ModalAnnouncement";
 import RejectComplaintModal from "@/components/modals/community/RejectComplaintModal";
 import ApproveComplaintModal from "@/components/modals/community/ApproveComplaintModal";
 import ImportUserModal from "@/components/modals/community/ImportUserModal";
-import { ChevronSort, Email, FilterEdit } from "@carbon/icons-react";
 
 type UserInfo = {
   id: string;
@@ -157,6 +156,7 @@ export default function CommunityAdminPage({
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [newModeratorEmail, setNewModeratorEmail] = useState("");
   const [excludeUserEmail, setExcludeUserEmail] = useState("");
   // Estados para importação em lote
@@ -198,72 +198,119 @@ export default function CommunityAdminPage({
 
   // Função para mapear status da API para status do frontend
   const mapApiStatusToFrontendStatus = (apiStatus: string): "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada" => {
-    if (!apiStatus) return 'Em análise';
+    if (!apiStatus) return 'Pendente';
     switch (apiStatus.toLowerCase()) {
-      case 'under_analysis':
+      // Pendência inicial
       case 'pending':
+        return 'Pendente';
+      // Backend usa 'under_analysis' para campanha em análise
+      case 'under_analysis':
+      // Algumas rotas antigas podem usar 'active' como estado de revisão
+      case 'active':
         return 'Em análise';
+      // Aprovação / reprovação explícita
       case 'approved':
         return 'Aprovado';
       case 'rejected':
         return 'Rejeitado';
+      // Em execução
       case 'in_progress':
         return 'Em progresso';
+      // Cancelado (aceita ambas grafias vindas de fontes externas)
       case 'canceled':
       case 'cancelled':
         return 'Cancelada';
+      // Finalizado
       case 'finished':
       case 'completed':
         return 'Finalizada';
       default:
-        return 'Em análise';
+        return 'Pendente';
     }
   };
 
   // Funções auxiliares para converter dados da API para o formato do componente
-  const convertPostToCampaign = (post: PostResponse): Campaign => ({
-    id: post.id,
-    title: post.title,
-    leader: post.user.name,
-    user: {
-      id: post.user.id,
-      name: post.user.name,
-      profile_picture: post.user.profile_picture,
-      role: post.user.role,
-    },
-    participants: 0, // Zerar participantes temporariamente
-    date: new Date(post.created_at).toLocaleDateString("pt-BR"),
-    // Preferir o status da campanha quando disponível (via admin endpoint normalizado)
-    status: mapApiStatusToFrontendStatus((post as any).status_campaign || post.status),
-    description: post.content,
-    accesses: 0,
-    likes: post.likes_count || 0,
-    comments: post.comments_count || 0,
-    image: post.image_url || undefined,
-  });
+  const convertPostToCampaign = (post: PostResponse): Campaign => {
+    return {
+      id: post.id,
+      title: post.title,
+      leader: post.user.name,
+      user: {
+        id: post.user.id,
+        name: post.user.name,
+        profile_picture: post.user.profile_picture,
+        role: post.user.role,
+      },
+      participants: post.current_participants || 0, // Usar participantes reais do backend
+      date: new Date(post.created_at).toLocaleDateString("pt-BR"),
+      // Usar status_campaign do backend se existir, igual ao notifications
+      status: mapApiStatusToFrontendStatus(post.status_campaign ?? post.status),
+      description: post.content,
+      accesses: 0, // Backend não fornece esse campo ainda
+      likes: post.likes_count || 0,
+      comments: post.comments_count || 0,
+      image: post.image_url || undefined,
+    };
+  };
 
-  const convertPostToReport = (post: PostResponse): Report => ({
-    id: parseInt(post.id) || 0,
-    title: post.title,
-    reporter: post.user.name,
-    user: {
-      id: post.user.id,
-      name: post.user.name,
-      profile_picture: post.user.profile_picture,
-      role: post.user.role,
-    },
-    reported: "Usuário Denunciado", // Placeholder - ajustar conforme API
-    date: new Date(post.created_at).toLocaleDateString("pt-BR"),
-    status: post.status === "active" ? "Em análise" : "Resolvido",
-    description: post.content,
-    category: "Comportamento", // Placeholder - ajustar conforme API
-    severity: "Moderada" as const, // Placeholder - ajustar conforme API
-    confirmations: post.report_count || 0,
-    image: post.image_url || undefined,
-    likes: post.likes_count || 0,
-    comments: post.comments_count || 0,
-    accesses: 0,
-  });
+  const convertPostToReport = (post: PostResponse, index: number): Report => {
+    // Mapear level_complaint do backend (low, medium, high) para o frontend (Leve, Moderada, Crítica)
+    const mapSeverity = (level?: string): "Crítica" | "Moderada" | "Leve" => {
+      if (!level) return "Leve";
+      switch (level.toLowerCase()) {
+        case "high":
+        case "critical":
+          return "Crítica";
+        case "medium":
+        case "moderate":
+          return "Moderada";
+        case "low":
+        default:
+          return "Leve";
+      }
+    };
+
+    // Mapear status_complaint do backend para o frontend
+    const mapComplaintStatus = (statusComplaint?: string): "Em análise" | "Resolvido" | "Arquivado" => {
+      if (!statusComplaint) return "Em análise";
+      switch (statusComplaint.toLowerCase()) {
+        case "resolved":
+        case "completed":
+          return "Resolvido";
+        case "archived":
+        case "dismissed":
+          return "Arquivado";
+        case "under_analysis":
+        case "active":
+        case "pending":
+        default:
+          return "Em análise";
+      }
+    };
+
+    return {
+      id: parseInt(post.id) || index,
+      title: post.title,
+      reporter: post.user.name,
+      user: {
+        id: post.user.id,
+        name: post.user.name,
+        profile_picture: post.user.profile_picture,
+        role: post.user.role,
+      },
+      reported: "Usuário Denunciado", // Placeholder - ajustar conforme API
+      date: new Date(post.created_at).toLocaleDateString("pt-BR"),
+      status: mapComplaintStatus(post.status_complaint),
+      description: post.content,
+      category: "Comportamento", // Placeholder - ajustar conforme API
+      severity: mapSeverity(post.level_complaint),
+      confirmations: post.report_count || 0,
+      image: post.image_url || undefined,
+      likes: post.likes_count || 0,
+      comments: post.comments_count || 0,
+      accesses: 0,
+    };
+  };
 
   const convertPostToAnnouncement = (post: PostResponse): Announcement => ({
     id: parseInt(post.id) || 0,
@@ -285,7 +332,7 @@ export default function CommunityAdminPage({
   });
   // Converter dados da API para o formato esperado pelos componentes
   const campaigns: Campaign[] = apiCampaigns.map(convertPostToCampaign);
-  const reports: Report[] = apiReports.map(convertPostToReport);
+  const reports: Report[] = apiReports.map((post, index) => convertPostToReport(post, index));
   const announcements: Announcement[] = apiAnnouncements.map(
     convertPostToAnnouncement
   );
@@ -332,7 +379,7 @@ export default function CommunityAdminPage({
   };
 
   // Hook para aprovar/rejeitar campanha
-  const { approveCampaign, rejectCampaign, loading: adminActionLoading } = useCampaignAdminActions();
+  const { approveCampaign, rejectCampaign, changeCampaignStatus, loading: adminActionLoading } = useCampaignAdminActions();
 
   // Handler para aprovação real
   const handleApproveCampaign = async (subject: string, message: string) => {
@@ -388,6 +435,31 @@ export default function CommunityAdminPage({
       toast.error(error?.message || "Erro ao rejeitar campanha");
     } finally {
       setIsRejectModalOpen(false);
+    }
+  };
+
+  // Handler para mudança de status da campanha
+  const handleChangeStatus = async (newStatus: 'in_progress' | 'canceled' | 'finished') => {
+    if (!selectedCampaign) return;
+    try {
+      const response = await changeCampaignStatus(id, selectedCampaign.id, newStatus);
+      if (response && response.status_campaign) {
+        const mappedStatus = mapApiStatusToFrontendStatus(response.status_campaign);
+        setSelectedCampaign({ ...selectedCampaign, status: mappedStatus });
+      }
+      toast.success("Status da campanha atualizado com sucesso!");
+      try {
+        if (id) await fetchCommunityPosts(id);
+        if (id && selectedCampaign?.id) {
+          await fetchCampaignDetailsById(id, selectedCampaign.id as any);
+        }
+      } catch (err) {
+        console.warn("Falha ao atualizar posts após mudança de status:", err);
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao atualizar status da campanha");
+    } finally {
+      setIsStatusDropdownOpen(false);
     }
   };
 
@@ -596,13 +668,9 @@ export default function CommunityAdminPage({
           aria-haspopup="listbox"
         >
           <span className="self-stretch my-auto">{value}</span>
-          <img
-            src={variant === 'primary'
-              ? "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/d24654308878f16b516227be8c8c92bf44fa5a86?placeholderIfAbsent=true"
-              : "https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/4522605e2ac1a433252df88a4bc4955a89e0cbd3?placeholderIfAbsent=true"
-            }
-            className="object-contain shrink-0 self-stretch my-auto w-6 aspect-square"
-            alt="Dropdown arrow"
+          <ChevronDown
+            className="object-contain shrink- w-6 aspect-square"
+            aria-label="Dropdown arrow"
           />
         </button>
 
@@ -881,7 +949,7 @@ export default function CommunityAdminPage({
             </div>
           )}
           {/* Right Section - Details */}
-          <div className="flex-1 bg-gray-100 px-6 py-8 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
+          <div className="flex-1 bg-gray-100 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             {/* Loading State for Details */}
             {postsLoading && activeTab !== "Usuários" && activeTab !== "Comunidade" && (
               <div className="bg-white p-6 text-center">
@@ -1039,7 +1107,8 @@ export default function CommunityAdminPage({
                           getCampaignStatusBadge(selectedCampaign.status)
                         )}
                       </div>
-                      {selectedCampaign.status === "Em análise" && (
+                      {/* Botões de Aprovar/Rejeitar para status Pendente */}
+                      {selectedCampaign.status === "Pendente" && (
                         <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
                           <button
                             onClick={() => setIsRejectModalOpen(true)}
@@ -1059,6 +1128,58 @@ export default function CommunityAdminPage({
                           </button>
                         </div>
                       )}
+                      {/* Botão Atualizar Status para status Aprovado e Em análise */}
+                      {(selectedCampaign.status === "Aprovado" || selectedCampaign.status === "Em análise" || selectedCampaign?.status === "Em progresso") && (
+                        <div className="relative mt-10 max-w-[698px]">
+                          <button
+                            onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                            disabled={adminActionLoading}
+                            className="flex gap-8 cursor-pointer items-center pt-4 pr-4 pb-6 pl-4 bg-neutral-800 text-zinc-100 w-full max-md:pr-5 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span className="flex-1 text-left text-zinc-100">
+                              Atualizar status
+                            </span>
+                            <ChevronDown
+                              className="object-contain shrink-0 w-6 aspect-square"
+                              aria-label="Dropdown arrow"
+                            />
+                          </button>
+                          {isStatusDropdownOpen && (
+                            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 shadow-lg z-10 w-full">
+                              <ul role="listbox" className="py-1">
+                                <li>
+                                  <button
+                                    className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
+                                    onClick={() => handleChangeStatus('in_progress')}
+                                    disabled={adminActionLoading}
+                                  >
+                                    Em progresso
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
+                                    onClick={() => handleChangeStatus('canceled')}
+                                    disabled={adminActionLoading}
+                                  >
+                                    Cancelar
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
+                                    onClick={() => handleChangeStatus('finished')}
+                                    disabled={adminActionLoading}
+                                  >
+                                    Finalizar
+                                  </button>
+                                </li>
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {/* Sem botões para status Finalizada, Cancelada e Rejeitada */}
                     </section>
                   </article>
                 </div>

@@ -501,7 +501,7 @@ export default function PostList() {
           location: item.community.name,
           type: translatePostType(item.type_post),
           time: getRelativeTime(item.created_at),
-          image: item.image_url || "/publication-image.jpg",
+          image: item.image_url || "",
           likes: item.likes_count,
           comments: item.comments_count,
           shares: item.report_count,
@@ -651,18 +651,59 @@ export default function PostList() {
       return;
     }
 
+    // Aplicação otimista: atualiza imediatamente as contagens locais para animação
+    const previousAllPosts = allPosts.slice();
+    const previousDisplayed = displayedPosts.slice();
+    const optimisticOptions = Array.isArray(post.poll_options) ? post.poll_options.map((o: any) => ({ ...o })) : [];
+    const prevVoted = post.userVotedOptionId;
+    if (optimisticOptions.length > 0) {
+      // Se usuário já tinha votado em outra opção, decrementa essa opção
+      if (prevVoted && prevVoted !== optionId) {
+        const prevOpt = optimisticOptions.find((o: any) => o.id === prevVoted);
+        if (prevOpt) prevOpt.votes_count = Math.max(0, (prevOpt.votes_count || 0) - 1);
+      }
+      // Incrementa a opção clicada
+      const clicked = optimisticOptions.find((o: any) => o.id === optionId);
+      if (clicked) clicked.votes_count = (clicked.votes_count || 0) + 1;
+    }
+
+    // Atualiza estados localmente para mostrar animação/contagem imediatamente
+    setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptions, userVotedOptionId: optionId } as any : p));
+    setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptions, userVotedOptionId: optionId } as any : p));
+    if (postPreviewData && postPreviewData.id === post.id) {
+      setPostPreviewData((prev: any) => ({ ...prev, poll_options: optimisticOptions, userVotedOptionId: optionId }));
+    }
+
     try {
       const response = await voteOnPoll(communityId, optionId, token ?? undefined);
       if (response?.alreadyVoted) {
         toast.info('Você já votou nessa opção!');
+        // backend diz que já votou, reverte otimista para o estado anterior
+        setAllPosts(previousAllPosts);
+        setDisplayedPosts(previousDisplayed);
         return;
       }
       // Atualiza contagem de votos usando os dados mais recentes do backend
       const updatedOptions = response?.post?.poll_options ?? response?.options ?? [];
       const updatedQuestion = response?.question ?? response?.post?.poll_question ?? post.poll_question;
 
-      // Se o backend não retornar opções, mantém as originais para não sumir da tela
-      const finalOptions = updatedOptions.length > 0 ? updatedOptions : post.poll_options;
+      // Se o backend retornar opções, atualiza contagens mas preserva a ordem
+      // das opções otimistas (optimisticOptions) para evitar reordenações visuais.
+      let finalOptions: any[] = optimisticOptions.slice();
+      if (Array.isArray(updatedOptions) && updatedOptions.length > 0) {
+        if (optimisticOptions.length > 0) {
+          const updatedMap: { [key: string]: any } = {};
+          updatedOptions.forEach((o: any) => { updatedMap[o.id] = o; });
+          // Mantém a ordem das opções otimistas, substituindo dados por aqueles retornados
+          finalOptions = optimisticOptions.map((o: any) => updatedMap[o.id] ?? o);
+          // Se backend trouxe novas opções que não existiam antes, anexá-las ao final
+          updatedOptions.forEach((o: any) => {
+            if (!finalOptions.some((f: any) => f.id === o.id)) finalOptions.push(o);
+          });
+        } else {
+          finalOptions = updatedOptions.slice();
+        }
+      }
 
       let userVotedOptionId: string | undefined = undefined;
       if (finalOptions && Array.isArray(finalOptions)) {
@@ -684,12 +725,19 @@ export default function PostList() {
       // Recarrega posts do backend para garantir consistência (quando backend não retorna opções atualizadas)
       try {
         const refreshed = await fetchPosts();
-        setAllPosts(refreshed);
+        // Ao recarregar, preservamos a ordem das opções da enquete que acabamos de
+        // calcular (`finalOptions`) para evitar reordenação visual causada pelo backend.
+        const merged = refreshed.map((p: any) => {
+          if (p.id === post.id) {
+            return { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId };
+          }
+          return p;
+        });
+        setAllPosts(merged);
         // mantém a mesma quantidade de posts exibidos atualmente
         const shownCount = Math.max(displayedPosts.length, postsPerPage);
-        setDisplayedPosts(refreshed.slice(0, shownCount));
-        if (refreshed.length <= shownCount) setHasMorePosts(false);
-        else setHasMorePosts(true);
+        setDisplayedPosts(merged.slice(0, shownCount));
+        setHasMorePosts(!(merged.length <= shownCount));
       } catch (err) {
         // se falhar no refresh, continuamos com o estado otimista já aplicado
         console.warn('Falha ao recarregar posts após voto:', err);
@@ -697,6 +745,12 @@ export default function PostList() {
       toast.success('Voto contabilizado');
     } catch (err: any) {
       console.error('Erro ao votar na enquete', err);
+      // Reverte otimista em caso de erro
+      setAllPosts(previousAllPosts);
+      setDisplayedPosts(previousDisplayed);
+      if (postPreviewData && postPreviewData.id === post.id) {
+        setPostPreviewData((prev: any) => ({ ...prev, poll_options: post.poll_options, userVotedOptionId: post.userVotedOptionId }));
+      }
       toast.error(err?.message || 'Erro ao votar na enquete');
     }
   };
@@ -706,6 +760,21 @@ export default function PostList() {
     if (!post.userVotedOptionId) return;
     const token = getTokenFromCookies();
     const communityId = post.community?.id || 'default-community-id';
+    // Otimista: decrementa imediatamente a opção votada localmente
+    const previousAllPostsUn = allPosts.slice();
+    const previousDisplayedUn = displayedPosts.slice();
+    const optimisticOptionsUn = Array.isArray(post.poll_options) ? post.poll_options.map((o: any) => ({ ...o })) : [];
+    const votedId = post.userVotedOptionId;
+    if (optimisticOptionsUn.length > 0 && votedId) {
+      const opt = optimisticOptionsUn.find((o: any) => o.id === votedId);
+      if (opt) opt.votes_count = Math.max(0, (opt.votes_count || 0) - 1);
+    }
+    setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptionsUn, userVotedOptionId: undefined } as any : p));
+    setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptionsUn, userVotedOptionId: undefined } as any : p));
+    if (postPreviewData && postPreviewData.id === post.id) {
+      setPostPreviewData((prev: any) => ({ ...prev, poll_options: optimisticOptionsUn, userVotedOptionId: undefined }));
+    }
+
     try {
       // Para retirar o voto, basta chamar voteOnPoll novamente na opção votada, e o backend deve tratar como unvote
       const response = await voteOnPoll(communityId, post.userVotedOptionId, token ?? undefined);
@@ -713,8 +782,20 @@ export default function PostList() {
       const updatedOptions = response?.post?.poll_options ?? response?.options ?? [];
       const updatedQuestion = response?.question ?? response?.post?.poll_question ?? post.poll_question;
 
-      // Se o backend não retornar opções, mantém as originais para não sumir da tela
-      const finalOptions = updatedOptions.length > 0 ? updatedOptions : post.poll_options;
+      // Preserva ordem das opções otimistas (optimisticOptionsUn) como em handleVotePoll
+      let finalOptions: any[] = optimisticOptionsUn.slice();
+      if (Array.isArray(updatedOptions) && updatedOptions.length > 0) {
+        if (optimisticOptionsUn.length > 0) {
+          const updatedMap: { [key: string]: any } = {};
+          updatedOptions.forEach((o: any) => { updatedMap[o.id] = o; });
+          finalOptions = optimisticOptionsUn.map((o: any) => updatedMap[o.id] ?? o);
+          updatedOptions.forEach((o: any) => {
+            if (!finalOptions.some((f: any) => f.id === o.id)) finalOptions.push(o);
+          });
+        } else {
+          finalOptions = updatedOptions.slice();
+        }
+      }
 
       setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: undefined } as any : p));
       setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: undefined } as any : p));
@@ -724,17 +805,29 @@ export default function PostList() {
       // Recarrega posts do backend para garantir consistência após remover voto
       try {
         const refreshed = await fetchPosts();
-        setAllPosts(refreshed);
+        // Preserva a ordem das opções já calculada em `finalOptions` ao mesclar
+        const merged = refreshed.map((p: any) => {
+          if (p.id === post.id) {
+            return { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: undefined };
+          }
+          return p;
+        });
+        setAllPosts(merged);
         const shownCount = Math.max(displayedPosts.length, postsPerPage);
-        setDisplayedPosts(refreshed.slice(0, shownCount));
-        if (refreshed.length <= shownCount) setHasMorePosts(false);
-        else setHasMorePosts(true);
+        setDisplayedPosts(merged.slice(0, shownCount));
+        setHasMorePosts(!(merged.length <= shownCount));
       } catch (err) {
         console.warn('Falha ao recarregar posts após remover voto:', err);
       }
       toast.success('Voto removido');
     } catch (err: any) {
       console.error('Erro ao remover voto', err);
+      // Reverte otimista em caso de erro
+      setAllPosts(previousAllPostsUn);
+      setDisplayedPosts(previousDisplayedUn);
+      if (postPreviewData && postPreviewData.id === post.id) {
+        setPostPreviewData((prev: any) => ({ ...prev, poll_options: post.poll_options, userVotedOptionId: post.userVotedOptionId }));
+      }
       toast.error(err?.message || 'Erro ao remover voto');
     }
   };
@@ -1027,47 +1120,49 @@ export default function PostList() {
                             {post.poll_question}
                           </h3>
                         )}
-                        {(post.poll_options ?? []).map((option) => {
+                        {(() => {
                           const totalVotes = Array.isArray(post.poll_options) ? post.poll_options.reduce((sum, opt) => sum + opt.votes_count, 0) : 0;
-                          const percent = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
-                          const isUserVote = post.userVotedOptionId === option.id;
-                          return (
-                            <div
-                              key={option.id}
-                              className={`mb-4 cursor-pointer hover:opacity-80 transition-opacity`}
-                            >
-                              <button
-                                className={`w-full text-left bg-transparent border-none outline-none p-0 m-0 cursor-pointer`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleVotePoll(post, option.id);
-                                }}
+                          return (post.poll_options ?? []).map((option) => {
+                            const percent = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
+                            const isUserVote = post.userVotedOptionId === option.id;
+                            return (
+                              <div
+                                key={`${option.id}-${option.votes_count}`}
+                                className={`mb-4 cursor-pointer hover:opacity-80 transition-opacity`}
                               >
-                                <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none">
-                                  <div className="flex gap-2 items-center self-stretch my-auto">
-                                    <span className="self-stretch my-auto text-neutral-800 font-medium">
-                                      {percent}%
-                                    </span>
-                                    <span className="self-stretch my-auto text-neutral-900">
-                                      {option.answer}
+                                <button
+                                  className={`w-full text-left bg-transparent border-none outline-none p-0 m-0 cursor-pointer`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleVotePoll(post, option.id);
+                                  }}
+                                >
+                                  <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none">
+                                    <div className="flex gap-2 items-center self-stretch my-auto">
+                                      <span className="self-stretch my-auto text-neutral-800 font-medium">
+                                        {percent}%
+                                      </span>
+                                      <span className="self-stretch my-auto text-neutral-900">
+                                        {option.answer}
+                                      </span>
+                                    </div>
+                                    <span className="self-stretch my-auto text-neutral-500">
+                                      {option.votes_count} {option.votes_count === 1 ? 'voto' : 'votos'}
                                     </span>
                                   </div>
-                                  <span className="self-stretch my-auto text-neutral-500">
-                                    {option.votes_count} {option.votes_count === 1 ? 'voto' : 'votos'}
-                                  </span>
-                                </div>
-                                <div className="mt-2 w-full rounded-sm">
-                                  <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300">
-                                    <div
-                                      className="flex shrink-0 h-2 rounded-sm bg-neutral-800"
-                                      style={{ width: `${percent}%`, minWidth: '8px' }}
-                                    />
+                                  <div className="mt-2 w-full rounded-sm">
+                                    <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300">
+                                      <div
+                                        className="flex shrink-0 h-2 rounded-sm bg-neutral-800"
+                                        style={{ width: `${percent}%`, minWidth: '8px', transition: 'width 300ms ease' }}
+                                      />
+                                    </div>
                                   </div>
-                                </div>
-                              </button>
-                            </div>
-                          );
-                        })}
+                                </button>
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
                     )}
 

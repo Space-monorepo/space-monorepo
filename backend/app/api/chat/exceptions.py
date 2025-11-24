@@ -100,17 +100,17 @@ class FileSizeExceededError(Exception):
     pass
 
 
-class VirusScanFailedError(Exception):
+class UsersNotConnectedError(Exception):
     """
-    Exception raised when uploaded file fails virus scan.
+    Exception raised when users are not connected and try to chat.
     """
 
     pass
 
 
-class UsersNotConnectedError(Exception):
+class CannotCreateSelfConversationError(Exception):
     """
-    Exception raised when users are not connected and try to chat.
+    Exception raised when a user tries to create a conversation with themselves.
     """
 
     pass
@@ -216,10 +216,12 @@ def _register_chat_validation_handlers(app: FastAPI):
             status.HTTP_400_BAD_REQUEST, str(exc), 'invalid_file_type'
         )
 
-    @app.exception_handler(VirusScanFailedError)
-    async def virus_scan_failed_handler(request: Request, exc: VirusScanFailedError):
+    @app.exception_handler(CannotCreateSelfConversationError)
+    async def cannot_create_self_conversation_handler(
+        request: Request, exc: CannotCreateSelfConversationError
+    ):
         return _create_error_response(
-            status.HTTP_400_BAD_REQUEST, str(exc), 'virus_scan_failed'
+            status.HTTP_400_BAD_REQUEST, str(exc), 'cannot_create_self_conversation'
         )
 
 

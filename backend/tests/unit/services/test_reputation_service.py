@@ -370,9 +370,9 @@ def test_add_popularity_points_save_error():
 
 
 @pytest.mark.unit
-def test_award_campaign_creation():
+def test_reward_campaign_creation_to_member():
     """
-    Tests the `award_campaign_creation` method.
+    Tests the `reward_campaign_creation_to_member` method.
 
     Scenario:
     - Given a campaign author
@@ -393,16 +393,16 @@ def test_award_campaign_creation():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_campaign_creation(author_id)
+    service.reward_campaign_creation_to_member(author_id)
 
     # Assert
     assert mock_member.reputation == 1100
 
 
 @pytest.mark.unit
-def test_award_campaign_status_change_approved():
+def test_reward_campaign_status_change_approved():
     """
-    Tests campaign approval award.
+    Tests campaign approval reward.
 
     Scenario:
     - Given a campaign changing from pending to approved
@@ -423,14 +423,14 @@ def test_award_campaign_status_change_approved():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_campaign_status_change(author_id, 'pending', 'approved')
+    service.reward_campaign_status_change_to_member(author_id, 'pending', 'approved')
 
     # Assert
     assert mock_member.reputation == 2400  # 2000 + 400
 
 
 @pytest.mark.unit
-def test_award_campaign_status_change_rejected():
+def test_reward_campaign_status_change_rejected():
     """
     Tests campaign rejection penalty.
 
@@ -453,16 +453,16 @@ def test_award_campaign_status_change_rejected():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_campaign_status_change(author_id, 'pending', 'rejected')
+    service.reward_campaign_status_change_to_member(author_id, 'pending', 'rejected')
 
     # Assert
     assert mock_member.reputation == 1950  # 2000 - 50
 
 
 @pytest.mark.unit
-def test_award_campaign_support():
+def test_reward_campaign_support_to_member():
     """
-    Tests the `award_campaign_support` method.
+    Tests the `reward_campaign_support_to_member` method.
 
     Scenario:
     - Given a member supporting a campaign
@@ -483,16 +483,16 @@ def test_award_campaign_support():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_campaign_support(supporter_id)
+    service.reward_campaign_support_to_member(supporter_id)
 
     # Assert
     assert mock_member.reputation == 3050
 
 
 @pytest.mark.unit
-def test_award_post_creation():
+def test_reward_post_creation_to_member():
     """
-    Tests the `award_post_creation` method.
+    Tests the `reward_post_creation_to_member` method.
 
     Scenario:
     - Given a member creating a post
@@ -513,16 +513,16 @@ def test_award_post_creation():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_post_creation(author_id)
+    service.reward_post_creation_to_member(author_id)
 
     # Assert
     assert mock_member.popularity == 600
 
 
 @pytest.mark.unit
-def test_award_post_like():
+def test_reward_post_like_to_member():
     """
-    Tests the `award_post_like` method.
+    Tests the `reward_post_like_to_member` method.
 
     Scenario:
     - Given a member liking a post
@@ -556,7 +556,7 @@ def test_award_post_like():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_post_like(liker_id, author_id)
+    service.reward_post_like_to_member(liker_id, author_id)
 
     # Assert
     assert mock_liker.popularity == 110  # 100 + 10 (LIKE)
@@ -564,7 +564,7 @@ def test_award_post_like():
 
 
 @pytest.mark.unit
-def test_award_comment_creation():
+def test_reward_comment_creation_to_member():
     """
     Tests the `award_comment_creation` method.
 
@@ -600,7 +600,7 @@ def test_award_comment_creation():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_comment_creation(commenter_id, post_author_id)
+    service.reward_comment_creation_to_member(commenter_id, post_author_id)
 
     # Assert
     assert mock_commenter.popularity == 225  # 200 + 25 (COMMENT_POST)
@@ -608,9 +608,9 @@ def test_award_comment_creation():
 
 
 @pytest.mark.unit
-def test_award_comment_like():
+def test_reward_comment_like_to_member():
     """
-    Tests the `award_comment_like` method.
+    Tests the `reward_comment_like_to_member` method.
 
     Scenario:
     - Given a member liking a comment
@@ -644,7 +644,7 @@ def test_award_comment_like():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_comment_like(liker_id, comment_author_id)
+    service.reward_comment_like_to_member(liker_id, comment_author_id)
 
     # Assert
     assert mock_liker.popularity == 160  # 150 + 10 (LIKE)
@@ -652,9 +652,9 @@ def test_award_comment_like():
 
 
 @pytest.mark.unit
-def test_award_complaint_creation():
+def test_reward_complaint_creation():
     """
-    Tests the `award_complaint_creation` method.
+    Tests the `reward_complaint_creation` method.
 
     Scenario:
     - Given a member creating a complaint
@@ -676,7 +676,7 @@ def test_award_complaint_creation():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_complaint_creation(author_id)
+    service.reward_complaint_creation_to_member(author_id)
 
     # Assert
     assert mock_member.reputation == 1100
@@ -684,9 +684,9 @@ def test_award_complaint_creation():
 
 
 @pytest.mark.unit
-def test_award_complaint_confirmation():
+def test_reward_complaint_confirmation_to_member():
     """
-    Tests the `award_complaint_confirmation` method.
+    Tests the `reward_complaint_confirmation_to_member` method.
 
     Scenario:
     - Given a member confirming a complaint
@@ -707,48 +707,66 @@ def test_award_complaint_confirmation():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_complaint_confirmation(member_id)
+    service.reward_complaint_confirmation_to_member(member_id)
 
     # Assert
     assert mock_member.reputation == 2030
 
 
 @pytest.mark.unit
-def test_award_complaint_resolution():
+def test_reward_complaint_resolution_to_member():
     """
-    Tests the `award_complaint_resolution` method.
+    Tests the `reward_complaint_resolution_to_member` method.
 
     Scenario:
-    - Given a member whose complaint is resolved
-    - When awarding resolution points
+    - Given a post whose complaint is resolved
+    - When awarding resolution points to the post author
     - Then both reputation and popularity should increase by 200 points each
     """
     # Arrange
     author_id = uuid4()
-    mock_member = Mock(spec=CommunityMember)
-    mock_member.reputation = 3000
-    mock_member.popularity = 1500
-
+    community_id = uuid4()
+    
+    # Mock do Post
+    mock_post = Mock()
+    mock_post.user = Mock()
+    mock_post.user.id = uuid4()
+    mock_post.community = Mock()
+    mock_post.community.id = community_id
+    
+    # Mock do author_member
+    mock_author_member = Mock()
+    mock_author_member.id = author_id
+    mock_author_member.reputation = 3000
+    mock_author_member.popularity = 1500
+    
     mock_tm = Mock()
     mock_member_repo = Mock()
-    mock_member_repo.get_by_id.return_value = mock_member
-    mock_member_repo.save.return_value = mock_member
-
+    mock_member_repo.get_by_id.return_value = mock_author_member
+    mock_member_repo.save.return_value = mock_author_member
+    
+    mock_community_service = Mock()
+    mock_community_service.get_member_association.return_value = mock_author_member
+    
     service = ReputationService(mock_tm)
     service.member_repo = mock_member_repo
-
+    service.community_service = mock_community_service
+    
     # Act
-    service.award_complaint_resolution(author_id)
-
+    service.reward_complaint_resolution_to_member(mock_post)
+    
     # Assert
-    assert mock_member.reputation == 3200
-    assert mock_member.popularity == 1700
+    assert mock_author_member.reputation == 3200
+    assert mock_author_member.popularity == 1700
+    mock_community_service.get_member_association.assert_called_once_with(
+        mock_post.user.id, mock_post.community.id
+    )
 
 
 @pytest.mark.unit
-def test_award_complaint_resolution_by_moderator():
+def test_reward_complaint_resolution_to_moderator():
     """
-    Tests the `award_complaint_resolution_by_moderator` method.
+    Tests the `reward_complaint_resolution_to_moderator` method.
 
     Scenario:
     - Given a moderator resolving a complaint
@@ -769,7 +787,7 @@ def test_award_complaint_resolution_by_moderator():
     service.member_repo = mock_member_repo
 
     # Act
-    service.award_complaint_resolution_by_moderator(moderator_id)
+    service.reward_complaint_resolution_to_moderator(moderator_id)
 
     # Assert
     assert mock_member.reputation == 5500

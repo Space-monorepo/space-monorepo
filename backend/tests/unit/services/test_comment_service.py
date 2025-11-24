@@ -206,7 +206,7 @@ def test_create_comment_service_success(
         fake_ids['member_id']
     )
     mock_services['community_service'].get_member_association.assert_called_once()
-    mock_services['reputation_service'].award_comment_creation.assert_called_once_with(
+    mock_services['reputation_service'].reward_comment_creation_to_member.assert_called_once_with(
         fake_member.id, fake_member.id
     )
     assert fake_post.comments_count == 1
@@ -290,7 +290,7 @@ def test_create_comment_reply_service_success(
         fake_ids['member_id']
     )
     mock_services['community_service'].get_member_association.assert_called_once()
-    mock_services['reputation_service'].award_comment_creation.assert_called_once_with(
+    mock_services['reputation_service'].reward_comment_creation_to_member.assert_called_once_with(
         fake_member.id, fake_member.id
     )
     assert result is not None

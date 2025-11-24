@@ -238,159 +238,171 @@ export default function ModerationPage() {
     // ===================================
     // INÍCIO: TRECHO DE USUÁRIOS REPORTADOS
     // ===================================
-    const renderUserReportsList = () => (
-        <div className="max-w-full">
-            <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
-                {userReports.map((report, index) => (
-                    <article key={report.id} className={`mb-0 bg-white max-md:mb-2.5 max-md:max-w-full ${index > 0 ? "mt-4" : ""}`}>
-                        <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
-                            <div className="w-full max-md:max-w-full">
-                                <div className="flex justify-between items-start w-full max-md:max-w-full">
-                                    <div className="flex items-center min-w-60">
-                                        <img
-                                            src={report.reportedUser.profile_picture || "/no-profile-pic.png"}
-                                            alt={`${report.reportedUser.name} profile picture`}
-                                            className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
-                                        />
-                                        <div className="self-stretch my-auto min-w-60 w-[342px]">
-                                            <div className="flex gap-2 items-center w-full h-[23px]">
-                                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
-                                                    <span className="self-stretch my-auto text-sm text-neutral-800">
-                                                        {report.reportedUser.name}
-                                                    </span>
-                                                    <CheckmarkFilled
-                                                        className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedUser.role)}`}
-                                                        aria-label="Verificado"
-                                                    />
-                                                    <div className="self-stretch my-auto text-[10px] text-black">
-                                                        •
+    const renderUserReportsList = () => {
+        if (!userReports || userReports.length === 0) {
+            return (
+                <div className="max-w-full">
+                    <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                        <div className="p-8 text-center text-neutral-500">Não há usuários para mostrar no momento.</div>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="max-w-full">
+                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                    {userReports.map((report, index) => (
+                        <article key={report.id} className={`mb-0 bg-white max-md:mb-2.5 max-md:max-w-full ${index > 0 ? "mt-4" : ""}`}>
+                            <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                                <div className="w-full max-md:max-w-full">
+                                    <div className="flex justify-between items-start w-full max-md:max-w-full">
+                                        <div className="flex items-center min-w-60">
+                                            <img
+                                                src={report.reportedUser.profile_picture || "/no-profile-pic.png"}
+                                                alt={`${report.reportedUser.name} profile picture`}
+                                                className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                                            />
+                                            <div className="self-stretch my-auto min-w-60 w-[342px]">
+                                                <div className="flex gap-2 items-center w-full h-[23px]">
+                                                    <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                                        <span className="self-stretch my-auto text-sm text-neutral-800">
+                                                            {report.reportedUser.name}
+                                                        </span>
+                                                        <CheckmarkFilled
+                                                            className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedUser.role)}`}
+                                                            aria-label="Verificado"
+                                                        />
+                                                        <div className="self-stretch my-auto text-[10px] text-black">
+                                                            •
+                                                        </div>
+                                                        <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedUser.role)}`}>
+                                                            {translateUserRole(report.reportedUser.role || "member")}
+                                                        </span>
                                                     </div>
-                                                    <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedUser.role)}`}>
-                                                        {translateUserRole(report.reportedUser.role || "member")}
-                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="self-stretch my-auto text-sm text-neutral-500">
-                                            {((voteCounts[report.id]?.tolerate || 0) + (voteCounts[report.id]?.suspend || 0))}/{VOTE_THRESHOLD} votos
+                                        <div className="flex items-center gap-4">
+                                            <div className="self-stretch my-auto text-sm text-neutral-500">
+                                                {((voteCounts[report.id]?.tolerate || 0) + (voteCounts[report.id]?.suspend || 0))}/{VOTE_THRESHOLD} votos
+                                            </div>
+                                            {getSeverityBadge(report.severity)}
                                         </div>
-                                        {getSeverityBadge(report.severity)}
+                                    </div>
+                                    <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                                        <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                                            <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                                Motivo:
+                                            </span>
+                                            <span className="self-stretch my-auto text-neutral-800">
+                                                {report.reason ? report.reason.charAt(0).toUpperCase() + report.reason.slice(1) : ''}
+                                            </span>
+                                        </div>
+                                        <div className="mt-4 w-full flex flex-col items-start gap-2">
+                                            <button
+                                                className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                                onClick={() => {
+                                                    setPreviewUserReport(report);
+                                                    setIsUserReportPreviewOpen(true);
+                                                }}
+                                            >
+                                                Investigar usuário
+                                            </button>
+                                            <button
+                                                className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                                onClick={() => handleShowUserReporters(report)}
+                                            >
+                                                Ver reportes
+                                            </button>
+                                            <ReportersModal
+                                                isOpen={userReportersOpen === report.id}
+                                                onClose={() => setUserReportersOpen(null)}
+                                                reporters={userReportersHook.reporters}
+                                                loading={userReportersHook.loading}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
-                                    <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
-                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
-                                            Motivo:
-                                        </span>
+                            </header>
+                            <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
+                                <div className="w-full leading-none max-md:max-w-full">
+                                    <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
+                                        <div className="flex flex-col">
+                                            <div className="flex gap-2 items-center">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Número de reportes:
+                                                </span>
+                                                <span className="self-stretch my-auto text-neutral-500">
+                                                    {report.confirmations} reportes
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 items-center self-start mt-4">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Data de entrada:
+                                                </span>
+                                                <time className="self-stretch my-auto text-neutral-500">
+                                                    {report.reportedUser.joined_date
+                                                        ? new Date(report.reportedUser.joined_date).toLocaleDateString("pt-BR")
+                                                        : (report.date || "-")}
+                                                </time>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col grow shrink w-[182px]">
+                                            <div className="flex gap-2 items-center self-start">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Reputação:
+                                                </span>
+                                                <span className="self-stretch my-auto text-neutral-500">
+                                                    {typeof report.reportedUser.reputation !== "undefined" && report.reportedUser.reputation !== null
+                                                        ? report.reportedUser.reputation
+                                                        : (report.status === "Resolvido" ? "Suspenso" : "Sob Observação")}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 items-center mt-4 w-full">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Popularidade:
+                                                </span>
+                                                <span className="self-stretch my-auto text-neutral-500">
+                                                    {typeof report.reportedUser.popularity !== "undefined" && report.reportedUser.popularity !== null
+                                                        ? `${report.reportedUser.popularity} visualizações`
+                                                        : `0 visualizações`}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                                    <button
+                                        onClick={async () => {
+                                            setSelectedUserReport(report);
+                                            await handleActuallyTolerate(report);
+                                        }}
+                                        className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                                    >
                                         <span className="self-stretch my-auto text-neutral-800">
-                                            {report.reason ? report.reason.charAt(0).toUpperCase() + report.reason.slice(1) : ''}
+                                            Tolerar
                                         </span>
-                                    </div>
-                                    <div className="mt-4 w-full flex flex-col items-start gap-2">
-                                        <button
-                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
-                                            onClick={() => {
-                                                setPreviewUserReport(report);
-                                                setIsUserReportPreviewOpen(true);
-                                            }}
-                                        >
-                                            Investigar usuário
-                                        </button>
-                                        <button
-                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
-                                            onClick={() => handleShowUserReporters(report)}
-                                        >
-                                            Ver reportes
-                                        </button>
-                                        <ReportersModal
-                                            isOpen={userReportersOpen === report.id}
-                                            onClose={() => setUserReportersOpen(null)}
-                                            reporters={userReportersHook.reporters}
-                                            loading={userReportersHook.loading}
-                                        />
-                                    </div>
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            setSelectedUserReport(report);
+                                            await handleActuallyResolve(report);
+                                        }}
+                                        className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                                    >
+                                        <span className="self-stretch my-auto text-zinc-100">
+                                            Suspender
+                                        </span>
+                                    </button>
                                 </div>
-                            </div>
-                        </header>
-                        <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
-                            <div className="w-full leading-none max-md:max-w-full">
-                                <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                                    <div className="flex flex-col">
-                                        <div className="flex gap-2 items-center">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Número de reportes:
-                                            </span>
-                                            <span className="self-stretch my-auto text-neutral-500">
-                                                {report.confirmations} reportes
-                                            </span>
-                                        </div>
-                                        <div className="flex gap-2 items-center self-start mt-4">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Data de entrada:
-                                            </span>
-                                            <time className="self-stretch my-auto text-neutral-500">
-                                                {report.reportedUser.joined_date
-                                                    ? new Date(report.reportedUser.joined_date).toLocaleDateString("pt-BR")
-                                                    : (report.date || "-")}
-                                            </time>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col grow shrink w-[182px]">
-                                        <div className="flex gap-2 items-center self-start">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Reputação:
-                                            </span>
-                                            <span className="self-stretch my-auto text-neutral-500">
-                                                {typeof report.reportedUser.reputation !== "undefined" && report.reportedUser.reputation !== null
-                                                    ? report.reportedUser.reputation
-                                                    : (report.status === "Resolvido" ? "Suspenso" : "Sob Observação")}
-                                            </span>
-                                        </div>
-                                        <div className="flex gap-2 items-center mt-4 w-full">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Popularidade:
-                                            </span>
-                                            <span className="self-stretch my-auto text-neutral-500">
-                                                {typeof report.reportedUser.popularity !== "undefined" && report.reportedUser.popularity !== null
-                                                    ? `${report.reportedUser.popularity} visualizações`
-                                                    : `0 visualizações`}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
-                                <button
-                                    onClick={async () => {
-                                        setSelectedUserReport(report);
-                                        await handleActuallyTolerate(report);
-                                    }}
-                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
-                                >
-                                    <span className="self-stretch my-auto text-neutral-800">
-                                        Tolerar
-                                    </span>
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        setSelectedUserReport(report);
-                                        await handleActuallyResolve(report);
-                                    }}
-                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
-                                >
-                                    <span className="self-stretch my-auto text-zinc-100">
-                                        Suspender
-                                    </span>
-                                </button>
-                            </div>
-                        </section>
-                    </article>
-                ))}
+                            </section>
+                        </article>
+                    ))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
     // ===================================
     // FIM: TRECHO DE USUÁRIOS REPORTADOS
     // ===================================
@@ -398,161 +410,173 @@ export default function ModerationPage() {
     // ===================================
     // INÍCIO: TRECHO DE PUBLICAÇÕES REPORTADAS
     // ===================================
-    const renderPostReportsList = () => (
-        <div className="max-w-full">
-            <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
-                {postReports.map((report, index) => (
-                    <article key={report.id} className={`mb-0 bg-white max-md:mb-2.5 max-md:max-w-full ${index > 0 ? "mt-4" : ""}`}>
-                        <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
-                            <div className="w-full max-md:max-w-full">
-                                <div className="flex justify-between items-start w-full max-md:max-w-full">
-                                    <div className="flex items-center min-w-60">
-                                        <img
-                                            src={report.reportedPost.author.profile_picture || "/no-profile-pic.png"}
-                                            alt={`${report.reportedPost.author.name} profile picture`}
-                                            className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
-                                        />
-                                        <div className="self-stretch my-auto min-w-60 w-[342px]">
-                                            <div className="flex gap-2 items-center w-full h-[23px]">
-                                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
-                                                    <span className="self-stretch my-auto text-sm text-neutral-800">
-                                                        {report.reportedPost.author.name}
-                                                    </span>
-                                                    <CheckmarkFilled
-                                                        className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedPost.author.role)}`}
-                                                        aria-label="Verificado"
-                                                    />
-                                                    <div className="self-stretch my-auto text-[10px] text-black">
-                                                        •
+    const renderPostReportsList = () => {
+        if (!postReports || postReports.length === 0) {
+            return (
+                <div className="max-w-full">
+                    <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                        <div className="p-8 text-center text-neutral-500">Não há publicações para mostrar no momento.</div>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="max-w-full">
+                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                    {postReports.map((report, index) => (
+                        <article key={report.id} className={`mb-0 bg-white max-md:mb-2.5 max-md:max-w-full ${index > 0 ? "mt-4" : ""}`}>
+                            <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                                <div className="w-full max-md:max-w-full">
+                                    <div className="flex justify-between items-start w-full max-md:max-w-full">
+                                        <div className="flex items-center min-w-60">
+                                            <img
+                                                src={report.reportedPost.author.profile_picture || "/no-profile-pic.png"}
+                                                alt={`${report.reportedPost.author.name} profile picture`}
+                                                className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                                            />
+                                            <div className="self-stretch my-auto min-w-60 w-[342px]">
+                                                <div className="flex gap-2 items-center w-full h-[23px]">
+                                                    <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                                        <span className="self-stretch my-auto text-sm text-neutral-800">
+                                                            {report.reportedPost.author.name}
+                                                        </span>
+                                                        <CheckmarkFilled
+                                                            className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedPost.author.role)}`}
+                                                            aria-label="Verificado"
+                                                        />
+                                                        <div className="self-stretch my-auto text-[10px] text-black">
+                                                            •
+                                                        </div>
+                                                        <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedPost.author.role)}`}>
+                                                            {translateUserRole(report.reportedPost.author.role || "member")}
+                                                        </span>
                                                     </div>
-                                                    <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedPost.author.role)}`}>
-                                                        {translateUserRole(report.reportedPost.author.role || "member")}
-                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="self-stretch my-auto text-sm text-neutral-500">
-                                            {((voteCounts[report.id]?.tolerate || 0) + (voteCounts[report.id]?.suspend || 0))}/{VOTE_THRESHOLD} votos
+                                        <div className="flex items-center gap-4">
+                                            <div className="self-stretch my-auto text-sm text-neutral-500">
+                                                {((voteCounts[report.id]?.tolerate || 0) + (voteCounts[report.id]?.suspend || 0))}/{VOTE_THRESHOLD} votos
+                                            </div>
+                                            {getSeverityBadge(report.severity)}
                                         </div>
-                                        {getSeverityBadge(report.severity)}
+                                    </div>
+                                    <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                                        <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                                            <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                                Título:
+                                            </span>
+                                            <span className="self-stretch my-auto text-neutral-800">
+                                                {report.reportedPost.title}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-4 items-center w-full leading-6 mt-4 max-md:max-w-full">
+                                            <span className="self-stretch my-auto font-semibold text-neutral-800">
+                                                Descrição:
+                                            </span>
+                                            <span className="self-stretch my-auto text-neutral-800">
+                                                {report.reportedPost.content}
+                                            </span>
+                                        </div>
+                                        <div className="mt-4 w-full flex flex-col items-start gap-2">
+                                            <button
+                                                className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                                onClick={() => {
+                                                    setPreviewPostReport(report);
+                                                    setIsPostReportPreviewOpen(true);
+                                                }}
+                                            >
+                                                Investigar publicação
+                                            </button>
+                                            <button
+                                                className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                                onClick={() => handleShowPostReporters(report)}
+                                            >
+                                                Ver reportes
+                                            </button>
+                                            <ReportersModal
+                                                isOpen={postReportersOpen === report.id}
+                                                onClose={() => setPostReportersOpen(null)}
+                                                reporters={postReportersHook.reporters}
+                                                loading={postReportersHook.loading}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
-                                    <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
-                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
-                                            Título:
-                                        </span>
+                            </header>
+                            <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
+                                <div className="w-full leading-none max-md:max-w-full">
+                                    <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
+                                        <div className="flex flex-col">
+                                            <div className="flex gap-2 items-center">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Número de reportes:
+                                                </span>
+                                                <span className="self-stretch my-auto text-neutral-500">
+                                                    {report.confirmations} reportes
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 items-center self-start mt-4">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Data publicada:
+                                                </span>
+                                                <time className="self-stretch my-auto text-neutral-500">
+                                                    {report.reportedPost.date}
+                                                </time>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col grow shrink w-[182px]">
+                                            <div className="flex gap-2 items-center self-start">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Curtidas:
+                                                </span>
+                                                <span className="self-stretch my-auto text-neutral-500">
+                                                    {report.reportedPost.likes}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 items-center mt-4 w-full">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Comentários:
+                                                </span>
+                                                <span className="self-stretch my-auto text-neutral-500">
+                                                    {report.reportedPost.comments}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                                    <button
+                                        onClick={async () => {
+                                            setSelectedPostReport(report);
+                                            await handleActuallyTolerate(report);
+                                        }}
+                                        className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                                    >
                                         <span className="self-stretch my-auto text-neutral-800">
-                                            {report.reportedPost.title}
+                                            Tolerar
                                         </span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-4 items-center w-full leading-6 mt-4 max-md:max-w-full">
-                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
-                                            Descrição:
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            setSelectedPostReport(report);
+                                            await handleActuallyResolve(report);
+                                        }}
+                                        className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                                    >
+                                        <span className="self-stretch my-auto text-zinc-100">
+                                            Suspender
                                         </span>
-                                        <span className="self-stretch my-auto text-neutral-800">
-                                            {report.reportedPost.content}
-                                        </span>
-                                    </div>
-                                    <div className="mt-4 w-full flex flex-col items-start gap-2">
-                                        <button
-                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
-                                            onClick={() => {
-                                                setPreviewPostReport(report);
-                                                setIsPostReportPreviewOpen(true);
-                                            }}
-                                        >
-                                            Investigar publicação
-                                        </button>
-                                        <button
-                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
-                                            onClick={() => handleShowPostReporters(report)}
-                                        >
-                                            Ver reportes
-                                        </button>
-                                        <ReportersModal
-                                            isOpen={postReportersOpen === report.id}
-                                            onClose={() => setPostReportersOpen(null)}
-                                            reporters={postReportersHook.reporters}
-                                            loading={postReportersHook.loading}
-                                        />
-                                    </div>
+                                    </button>
                                 </div>
-                            </div>
-                        </header>
-                        <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
-                            <div className="w-full leading-none max-md:max-w-full">
-                                <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                                    <div className="flex flex-col">
-                                        <div className="flex gap-2 items-center">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Número de reportes:
-                                            </span>
-                                            <span className="self-stretch my-auto text-neutral-500">
-                                                {report.confirmations} reportes
-                                            </span>
-                                        </div>
-                                        <div className="flex gap-2 items-center self-start mt-4">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Data publicada:
-                                            </span>
-                                            <time className="self-stretch my-auto text-neutral-500">
-                                                {report.reportedPost.date}
-                                            </time>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col grow shrink w-[182px]">
-                                        <div className="flex gap-2 items-center self-start">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Curtidas:
-                                            </span>
-                                            <span className="self-stretch my-auto text-neutral-500">
-                                                {report.reportedPost.likes}
-                                            </span>
-                                        </div>
-                                        <div className="flex gap-2 items-center mt-4 w-full">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Comentários:
-                                            </span>
-                                            <span className="self-stretch my-auto text-neutral-500">
-                                                {report.reportedPost.comments}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
-                                <button
-                                    onClick={async () => {
-                                        setSelectedPostReport(report);
-                                        await handleActuallyTolerate(report);
-                                    }}
-                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
-                                >
-                                    <span className="self-stretch my-auto text-neutral-800">
-                                        Tolerar
-                                    </span>
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        setSelectedPostReport(report);
-                                        await handleActuallyResolve(report);
-                                    }}
-                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
-                                >
-                                    <span className="self-stretch my-auto text-zinc-100">
-                                        Suspender
-                                    </span>
-                                </button>
-                            </div>
-                        </section>
-                    </article>
-                ))}
+                            </section>
+                        </article>
+                    ))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
     // ===================================
     // FIM: TRECHO DE PUBLICAÇÕES REPORTADAS
     // ===================================
@@ -560,153 +584,165 @@ export default function ModerationPage() {
     // ===================================
     // INÍCIO: TRECHO DE COMENTÁRIOS REPORTADOS
     // ===================================
-    const renderCommentReportsList = () => (
-        <div className="max-w-full">
-            <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
-                {commentReports.map((report, index) => (
-                    <article key={report.id} className={`mb-0 bg-white max-md:mb-2.5 max-md:max-w-full ${index > 0 ? "mt-4" : ""}`}>
-                        <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
-                            <div className="w-full max-md:max-w-full">
-                                <div className="flex justify-between items-start w-full max-md:max-w-full">
-                                    <div className="flex items-center min-w-60">
-                                        <img
-                                            src={report.reportedComment.author.profile_picture || "/no-profile-pic.png"}
-                                            alt={`${report.reportedComment.author.name} profile picture`}
-                                            className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
-                                        />
-                                        <div className="self-stretch my-auto min-w-60 w-[342px]">
-                                            <div className="flex gap-2 items-center w-full h-[23px]">
-                                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
-                                                    <span className="self-stretch my-auto text-sm text-neutral-800">
-                                                        {report.reportedComment.author.name}
-                                                    </span>
-                                                    <CheckmarkFilled
-                                                        className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedComment.author.role)}`}
-                                                        aria-label="Verificado"
-                                                    />
-                                                    <div className="self-stretch my-auto text-[10px] text-black">
-                                                        •
+    const renderCommentReportsList = () => {
+        if (!commentReports || commentReports.length === 0) {
+            return (
+                <div className="max-w-full">
+                    <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                        <div className="p-8 text-center text-neutral-500">Não há comentários para mostrar no momento.</div>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="max-w-full">
+                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                    {commentReports.map((report, index) => (
+                        <article key={report.id} className={`mb-0 bg-white max-md:mb-2.5 max-md:max-w-full ${index > 0 ? "mt-4" : ""}`}>
+                            <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                                <div className="w-full max-md:max-w-full">
+                                    <div className="flex justify-between items-start w-full max-md:max-w-full">
+                                        <div className="flex items-center min-w-60">
+                                            <img
+                                                src={report.reportedComment.author.profile_picture || "/no-profile-pic.png"}
+                                                alt={`${report.reportedComment.author.name} profile picture`}
+                                                className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                                            />
+                                            <div className="self-stretch my-auto min-w-60 w-[342px]">
+                                                <div className="flex gap-2 items-center w-full h-[23px]">
+                                                    <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                                        <span className="self-stretch my-auto text-sm text-neutral-800">
+                                                            {report.reportedComment.author.name}
+                                                        </span>
+                                                        <CheckmarkFilled
+                                                            className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedComment.author.role)}`}
+                                                            aria-label="Verificado"
+                                                        />
+                                                        <div className="self-stretch my-auto text-[10px] text-black">
+                                                            •
+                                                        </div>
+                                                        <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedComment.author.role)}`}>
+                                                            {translateUserRole(report.reportedComment.author.role || "member")}
+                                                        </span>
                                                     </div>
-                                                    <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(report.reportedComment.author.role)}`}>
-                                                        {translateUserRole(report.reportedComment.author.role || "member")}
-                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="self-stretch my-auto text-sm text-neutral-500">
-                                            {((voteCounts[report.id]?.tolerate || 0) + (voteCounts[report.id]?.suspend || 0))}/{VOTE_THRESHOLD} votos
+                                        <div className="flex items-center gap-4">
+                                            <div className="self-stretch my-auto text-sm text-neutral-500">
+                                                {((voteCounts[report.id]?.tolerate || 0) + (voteCounts[report.id]?.suspend || 0))}/{VOTE_THRESHOLD} votos
+                                            </div>
+                                            {getSeverityBadge(report.severity)}
                                         </div>
-                                        {getSeverityBadge(report.severity)}
+                                    </div>
+                                    <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                                        <div className="flex flex-col gap-2 w-full max-md:max-w-full">
+                                            <span className="font-semibold text-neutral-800">
+                                                Comentário:
+                                            </span>
+                                            <span className="text-neutral-800 leading-6">
+                                                {report.reportedComment.content}
+                                            </span>
+                                        </div>
+                                        <div className="mt-4 w-full flex flex-col items-start gap-2">
+                                            <button
+                                                className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                                onClick={() => {
+                                                    setPreviewCommentReport(report);
+                                                    setIsCommentReportPreviewOpen(true);
+                                                }}
+                                            >
+                                                Investigar comentário
+                                            </button>
+                                            <button
+                                                className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
+                                                onClick={() => handleShowCommentReporters(report)}
+                                            >
+                                                Ver reportes
+                                            </button>
+                                            <ReportersModal
+                                                isOpen={commentReportersOpen === report.id}
+                                                onClose={() => setCommentReportersOpen(null)}
+                                                reporters={commentReportersHook.reporters}
+                                                loading={commentReportersHook.loading}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
-                                    <div className="flex flex-col gap-2 w-full max-md:max-w-full">
-                                        <span className="font-semibold text-neutral-800">
-                                            Comentário:
+                            </header>
+                            <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
+                                <div className="w-full leading-none max-md:max-w-full">
+                                    <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
+                                        <div className="flex flex-col">
+                                            <div className="flex gap-2 items-center">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Número de reportes:
+                                                </span>
+                                                <span className="self-stretch my-auto text-neutral-500">
+                                                    {report.confirmations} reportes
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 items-center self-start mt-4">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Data publicada:
+                                                </span>
+                                                <time className="self-stretch my-auto text-neutral-500">
+                                                    {report.reportedComment.date}
+                                                </time>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col grow shrink w-[182px]">
+                                            <div className="flex gap-2 items-center self-start">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Curtidas:
+                                                </span>
+                                                <span className="self-stretch my-auto text-neutral-500">
+                                                    {report.reportedComment.likes}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 items-center mt-4 w-full">
+                                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                    Categoria:
+                                                </span>
+                                                <span className="self-stretch my-auto text-neutral-500">
+                                                    {report.category}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                                    <button
+                                        onClick={async () => {
+                                            setSelectedCommentReport(report);
+                                            await handleActuallyTolerate(report);
+                                        }}
+                                        className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                                    >
+                                        <span className="self-stretch my-auto text-neutral-800">
+                                            Tolerar
                                         </span>
-                                        <span className="text-neutral-800 leading-6">
-                                            {report.reportedComment.content}
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            setSelectedCommentReport(report);
+                                            await handleActuallyResolve(report);
+                                        }}
+                                        className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                                    >
+                                        <span className="self-stretch my-auto text-zinc-100">
+                                            Suspender
                                         </span>
-                                    </div>
-                                    <div className="mt-4 w-full flex flex-col items-start gap-2">
-                                        <button
-                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
-                                            onClick={() => {
-                                                setPreviewCommentReport(report);
-                                                setIsCommentReportPreviewOpen(true);
-                                            }}
-                                        >
-                                            Investigar comentário
-                                        </button>
-                                        <button
-                                            className="text-yellow-600 font-medium text-sm hover:text-yellow-700 transition-colors cursor-pointer"
-                                            onClick={() => handleShowCommentReporters(report)}
-                                        >
-                                            Ver reportes
-                                        </button>
-                                        <ReportersModal
-                                            isOpen={commentReportersOpen === report.id}
-                                            onClose={() => setCommentReportersOpen(null)}
-                                            reporters={commentReportersHook.reporters}
-                                            loading={commentReportersHook.loading}
-                                        />
-                                    </div>
+                                    </button>
                                 </div>
-                            </div>
-                        </header>
-                        <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
-                            <div className="w-full leading-none max-md:max-w-full">
-                                <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                                    <div className="flex flex-col">
-                                        <div className="flex gap-2 items-center">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Número de reportes:
-                                            </span>
-                                            <span className="self-stretch my-auto text-neutral-500">
-                                                {report.confirmations} reportes
-                                            </span>
-                                        </div>
-                                        <div className="flex gap-2 items-center self-start mt-4">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Data publicada:
-                                            </span>
-                                            <time className="self-stretch my-auto text-neutral-500">
-                                                {report.reportedComment.date}
-                                            </time>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col grow shrink w-[182px]">
-                                        <div className="flex gap-2 items-center self-start">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Curtidas:
-                                            </span>
-                                            <span className="self-stretch my-auto text-neutral-500">
-                                                {report.reportedComment.likes}
-                                            </span>
-                                        </div>
-                                        <div className="flex gap-2 items-center mt-4 w-full">
-                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                Categoria:
-                                            </span>
-                                            <span className="self-stretch my-auto text-neutral-500">
-                                                {report.category}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
-                                <button
-                                    onClick={async () => {
-                                        setSelectedCommentReport(report);
-                                        await handleActuallyTolerate(report);
-                                    }}
-                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
-                                >
-                                    <span className="self-stretch my-auto text-neutral-800">
-                                        Tolerar
-                                    </span>
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        setSelectedCommentReport(report);
-                                        await handleActuallyResolve(report);
-                                    }}
-                                    className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
-                                >
-                                    <span className="self-stretch my-auto text-zinc-100">
-                                        Suspender
-                                    </span>
-                                </button>
-                            </div>
-                        </section>
-                    </article>
-                ))}
+                            </section>
+                        </article>
+                    ))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
     // ===================================
     // FIM: TRECHO DE COMENTÁRIOS REPORTADOS
     // ===================================
@@ -790,6 +826,7 @@ export default function ModerationPage() {
         removePost,
         removeComment,
         tolerateReport,
+        getReportVotes,
     } = useModerationReports();
 
     // Estados existentes
@@ -914,6 +951,14 @@ export default function ModerationPage() {
     };
 
     // Funções auxiliares para converter dados da API para o formato do componente
+    // Normaliza um objeto de reporter vindo da API para o formato `UserInfo` usado no componente
+    const normalizeReporter = (r: any): UserInfo => ({
+        id: r?.id || r?.user_id || '',
+        name: r?.name || r?.username || r?.full_name || 'Desconhecido',
+        profile_picture: r?.profile_picture || r?.profile_image_url || r?.profile_image || undefined,
+        role: r?.role || r?.user_role || 'member',
+    });
+
     const convertPostToCampaign = (post: PostResponse): Campaign => ({
         id: post.id,
         title: post.title,
@@ -996,12 +1041,7 @@ export default function ModerationPage() {
             comments: apiPost.comments_count || 0,
             date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
         },
-        reporter: {
-            id: "community",
-            name: "Comunidade",
-            profile_picture: "/community-avatar.png",
-            role: "member",
-        },
+        reporter: normalizeReporter((apiPost as any).reporter || (apiPost as any).reports?.[0]?.reporter || apiPost.user || {}),
         reason: "Conteúdo inapropriado",
         description: "Publicação foi reportada pela comunidade por violar as diretrizes de conteúdo.",
         date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
@@ -1032,12 +1072,7 @@ export default function ModerationPage() {
         },
         // Mapear reporter real quando disponível. A API pode fornecer o reporter
         // diretamente ou dentro de um array de reports. Usar fallbacks amigáveis.
-        reporter: {
-            id: apiComment.reporter?.id || apiComment.reported_by?.id || apiComment.reports?.[0]?.reporter?.id || apiComment.reports?.[0]?.user?.id || "community",
-            name: apiComment.reporter?.name || apiComment.reported_by?.name || apiComment.reports?.[0]?.reporter?.name || apiComment.reports?.[0]?.user?.name || "Comunidade",
-            profile_picture: apiComment.reporter?.profile_picture || apiComment.reported_by?.profile_picture || apiComment.reports?.[0]?.reporter?.profile_picture || apiComment.reports?.[0]?.user?.profile_picture || "/community-avatar.png",
-            role: apiComment.reporter?.role || apiComment.reported_by?.role || apiComment.reports?.[0]?.reporter?.role || apiComment.reports?.[0]?.user?.role || "member",
-        },
+        reporter: normalizeReporter((apiComment as any).reporter || (apiComment as any).reported_by || (apiComment as any).reports?.[0]?.reporter || (apiComment as any).reports?.[0]?.user || {}),
         reason: apiComment.reason || apiComment.report_reason || apiComment.reports?.[0]?.reason || apiComment.reports?.[0]?.report_reason || "Linguagem inadequada",
         description: apiComment.description || apiComment.report_description || apiComment.reports?.[0]?.description || `Comentário reportado (id: ${apiComment.id})`,
         date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
@@ -1060,7 +1095,11 @@ export default function ModerationPage() {
         },
         reported: "Usuário Denunciado",
         date: new Date(post.created_at).toLocaleDateString("pt-BR"),
-        status: post.status === "active" ? "Em análise" : "Resolvido",
+        // Preferir o campo de status de denúncia quando disponível (ex: status_complaint)
+        // e usar o helper `mapComplaintStatusToFrontendStatus` para mapear corretamente
+        status: mapComplaintStatusToFrontendStatus(
+            (post as any).status_complaint ?? (post as any).statusComplaint ?? post.status
+        ),
         description: post.content,
         category: "Comportamento",
         severity: ["Crítica", "Moderada", "Leve"].includes(post.level_complaint as string)
@@ -1111,7 +1150,7 @@ export default function ModerationPage() {
             answer: opt.answer,
             votes_count: opt.votes_count
         })) : [],
-        image: post.image_url || "/publication-image.jpg",
+        image: post.image_url || undefined,
         likes: post.likes_count ?? 0,
         comments: post.comments_count ?? 0,
     });
@@ -1123,6 +1162,15 @@ export default function ModerationPage() {
     const announcements: Announcement[] = (apiAnnouncements || []).map(convertPostToAnnouncement);
     const polls: Poll[] = (apiPolls || []).map(convertPostToPoll);
 
+    // Estado local para permitir updates pontuais sem refetch completo
+    const [localReports, setLocalReports] = useState<Report[] | null>(null);
+
+    useEffect(() => {
+        setLocalReports(reports);
+    }, [apiReports]);
+
+    const displayedReports = localReports ?? reports;
+
     // Dados reais de moderação convertidos dos dados da API
     const userReports: UserReport[] = (reportedUsers || []).map((apiUser): UserReport => {
         return {
@@ -1133,12 +1181,7 @@ export default function ModerationPage() {
                 profile_picture: apiUser.profile_picture,
                 role: apiUser.role || "member",
             },
-            reporter: {
-                id: "system",
-                name: "Sistema",
-                profile_picture: "/system-avatar.png",
-                role: "admin",
-            },
+            reporter: normalizeReporter((apiUser as any).reporter || (apiUser as any).reported_by || {}),
             reason: apiUser.suspension_reason || "Violação das diretrizes da comunidade",
             description: `Usuário reportado por comportamento inadequado. Status atual: ${apiUser.status}`,
             date: new Date(apiUser.created_at).toLocaleDateString("pt-BR"),
@@ -1172,12 +1215,7 @@ export default function ModerationPage() {
                 status_complaint: apiPost.status_complaint,
                 level_complaint: apiPost.level_complaint,
             },
-            reporter: {
-                id: "community",
-                name: "Comunidade",
-                profile_picture: "/community-avatar.png",
-                role: "member",
-            },
+            reporter: normalizeReporter((apiPost as any).reporter || (apiPost as any).reports?.[0]?.reporter || apiPost.user || {}),
             reason: "Conteúdo inapropriado",
             description: "Publicação foi reportada pela comunidade por violar as diretrizes de conteúdo.",
             date: new Date(apiPost.created_at).toLocaleDateString("pt-BR"),
@@ -1204,12 +1242,7 @@ export default function ModerationPage() {
                 postTitle: apiComment.post?.title || "Post não encontrado",
                 likes: apiComment.likes_count || 0,
             },
-            reporter: {
-                id: "community",
-                name: "Comunidade",
-                profile_picture: "/community-avatar.png",
-                role: "member",
-            },
+            reporter: normalizeReporter((apiComment as any).reporter || (apiComment as any).reports?.[0]?.reporter || (apiComment as any).reports?.[0]?.user || {}),
             reason: "Linguagem inadequada",
             description: `Comentário reportado (id: ${apiComment.id})`,
             date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
@@ -1410,6 +1443,34 @@ export default function ModerationPage() {
     // Alinha com o backend (REPORT_VOTES_THRESHOLD = 2)
     const VOTE_THRESHOLD = 2;
     const [voteCounts, setVoteCounts] = useState<Record<string, { tolerate: number; suspend: number }>>({});
+    // Buscar contagem de votos do backend ao carregar reportes
+    useEffect(() => {
+        async function fetchVotesCounts() {
+            if (!selectedCommunity) return;
+            const allReports = [
+                ...userReports.map(r => r.id),
+                ...postReports.map(r => r.id),
+                ...commentReports.map(r => r.id),
+            ];
+            const newCounts: Record<string, { tolerate: number; suspend: number }> = {};
+            await Promise.all(
+                allReports.map(async (reportId) => {
+                    const data = await getReportVotes(selectedCommunity.id, reportId);
+                    newCounts[reportId] = {
+                        tolerate: data.tolerate ?? 0,
+                        suspend: data.suspend ?? 0,
+                    };
+                })
+            );
+            setVoteCounts(newCounts);
+        }
+        fetchVotesCounts();
+    }, [
+        selectedCommunity,
+        userReports.map(r => r.id).join(','),
+        postReports.map(r => r.id).join(','),
+        commentReports.map(r => r.id).join(',')
+    ]);
     const handleActuallyTolerate = async (report: UserReport | PostReport | CommentReport) => {
         if (!selectedCommunity || !user || !currentUserMemberId) {
             if (!currentUserMemberId) {
@@ -1518,18 +1579,23 @@ export default function ModerationPage() {
         if (!selectedReport || !selectedCommunity) return;
         try {
             const response: any = await updateComplaintStatus(selectedCommunity.id, selectedReport.id, 'resolved');
+            let mapped = 'Em análise';
             if (response && response.status_complaint) {
-                const mapped = mapComplaintStatusToFrontendStatus(response.status_complaint);
-                setSelectedReport({ ...selectedReport, status: mapped });
+                mapped = mapComplaintStatusToFrontendStatus(response.status_complaint);
             } else {
-                setSelectedReport({ ...selectedReport, status: 'Resolvido' });
+                mapped = 'Resolvido';
             }
+
+            // Atualiza o detalhe selecionado
+            setSelectedReport({ ...selectedReport, status: mapped as any });
+
+            // Atualiza a lista local de reports (se presente)
+            setLocalReports(prev => {
+                if (!prev) return prev;
+                return prev.map(r => (r.id === selectedReport.id ? { ...r, status: mapped as any } : r));
+            });
+
             toast.success('Denúncia resolvida com sucesso!');
-            try {
-                if (selectedCommunity) await fetchCommunityPosts(selectedCommunity.id);
-            } catch (err) {
-                console.warn('Falha ao atualizar posts após resolver denúncia:', err);
-            }
         } catch (error: any) {
             toast.error(error?.message || 'Erro ao resolver denúncia');
         }
@@ -1540,18 +1606,23 @@ export default function ModerationPage() {
         try {
             // Usar 'resolved' no backend para arquivar/dissolver
             const response: any = await updateComplaintStatus(selectedCommunity.id, selectedReport.id, 'resolved');
+            let mapped = 'Em análise';
             if (response && response.status_complaint) {
-                const mapped = mapComplaintStatusToFrontendStatus(response.status_complaint);
-                setSelectedReport({ ...selectedReport, status: mapped });
+                mapped = mapComplaintStatusToFrontendStatus(response.status_complaint);
             } else {
-                setSelectedReport({ ...selectedReport, status: 'Arquivado' });
+                mapped = 'Arquivado';
             }
+
+            // Atualiza o detalhe selecionado
+            setSelectedReport({ ...selectedReport, status: mapped as any });
+
+            // Atualiza a lista local de reports (se presente)
+            setLocalReports(prev => {
+                if (!prev) return prev;
+                return prev.map(r => (r.id === selectedReport.id ? { ...r, status: mapped as any } : r));
+            });
+
             toast.success('Denúncia dissolvida com sucesso!');
-            try {
-                if (selectedCommunity) await fetchCommunityPosts(selectedCommunity.id);
-            } catch (err) {
-                console.warn('Falha ao atualizar posts após dissolver denúncia:', err);
-            }
         } catch (error: any) {
             toast.error(error?.message || 'Erro ao dissolver denúncia');
         }
@@ -1796,102 +1867,116 @@ export default function ModerationPage() {
                             )}
 
                             {/* Exibir listas apenas nas abas Denúncias, Enquetes e Anúncios */}
-                            {activeTab === "Denúncias" &&
-                                reports.map((report) => (
-                                    <div
-                                        key={report.id}
-                                        className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
-                                            }`}
-                                        onClick={() => setSelectedReport(report)}
-                                    >
-                                        <div className="mb-2">
-                                            <h3 className="font-medium text-sm mb-1">
-                                                {report.title}
-                                            </h3>
-                                            <p className="text-xs text-[#525252] mb-1">
-                                                Denunciante: {report.reporter}
-                                            </p>
-                                            <p className="text-xs text-[#525252] mb-2">
-                                                {report.confirmations} confirmações
-                                            </p>
-                                            <p className="text-xs text-[#525252] mb-2">
-                                                {report.date}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            {getSeverityBadge(report.severity)}
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-xs text-[#525252]">{report.accesses || 0}</span>
-                                                <View className="h-4 w-4 text-[#161616]" />
+                            {activeTab === "Denúncias" && (
+                                (displayedReports.length === 0) ? (
+                                    <div className="p-4 mt-20 text-center text-neutral-500">Não há denúncias para mostrar no momento.</div>
+                                ) : (
+                                    displayedReports.map((report) => (
+                                        <div
+                                            key={report.id}
+                                            className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
+                                                }`}
+                                            onClick={() => setSelectedReport(report)}
+                                        >
+                                            <div className="mb-2">
+                                                <h3 className="font-medium text-sm mb-1">
+                                                    {report.title}
+                                                </h3>
+                                                <p className="text-xs text-[#525252] mb-1">
+                                                    Denunciante: {report.reporter}
+                                                </p>
+                                                <p className="text-xs text-[#525252] mb-2">
+                                                    {report.confirmations} confirmações
+                                                </p>
+                                                <p className="text-xs text-[#525252] mb-2">
+                                                    {report.date}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                {getSeverityBadge(report.severity)}
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-xs text-[#525252]">{report.accesses || 0}</span>
+                                                    <View className="h-4 w-4 text-[#161616]" />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))
+                                )
+                            )}
 
                             {/* Polls List */}
                             {activeTab === "Enquetes" && (
                                 <div className="flex flex-col mt-4">
-                                    {polls.map((poll) => (
-                                        <div
-                                            key={poll.id}
-                                            className={`w-full p-4 cursor-pointer transition-colors rounded-md border border-transparent ${selectedPoll?.id === poll.id ? 'bg-zinc-100' : 'bg-white hover:bg-zinc-50'}`}
-                                            onClick={() => setSelectedPoll(poll)}
-                                        >
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-[12px] font-normal text-neutral-500">{poll.date}</span>
-                                                <span className="flex items-center gap-1 text-[12px] font-normal text-neutral-500">
-                                                    {poll.votes ? `${poll.votes.toLocaleString('pt-BR')} mil` : '0'}
-                                                    <View className="h-4 w-4 text-[#161616]" />
-                                                </span>
+                                    {(!polls || polls.length === 0) ? (
+                                        <div className="p-4 mt-20 text-center text-neutral-500">Não há enquetes para mostrar no momento.</div>
+                                    ) : (
+                                        polls.map((poll) => (
+                                            <div
+                                                key={poll.id}
+                                                className={`w-full p-4 cursor-pointer transition-colors rounded-md border border-transparent ${selectedPoll?.id === poll.id ? 'bg-zinc-100' : 'bg-white hover:bg-zinc-50'}`}
+                                                onClick={() => setSelectedPoll(poll)}
+                                            >
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[12px] font-normal text-neutral-500">{poll.date}</span>
+                                                    <span className="flex items-center gap-1 text-[12px] font-normal text-neutral-500">
+                                                        {poll.votes ? `${poll.votes.toLocaleString('pt-BR')} mil` : '0'}
+                                                        <View className="h-4 w-4 text-[#161616]" />
+                                                    </span>
+                                                </div>
+                                                <div className="mt-1 text-[16px] font-normal text-black">{poll.title}</div>
+                                                <div className="mt-1 text-[12px] font-normal text-neutral-500">
+                                                    Moderador: {poll.author}
+                                                </div>
                                             </div>
-                                            <div className="mt-1 text-[16px] font-normal text-black">{poll.title}</div>
-                                            <div className="mt-1 text-[12px] font-normal text-neutral-500">
-                                                Moderador: {poll.author}
-                                            </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    )}
                                 </div>
                             )}
 
                             {/* Announcements List */}
-                            {activeTab === "Anúncios" &&
-                                announcements.map((announcement) => (
-                                    <div
-                                        key={announcement.id}
-                                        className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedAnnouncement?.id === announcement.id
-                                            ? "bg-[#f4f4f4]"
-                                            : ""
-                                            }`}
-                                        onClick={() => setSelectedAnnouncement(announcement)}
-                                    >
-                                        <div className="mb-2">
-                                            <h3 className="font-medium text-sm mb-1">
-                                                {announcement.title}
-                                            </h3>
-                                            <p className="text-xs text-[#525252] mb-1">
-                                                Autor: {announcement.author}
-                                            </p>
-                                            <p className="text-xs text-[#525252] mb-2">
-                                                {announcement.views} visualizações
-                                            </p>
-                                            <p className="text-xs text-[#525252] mb-2">
-                                                {announcement.date}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <span className={`px-2 py-1 rounded text-xs ${announcement.status === "Publicado"
-                                                ? "bg-green-100 text-green-800"
-                                                : "bg-gray-100 text-gray-800"
-                                                }`}>
-                                                {announcement.status}
-                                            </span>
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-xs text-[#525252]">{announcement.views || 0}</span>
-                                                <View className="h-4 w-4 text-[#161616]" />
+                            {activeTab === "Anúncios" && (
+                                (!announcements || announcements.length === 0) ? (
+                                    <div className="p-4 mt-20 text-center text-neutral-500">Não há anúncios para mostrar no momento.</div>
+                                ) : (
+                                    announcements.map((announcement) => (
+                                        <div
+                                            key={announcement.id}
+                                            className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedAnnouncement?.id === announcement.id
+                                                ? "bg-[#f4f4f4]"
+                                                : ""
+                                                }`}
+                                            onClick={() => setSelectedAnnouncement(announcement)}
+                                        >
+                                            <div className="mb-2">
+                                                <h3 className="font-medium text-sm mb-1">
+                                                    {announcement.title}
+                                                </h3>
+                                                <p className="text-xs text-[#525252] mb-1">
+                                                    Autor: {announcement.author}
+                                                </p>
+                                                <p className="text-xs text-[#525252] mb-2">
+                                                    {announcement.views} visualizações
+                                                </p>
+                                                <p className="text-xs text-[#525252] mb-2">
+                                                    {announcement.date}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className={`px-2 py-1 rounded text-xs ${announcement.status === "Publicado"
+                                                    ? "bg-green-100 text-green-800"
+                                                    : "bg-gray-100 text-gray-800"
+                                                    }`}>
+                                                    {announcement.status}
+                                                </span>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-xs text-[#525252]">{announcement.views || 0}</span>
+                                                    <View className="h-4 w-4 text-[#161616]" />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))
+                                )
+                            )}
                         </div>
                     </div>
 
@@ -1932,25 +2017,38 @@ export default function ModerationPage() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="mt-6 w-full text-sm leading-6 max-md:max-w-full">
-                                                    <div className="flex flex-wrap gap-4 items-center w-full text-neutral-800 max-md:max-w-full">
-                                                        <span className="self-stretch my-auto font-semibold text-neutral-800">
-                                                            Motivo:
+                                                <div className="flex flex-col mt-6 w-full max-md:max-w-full">
+                                                    <div className="flex gap-2 items-center self-start whitespace-nowrap">
+                                                        <span className="self-stretch my-auto text-sm font-semibold leading-none text-neutral-800">
+                                                            Nível:
                                                         </span>
-                                                        <span className="self-stretch my-auto text-neutral-800">
-                                                            {selectedReport.category}
-                                                        </span>
+                                                        <div className="flex gap-2.5 items-start self-stretch my-auto">
+                                                            {getSeverityBadge(selectedReport.severity)}
+                                                        </div>
                                                     </div>
-                                                    <div className="mt-2 w-full max-md:max-w-full">
-                                                        <span className="self-stretch my-auto text-neutral-800 leading-6">
-                                                            {selectedReport.description || "Investigar denúncia"}
-                                                        </span>
+                                                    <div className="flex flex-wrap gap-4 items-center mt-2 w-full text-sm text-neutral-800 max-md:max-w-full">
+                                                        <h2 className="self-stretch my-auto font-semibold leading-6 text-neutral-800">
+                                                            Título:
+                                                        </h2>
+                                                        <p className="self-stretch my-auto leading-8 text-neutral-800">
+                                                            {selectedReport.title}
+                                                        </p>
                                                     </div>
-                                                    <img
-                                                        src={selectedReport.image || "/publication-image.jpg"}
-                                                        alt={selectedReport.title || "Imagem da denúncia"}
-                                                        className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
-                                                    />
+                                                    <div className="mt-2 w-full text-sm text-neutral-800 max-md:max-w-full">
+                                                        <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                                                            Descrição:
+                                                        </h3>
+                                                        <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                                                            {selectedReport.description || "Descrição não disponível."}
+                                                        </p>
+                                                    </div>
+                                                    {selectedReport.image && (
+                                                        <img
+                                                            src={selectedReport.image}
+                                                            alt={selectedReport.title || "Imagem da denúncia"}
+                                                            className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
+                                                        />
+                                                    )}
                                                 </div>
                                             </div>
                                         </header>
@@ -1958,42 +2056,64 @@ export default function ModerationPage() {
                                         <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                                             <div className="w-full leading-none max-md:max-w-full">
                                                 <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                                                    <div className="flex flex-col">
+                                                    <div className="flex flex-col items-start">
                                                         <div className="flex gap-2 items-center">
                                                             <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                                Número de reportes:
-                                                            </span>
-                                                            <span className="self-stretch my-auto text-neutral-500">
-                                                                {selectedReport.confirmations} reportes
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex gap-2 items-center self-start mt-4">
-                                                            <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                                Data de entrada:
+                                                                Data publicada:
                                                             </span>
                                                             <span className="self-stretch my-auto text-neutral-500">
                                                                 {selectedReport.date}
                                                             </span>
                                                         </div>
-                                                    </div>
-                                                    <div className="flex flex-col grow shrink w-[182px]">
-                                                        <div className="flex gap-2 items-center self-start">
+                                                        <div className="flex gap-2 items-center self-stretch mt-4">
                                                             <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                                Status:
+                                                                Número de acessos:
                                                             </span>
                                                             <span className="self-stretch my-auto text-neutral-500">
-                                                                {selectedReport.status}
+                                                                {selectedReport.accesses || 0} acessos
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex gap-2 items-center mt-4">
+                                                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                                Confirmações:
+                                                            </span>
+                                                            <span className="self-stretch my-auto text-neutral-500">
+                                                                {selectedReport.confirmations} pessoas
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col w-[198px]">
+                                                        <div className="flex gap-2 items-center self-start">
+                                                            <span className="self-stretch my-auto font-medium text-neutral-800">
+                                                                Curtidas:
+                                                            </span>
+                                                            <span className="self-stretch my-auto text-neutral-500">
+                                                                {selectedReport.likes || 0} curtidas
                                                             </span>
                                                         </div>
                                                         <div className="flex gap-2 items-center mt-4 w-full">
                                                             <span className="self-stretch my-auto font-medium text-neutral-800">
-                                                                Popularidade:
+                                                                Comentários:
                                                             </span>
                                                             <span className="self-stretch my-auto text-neutral-500">
-                                                                {selectedReport.accesses || 0} visualizações
+                                                                {selectedReport.comments || 0} comentários
                                                             </span>
                                                         </div>
                                                     </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2 items-center self-start mt-10 text-neutral-800">
+                                                <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
+                                                    Status:
+                                                </span>
+                                                <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-2 my-auto text-xs leading-none rounded-sm bg-zinc-100">
+                                                    <Search
+                                                        className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square text-neutral-800"
+                                                        aria-label="Status"
+                                                    />
+                                                    <span className="self-stretch my-auto text-neutral-800">
+                                                        {selectedReport.status}
+                                                    </span>
                                                 </div>
                                             </div>
 
@@ -2082,11 +2202,13 @@ export default function ModerationPage() {
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <img
-                                                    src={selectedPoll.image || "/publication-image.jpg"}
-                                                    alt={selectedPoll.title || "Ilustração da enquete"}
-                                                    className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
-                                                />
+                                                {selectedPoll.image && (
+                                                    <img
+                                                        src={selectedPoll.image}
+                                                        alt={selectedPoll.title || "Ilustração da enquete"}
+                                                        className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
+                                                    />
+                                                )}
                                             </div>
                                         </article>
 
@@ -2497,10 +2619,9 @@ function UserReportDetails({ reportId, onTolerate, onSuspend }: {
                                                 <h2 className="self-stretch my-auto text-sm text-neutral-800">
                                                     {report.reportedUser?.name}
                                                 </h2>
-                                                <img
-                                                    src="https://api.builder.io/api/v1/image/assets/2c92ea9fbec34a758f970e8cafff5cb1/0915c1f8d702c90f4deafed21adc581f37a91002?placeholderIfAbsent=true"
-                                                    alt="Role indicator"
-                                                    className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px]"
+                                                <CheckmarkFilled
+                                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(report.reportedUser?.role)}`}
+                                                    aria-label="Verificado"
                                                 />
                                                 <span className="flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded bg-neutral-800 text-zinc-100">
                                                     {translateUserRole(report.reportedUser?.role || "member")}

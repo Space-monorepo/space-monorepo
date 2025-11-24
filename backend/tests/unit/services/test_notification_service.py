@@ -21,7 +21,6 @@ def test_create_notification(notification_service: NotificationService, mock_tm:
     """
     mock_repo = mock_tm.get_notification_repository()
 
-    # CORREÇÃO: O service deve passar o user_id como string (pois User.id é as_uuid=False)
     expected_user_id_str = str(mock_user.id)
 
     notif_data = {
@@ -30,7 +29,6 @@ def test_create_notification(notification_service: NotificationService, mock_tm:
         "data": {"title": "Teste"}
     }
 
-    # Simula o retorno do repositório
     mock_repo.create.return_value = Notification(
         user_id=expected_user_id_str,
         type=NotificationTypeEnum.OFFICIAL_NOTICE,
@@ -38,12 +36,11 @@ def test_create_notification(notification_service: NotificationService, mock_tm:
     )
 
     notification_service.create_notification(
-        user_id=mock_user.id,  # O serviço recebe o UUID (ou str)
+        user_id=mock_user.id,
         type=NotificationTypeEnum.OFFICIAL_NOTICE,
         data={"title": "Teste"}
     )
 
-    # CORREÇÃO: Verifica se o serviço chamou o repositório com o ID como string
     mock_repo.create.assert_called_once_with(obj_in=notif_data)
 
 
@@ -106,20 +103,20 @@ def test_create_interaction_notification_comment(notification_service: Notificat
 
 
 @pytest.mark.unit
-def test_create_connection_notification_follow_request(notification_service: NotificationService, mock_user: User,
+def test_create_connection_notification_request_received(notification_service: NotificationService, mock_user: User,
                                                        mock_actor: User):
     """
-    Testa o wrapper de criação de notificação de solicitação de conexão.
+    Testa o wrapper de criação de notificação de pedido de conexão recebido.
     """
     with patch.object(notification_service, 'create_notification') as mock_create:
         notification_service.create_connection_notification(
             recipient=mock_user,
             actor=mock_actor,
-            connection_type="follow_request"
+            connection_type="request_received"
         )
 
         expected_data = {
-            "connection_type": "follow_request",
+            "connection_type": "request_received",
             "actor_id": str(mock_actor.id),
             "actor_name": mock_actor.name
         }
@@ -132,7 +129,7 @@ def test_create_connection_notification_follow_request(notification_service: Not
 
 
 @pytest.mark.unit
-def test_create_connection_notification_follow_accepted(notification_service: NotificationService, mock_user: User,
+def test_create_connection_notification_request_accepted(notification_service: NotificationService, mock_user: User,
                                                         mock_actor: User):
     """
     Testa o wrapper de criação de notificação de aceitação de conexão.
@@ -141,11 +138,11 @@ def test_create_connection_notification_follow_accepted(notification_service: No
         notification_service.create_connection_notification(
             recipient=mock_user,
             actor=mock_actor,
-            connection_type="follow_accepted"
+            connection_type="request_accepted"
         )
 
         expected_data = {
-            "connection_type": "follow_accepted",
+            "connection_type": "request_accepted",
             "actor_id": str(mock_actor.id),
             "actor_name": mock_actor.name
         }
@@ -204,7 +201,7 @@ def test_mark_as_read(notification_service: NotificationService, mock_tm: MagicM
         type=NotificationTypeEnum.CAMPAIGN,
         read=True,
         created_at=datetime.now(),
-        data={"community_name": "Comunidade Teste", "campaign_title": "Participe!"}
+        data={"community_name": "Comunidade Teste", "campaign_title": "Participe!", "campaign_status_type": "default"}
     )
     mock_repo.mark_as_read.return_value = mock_notif_model
 
@@ -240,7 +237,9 @@ def test_mark_all_as_read(notification_service: NotificationService, mock_tm: Ma
 
 @pytest.mark.unit
 @pytest.mark.parametrize("notif_type, data, expected_message", [
-    (NotificationTypeEnum.INTERACTION, {"interaction_type": "like", "actor_name": "Bob", "post_title": "seu post"},
+    # INTERAÇÕES
+    (NotificationTypeEnum.INTERACTION, 
+     {"interaction_type": "like", "actor_name": "Bob", "post_title": "seu post"},
      "Bob curtiu seu post."),
     (NotificationTypeEnum.INTERACTION,
      {"interaction_type": "comment", "actor_name": "Alice", "post_title": "sua foto", "comment_content": "Que legal!"},
@@ -248,25 +247,64 @@ def test_mark_all_as_read(notification_service: NotificationService, mock_tm: Ma
     (NotificationTypeEnum.INTERACTION,
      {"interaction_type": "comment_like", "actor_name": "Carol", "comment_content": "Meu comentário"},
      'Carol curtiu seu comentário: "Meu comentário"'),
+
+    # CONEXÕES (Novos formatos)
     (NotificationTypeEnum.CONNECTION,
-     {"connection_type": "follow_request", "actor_name": "David"},
-     "David quer te seguir."),
+     {"connection_type": "request_received", "actor_name": "David"},
+     "David enviou um pedido de conexão."),
     (NotificationTypeEnum.CONNECTION,
-     {"connection_type": "follow_accepted", "actor_name": "Eve"},
-     "Eve aceitou sua solicitação de conexão."),
-    (NotificationTypeEnum.CAMPAIGN, {"community_name": "Devs", "campaign_title": "Hackathon"},
+     {"connection_type": "request_accepted", "actor_name": "Eve"},
+     "Eve aceitou seu pedido de conexão."),
+    (NotificationTypeEnum.CONNECTION,
+     {"connection_type": "badge", "badge_name": "Super Star"},
+     "Você recebeu um novo emblema: Super Star"),
+
+    # CAMPANHAS (Todos os ciclos de vida)
+    (NotificationTypeEnum.CAMPAIGN, 
+     {"community_name": "Devs", "campaign_title": "Hackathon", "campaign_status_type": "default"},
      "Nova campanha em Devs: Hackathon"),
-    (NotificationTypeEnum.OFFICIAL_NOTICE, {"notice_title": "Manutenção"}, "Aviso do Space: Manutenção"),
+    
+    (NotificationTypeEnum.CAMPAIGN, 
+     {"community_name": "Devs", "campaign_title": "Hackathon", "campaign_status_type": "target_reached"},
+     'A campanha "Hackathon" atingiu a meta! Agora está em análise.'),
+    
+    (NotificationTypeEnum.CAMPAIGN, 
+     {"community_name": "Devs", "campaign_title": "Hackathon", "campaign_status_type": "in_progress"},
+     'A campanha "Hackathon" entrou em progresso.'),
+
+    (NotificationTypeEnum.CAMPAIGN, 
+     {"community_name": "Devs", "campaign_title": "Hackathon", "campaign_status_type": "finished"},
+     'A campanha "Hackathon" foi finalizada com sucesso!'),
+
+    # APROVAÇÃO/REJEIÇÃO (Com e sem feedback)
+    (NotificationTypeEnum.CAMPAIGN, 
+     {"community_name": "Devs", "campaign_title": "Hackathon", "campaign_status_type": "approved"},
+     'Boas notícias! A campanha "Hackathon" foi aprovada.'),
+    
+    (NotificationTypeEnum.CAMPAIGN, 
+     {"community_name": "Devs", "campaign_title": "Hackathon", "campaign_status_type": "approved", "feedback_content": "Excelente iniciativa"},
+     'Boas notícias! A campanha "Hackathon" foi aprovada: "Excelente iniciativa"'),
+
+    (NotificationTypeEnum.CAMPAIGN, 
+     {"community_name": "Devs", "campaign_title": "Hackathon", "campaign_status_type": "rejected"},
+     'A campanha "Hackathon" não foi aprovada.'),
+
+    (NotificationTypeEnum.CAMPAIGN, 
+     {"community_name": "Devs", "campaign_title": "Hackathon", "campaign_status_type": "rejected", "feedback_content": "Fora do tema"},
+     'A campanha "Hackathon" não foi aprovada: "Fora do tema"'),
+
+    # OUTROS
+    (NotificationTypeEnum.OFFICIAL_NOTICE, {"notice_title": "Manutenção"}, "Aviso: Manutenção"),
     ("INVALID_TYPE", {}, "Você tem uma nova notificação."),
 ])
 def test_format_notification_message(notification_service: NotificationService, notif_type: NotificationTypeEnum,
                                      data: dict, expected_message: str):
     """
-    Testa o helper '_format_notification_message' para todos os cenários.
+    Testa o helper '_format_notification_message' para todos os cenários, incluindo o ciclo de vida das campanhas.
     """
     mock_notif = Notification(
         id=uuid.uuid4(),
-        user_id="user_uuid_as_string",  # User ID é str
+        user_id="user_uuid_as_string",
         type=notif_type,
         data=data,
         read=False,

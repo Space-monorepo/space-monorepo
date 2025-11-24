@@ -312,24 +312,10 @@ export function ModalCampaign({
         return;
       }
 
-      // Se não houver arquivos, adiciona a imagem padrão
-      let filesToSend = campaignData.files;
-      if (filesToSend.length === 0) {
-        try {
-          // Busca a imagem padrão da pasta public
-          const response = await fetch("/publication-image.jpg");
-          const blob = await response.blob();
-          const defaultFile = new File([blob], "publication-image.jpg", { type: blob.type });
-          filesToSend = [defaultFile];
-        } catch (e) {
-          toast.warn("Não foi possível carregar a imagem padrão. Tente novamente.");
-          return;
-        }
-      }
-
+      // Enviar conforme preenchido; permitir publicar sem arquivos
       setIsLoading(true);
       try {
-        await createCampaign({ ...campaignData, files: filesToSend });
+        await createCampaign(campaignData);
       } catch {
         setIsLoading(false);
       }

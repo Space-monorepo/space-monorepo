@@ -187,8 +187,8 @@ class ModerationService:
             complaint_post_saved = self.complaint_repo.save(complaint_post)
             post = self.post_service.get_post(post_id)
             if status == ComplaintStatusEnum.RESOLVED:
-                self.reputation_service.award_complaint_resolution(post.user.id)
-                self.reputation_service.award_complaint_resolution_by_moderator(
+                self.reputation_service.reward_complaint_resolution_to_member(post)
+                self.reputation_service.reward_complaint_resolution_to_moderator(
                     moderator_id
                 )
             return ComplaintResponse(

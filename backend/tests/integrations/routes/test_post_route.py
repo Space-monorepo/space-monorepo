@@ -212,7 +212,7 @@ def test_create_campaign_route(authenticate_client, community_member_on_db):
     assert response.json()['post']['image_url'] == post.image_url
     assert response.json()['post']['status'] == PostStatusEnum.ACTIVE
     assert response.json()['target_participants'] == 100
-    assert response.json()['current_participants'] == 0
+    assert response.json()['current_participants'] == 1  # Criador já participa automaticamente
     assert response.json()['status_campaign'] == CampaignStatusEnum.PENDING
 
 
@@ -258,6 +258,7 @@ def test_create_complaint_route(authenticate_client, community_member_on_db):
     assert response.json()['post']['type_post'] == post.type_post
     assert response.json()['post']['image_url'] == post.image_url
     assert response.json()['post']['status'] == PostStatusEnum.ACTIVE
+    assert response.json()['confirmations_count'] == 1  # Criador já confirmou automaticamente
     assert response.json()['level_complaint'] == ComplaintLevelEnum.LOW
     assert response.json()['status_complaint'] == ComplaintStatusEnum.PENDING
 

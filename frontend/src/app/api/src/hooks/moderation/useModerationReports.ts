@@ -412,6 +412,27 @@ const useModerationReports = () => {
         }
     }, [fetchReportedUsers, fetchReportedPosts, fetchReportedComments]);
 
+    /**
+     * Buscar contagem de votos de um reporte
+     */
+    const getReportVotes = async (communityId: string, reportId: string): Promise<{ tolerate: number; suspend: number }> => {
+        try {
+            const token = getTokenFromCookies();
+            const res = await axios.get(`${API_URL}/moderation/${communityId}/report-votes/${reportId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.status === 200 && res.data) {
+                return {
+                    tolerate: res.data.tolerate ?? 0,
+                    suspend: res.data.suspend ?? 0,
+                };
+            }
+            return { tolerate: 0, suspend: 0 };
+        } catch {
+            return { tolerate: 0, suspend: 0 };
+        }
+    };
+
     return {
         reportedUsers,
         reportedPosts,
@@ -425,6 +446,7 @@ const useModerationReports = () => {
         removePost,
         removeComment,
         tolerateReport,
+        getReportVotes,
     };
 };
 
