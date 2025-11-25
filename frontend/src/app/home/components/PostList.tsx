@@ -49,7 +49,7 @@ interface Comment {
   likes_count?: number;
 }
 
-function CommentsSection({ communityId, postId }: { communityId: string; postId: string }) {
+function CommentsSection({ communityId, postId, refreshSignal }: { communityId: string; postId: string; refreshSignal?: number }) {
   const { listComments, addComment, replyComment, likeComment, unlikeComment } = usePostActions();
   const [likedComments, setLikedComments] = React.useState<{ [key: string]: boolean }>({});
   const [comments, setComments] = React.useState<Comment[]>([]);
@@ -99,6 +99,14 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
     fetchComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [communityId, postId]);
+
+  // Quando o sinal de refresh mudar (vindo do polling global), refazemos os comentários
+  React.useEffect(() => {
+    if (typeof refreshSignal !== 'undefined') {
+      fetchComments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
 
   const handleAddComment = async () => {
     if (!commentInput.trim()) return;
@@ -468,6 +476,27 @@ export default function PostList() {
 
   // Adicionar estado para rastrear confirmações de problemas
   const [confirmedProblems, setConfirmedProblems] = useState<{ [key: string]: boolean }>({});
+  // Estado para bloquear requisições de voto por post (previne votos duplicados)
+  const [votingPosts, setVotingPosts] = useState<{ [key: string]: boolean }>({});
+  // Sinal para forçar refresh dos comentários por post (incremental)
+  const [commentsRefreshSignal, setCommentsRefreshSignal] = useState<{ [key: string]: number }>({});
+  // Refs para evitar recriar o intervalo de polling quando estados mudam
+  const allPostsRef = useRef<PostDisplay[]>(allPosts);
+  const votingPostsRef = useRef<{ [key: string]: boolean }>(votingPosts);
+  const displayedPostsRef = useRef<PostDisplay[]>(displayedPosts);
+
+  // Sincroniza refs com os estados correspondentes
+  useEffect(() => {
+    allPostsRef.current = allPosts;
+  }, [allPosts]);
+
+  useEffect(() => {
+    votingPostsRef.current = votingPosts;
+  }, [votingPosts]);
+
+  useEffect(() => {
+    displayedPostsRef.current = displayedPosts;
+  }, [displayedPosts]);
 
   // Função para buscar posts do backend (usada tanto para inicial quanto para atualização)
   const fetchPosts = async () => {
@@ -486,11 +515,11 @@ export default function PostList() {
           'Content-Type': 'application/json'
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Erro ao carregar posts');
       }
-      
+
       const feedData: PostsListFeed = await response.json();
       const userCampaigns = await fetchUserCampaigns();
       const userCampaignPostIds = userCampaigns.map((c: any) => c.post?.id).filter(Boolean);
@@ -545,23 +574,63 @@ export default function PostList() {
     setLoading(false);
   };
 
-  // Atualização periódica: busca novos posts a cada 5s
+  // Polling global otimizado: cria apenas UM intervalo e usa refs para acessar estados mais recentes
   useEffect(() => {
     const interval = setInterval(async () => {
-      const fetchedPosts = await fetchPosts();
-      if (fetchedPosts.length > 0 && allPosts.length > 0) {
-        // Verifica se há posts novos (comparando IDs)
-        const currentIds = new Set(allPosts.map(p => p.id));
-        const onlyNew = fetchedPosts.filter(p => !currentIds.has(p.id));
-        if (onlyNew.length > 0) {
-          setNewPosts(onlyNew);
-          setShowNewPostsBanner(true);
-        }
+      try {
+        const fetched = await fetchPosts();
+        if (!fetched || fetched.length === 0) return;
+
+        // Mesclar fetched com snapshot atual de allPosts (via ref)
+        const prevAllSnapshot = allPostsRef.current;
+        const prevMap = new Map(prevAllSnapshot.map(p => [p.id, p]));
+        const merged: PostDisplay[] = [];
+
+        fetched.forEach((fp) => {
+          const existing = prevMap.get(fp.id);
+          if (!existing) {
+            merged.push(fp);
+          } else {
+            if (votingPostsRef.current[fp.id]) {
+              merged.push(existing);
+            } else {
+              const updated: PostDisplay = {
+                ...existing,
+                ...fp,
+                likes: (fp as any).likes_count ?? existing.likes,
+                comments: (fp as any).comments_count ?? existing.comments,
+                shares: (fp as any).report_count ?? existing.shares,
+                poll_options: (fp as any).poll_options ?? existing.poll_options,
+                poll_question: (fp as any).poll_question ?? existing.poll_question,
+                userVotedOptionId: fp.userVotedOptionId ?? existing.userVotedOptionId,
+                confirmations_count: (fp as any).confirmations_count ?? existing.confirmations_count,
+              } as PostDisplay;
+              merged.push(updated);
+
+              if ((fp as any).comments_count !== undefined && (fp as any).comments_count !== existing.comments) {
+                setCommentsRefreshSignal(prev => ({ ...prev, [fp.id]: (prev[fp.id] || 0) + 1 }));
+              }
+            }
+          }
+          prevMap.delete(fp.id);
+        });
+        prevMap.forEach(p => merged.push(p));
+
+        // Atualiza estados a partir do merged
+        setAllPosts(merged);
+
+        const shownCount = Math.max(displayedPostsRef.current.length, postsPerPage);
+        setDisplayedPosts(merged.slice(0, shownCount));
+
+        setHasMorePosts(!(fetched.length <= shownCount));
+      } catch (err) {
+        console.warn('Polling failed:', err);
       }
     }, 5000);
+
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allPosts]);
+  }, []);
 
   // Função para carregar mais posts (scroll infinito)
   const loadMorePosts = useCallback(async () => {
@@ -613,7 +682,7 @@ export default function PostList() {
   const handleLike = async (post: PostDisplay) => {
     const communityId = post.community?.id;
     if (!communityId) return;
-    
+
     try {
       if (!post.liked) {
         await likePost(communityId, post.id);
@@ -638,7 +707,7 @@ export default function PostList() {
   const handleShare = async (post: PostDisplay) => {
     const communityId = post.community?.id;
     if (!communityId) return;
-    
+
     await sharePost(communityId, post.id);
     // Quando implementar no backend, incremente shares
     // setDisplayedPosts(posts => posts.map((p) =>
@@ -675,7 +744,7 @@ export default function PostList() {
     try {
       const token = getTokenFromCookies();
       const communityId = post.community?.id;
-      
+
       if (!communityId) {
         toast.error('ID da comunidade não encontrado');
         return;
@@ -800,7 +869,7 @@ export default function PostList() {
       toast.error('ID da comunidade não encontrado');
       return;
     }
-    
+
     try {
       await participate(communityId, post.id);
       setDisplayedPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
@@ -810,35 +879,98 @@ export default function PostList() {
     }
   };
 
-  // Função para votar em uma enquete
+  // Função para votar em uma enquete (suporta troca de voto e remover voto clicando na mesma opção)
   const handleVotePoll = async (post: PostDisplay, optionId: string) => {
+    const communityId = post.community?.id;
+    if (!communityId) return;
+    const token = getTokenFromCookies();
+
+    // Se já estamos processando um voto para este post, ignore
+    if (votingPosts[post.id]) return;
+
+    // Se o usuário clicou na mesma opção que já votou -> trata como remover voto
+    if (post.userVotedOptionId === optionId) {
+      await handleUnvotePoll(post);
+      return;
+    }
+
+    // Otimista: aplique mudança localmente (incrementa nova opção, decrementa antiga se houver)
+    const previousAllPosts = allPosts.slice();
+    const previousDisplayed = displayedPosts.slice();
+
+    const optimisticOptions = Array.isArray(post.poll_options) ? post.poll_options.map((o: any) => ({ ...o })) : [];
+    // decrement previous vote
+    if (post.userVotedOptionId) {
+      const prevOpt = optimisticOptions.find((o: any) => o.id === post.userVotedOptionId);
+      if (prevOpt) prevOpt.votes_count = Math.max(0, (prevOpt.votes_count || 0) - 1);
+    }
+    // increment new vote
+    const newOpt = optimisticOptions.find((o: any) => o.id === optionId);
+    if (newOpt) newOpt.votes_count = (newOpt.votes_count || 0) + 1;
+
+    setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptions, userVotedOptionId: optionId } as any : p));
+    setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptions, userVotedOptionId: optionId } as any : p));
+    if (postPreviewData && postPreviewData.id === post.id) {
+      setPostPreviewData((prev: any) => ({ ...prev, poll_options: optimisticOptions, userVotedOptionId: optionId }));
+    }
+
+    setVotingPosts(prev => ({ ...prev, [post.id]: true }));
+
     try {
-      const token = getTokenFromCookies();
-      const communityId = post.community?.id;
-      if (!communityId) return;
+      const response = await voteOnPoll(communityId, optionId, token ?? undefined);
+      const updatedOptions = response?.post?.poll_options ?? response?.options ?? [];
+      const updatedQuestion = response?.question ?? response?.post?.poll_question ?? post.poll_question;
 
-      // Lógica otimista para atualizar o estado local
-      setDisplayedPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? {
-                ...p,
-                poll_options: p.poll_options?.map((opt) =>
-                  opt.id === optionId
-                    ? { ...opt, votes_count: (opt.votes_count || 0) + 1 }
-                    : opt
-                ),
-                userVotedOptionId: optionId,
-              }
-            : p
-        )
-      );
+      // Preserva ordem das opções otimistas ao mesclar com as atualizadas do backend
+      let finalOptions: any[] = optimisticOptions.slice();
+      if (Array.isArray(updatedOptions) && updatedOptions.length > 0) {
+        if (optimisticOptions.length > 0) {
+          const updatedMap: { [key: string]: any } = {};
+          updatedOptions.forEach((o: any) => { updatedMap[o.id] = o; });
+          finalOptions = optimisticOptions.map((o: any) => updatedMap[o.id] ?? o);
+          updatedOptions.forEach((o: any) => {
+            if (!finalOptions.some((f: any) => f.id === o.id)) finalOptions.push(o);
+          });
+        } else {
+          finalOptions = updatedOptions.slice();
+        }
+      }
 
-      // Chamada ao backend para registrar o voto
-      await voteOnPoll(communityId, optionId, token ?? undefined);
-    } catch (err) {
+      setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId } as any : p));
+      setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId } as any : p));
+      if (postPreviewData && postPreviewData.id === post.id) {
+        setPostPreviewData((prev: any) => ({ ...prev, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId }));
+      }
+
+      // Opcional: recarrega posts para garantir consistência
+      try {
+        const refreshed = await fetchPosts();
+        const merged = refreshed.map((p: any) => {
+          if (p.id === post.id) {
+            return { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId };
+          }
+          return p;
+        });
+        setAllPosts(merged);
+        const shownCount = Math.max(displayedPosts.length, postsPerPage);
+        setDisplayedPosts(merged.slice(0, shownCount));
+        setHasMorePosts(!(merged.length <= shownCount));
+      } catch (err) {
+        // ignora falha de refresh
+      }
+
+      toast.success('Voto registrado');
+    } catch (err: any) {
       console.error('Erro ao votar na enquete:', err);
-      toast.error('Erro ao registrar o voto.');
+      // Reverter otimista
+      setAllPosts(previousAllPosts);
+      setDisplayedPosts(previousDisplayed);
+      if (postPreviewData && postPreviewData.id === post.id) {
+        setPostPreviewData((prev: any) => ({ ...prev, poll_options: post.poll_options, userVotedOptionId: post.userVotedOptionId }));
+      }
+      toast.error(err?.message || 'Erro ao registrar o voto.');
+    } finally {
+      setVotingPosts(prev => ({ ...prev, [post.id]: false }));
     }
   };
 
@@ -1135,11 +1267,12 @@ export default function PostList() {
                                 className={`mb-4 cursor-pointer hover:opacity-80 transition-opacity`}
                               >
                                 <button
-                                  className={`w-full text-left bg-transparent border-none outline-none p-0 m-0 cursor-pointer`}
+                                  className={`w-full text-left bg-transparent border-none outline-none p-0 m-0 ${votingPosts[post.id] ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleVotePoll(post, option.id);
+                                    if (!votingPosts[post.id]) handleVotePoll(post, option.id);
                                   }}
+                                  disabled={votingPosts[post.id]}
                                 >
                                   <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none">
                                     <div className="flex gap-2 items-center self-stretch my-auto">
@@ -1252,7 +1385,7 @@ export default function PostList() {
             {openCommentsPostId === post.id && (
               <div className="flex justify-center w-full -mt-6">
                 {post.community?.id && (
-                  <CommentsSection communityId={post.community.id} postId={post.id} />
+                  <CommentsSection communityId={post.community.id} postId={post.id} refreshSignal={commentsRefreshSignal[post.id]} />
                 )}
               </div>
             )}

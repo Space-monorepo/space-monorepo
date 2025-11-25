@@ -453,9 +453,21 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
         if (!token) throw new Error("Token não encontrado nos cookies");
         const user = await fetchUserProfile(token);
         if (!user || !user.id) throw new Error("ID do usuário não encontrado ou perfil inválido");
+        // Buscar associação de membro da comunidade para obter o community_member.id
+        const membersResponse = await axios.get(
+          `${API_URL}/communities/${communityId}/members`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            params: { user_id: user.id },
+          }
+        );
+        const memberItems = membersResponse.data?.items || [];
+        if (!memberItems.length) throw new Error('Usuário não é membro desta comunidade');
+        const communityMemberId = memberItems[0].id;
+
         const payload = {
           post_id: postId,
-          user_id: user.id,
+          member_id: communityMemberId,
           content,
           parent_id: null,
           status: 'active',
@@ -515,9 +527,21 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
         if (!token) throw new Error("Token não encontrado nos cookies");
         const user = await fetchUserProfile(token);
         if (!user || !user.id) throw new Error("ID do usuário não encontrado ou perfil inválido");
+        // Buscar associação de membro da comunidade para obter o community_member.id
+        const membersResponse = await axios.get(
+          `${API_URL}/communities/${communityId}/members`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            params: { user_id: user.id },
+          }
+        );
+        const memberItems = membersResponse.data?.items || [];
+        if (!memberItems.length) throw new Error('Usuário não é membro desta comunidade');
+        const communityMemberId = memberItems[0].id;
+
         const payload = {
           post_id: postId,
-          user_id: user.id,
+          member_id: communityMemberId,
           content,
           parent_id: parentCommentId,
           status: 'active',
