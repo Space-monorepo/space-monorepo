@@ -187,7 +187,6 @@ def init_community():
                 campaign = post_service.create_campaign(post_data)
                 post = campaign.post
                 print(f"Campanha '{post.title}' criada com sucesso! ID: {post.id}")
-                post_service.participate_campaign(post.id, admin_member_id)
                 print(f"Usuário {user.id} (CommunityMember {admin_member_id}) inscrito na campanha {post.id}")
                 posts.append(post)
 
