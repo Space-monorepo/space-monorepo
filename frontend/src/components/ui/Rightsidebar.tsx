@@ -31,7 +31,7 @@ export default function RightSidebar() {
   };
 
   return (
-    <nav className="flex flex-col shrink-0 gap-10 items-start pt-10 pr-0 pb-0 pl-5 border border-solid border-t-0 bg-zinc-100 border-stone-300 h-[927px] w-[330px] max-md:gap-8 max-md:px-4 max-md:py-8 max-md:w-full max-md:h-auto max-md:max-w-[330px] max-sm:gap-5 max-sm:px-2.5 max-sm:py-5 max-sm:w-full max-sm:border-b max-sm:border-solid max-sm:border-t-0 max-sm:border-[none] max-sm:border-y-stone-300 lg:block fixed right-0 top-16 bottom-0 overflow-y-auto z-[5]">
+    <nav className="flex w-full flex-col gap-10 border border-stone-300 border-t-0 border-r-0 bg-zinc-100 px-5 py-6 shadow-none min-[1360px]:sticky min-[1360px]:top-24 max-h-[calc(100vh-6rem)] overflow-y-auto">
       <section className="flex relative flex-col items-start w-[180px] max-md:w-full mb-8">
         <header className="flex relative gap-2 items-center self-stretch px-0 py-3 max-sm:px-0 max-sm:py-2 mb-2">
           <h2 className="text-sm font-bold text-neutral-800 max-sm:text-sm">

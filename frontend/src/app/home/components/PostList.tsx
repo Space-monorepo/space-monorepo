@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 import { useCampaignParticipation } from "@/app/api/src/hooks/post/useCampaignParticipation";
 import Link from "next/link";
 import {
-  Bookmark,
   EllipsisVerticalIcon as OverflowMenuVertical,
   Activity,
 } from "lucide-react";
@@ -177,7 +176,7 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
       (userObj as any)?.role;
 
     return (
-      <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]' : 'flex flex-wrap justify-between w-full max-md:max-w-full'}`}>
+      <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 w-full max-w-[592px]' : 'flex flex-wrap justify-between w-full max-[899px]:max-w-full'}`}>
         <div className="flex flex-col items-center w-11">
           <img
             src={userObj?.profile_image_url || userObj?.profile_picture || '/no-profile-pic.png'}
@@ -188,10 +187,10 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
             <div className="flex mt-2 w-px bg-zinc-300 min-h-[78px]" />
           )}
         </div>
-        <div className="flex-1 shrink basis-0 min-w-60 max-md:max-w-full">
-          <div className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
-            <div className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
-              <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
+        <div className="flex-1 shrink basis-0 min-w-0 max-[899px]:max-w-full min-[900px]:min-w-60">
+          <div className="flex flex-wrap gap-3 items-center py-3 w-full max-[899px]:max-w-full">
+            <div className={`flex items-center self-stretch my-auto text-neutral-800 min-w-0 w-full min-[900px]:min-w-60 ${isChild ? 'min-[900px]:w-[360px]' : 'min-[900px]:w-[380px]'}`}>
+              <div className={`self-stretch my-auto min-w-0 w-full min-[900px]:min-w-60 ${isChild ? 'min-[900px]:w-[360px]' : 'min-[900px]:w-[380px]'}`}>
                 <div className="flex gap-2 items-center w-full h-[23px]">
                   <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                     <div className="self-stretch my-auto whitespace-nowrap text-sm text-neutral-800">
@@ -227,13 +226,13 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
               {/* Menu de opções para comentários pode ser implementado aqui se necessário */}
             </div>
           </div>
-          <div className="px-3 mt-2 w-full max-md:max-w-full">
-            <div className={`flex ${isChild ? 'overflow-hidden ' : ''}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-md:max-w-full`}>
-              <div className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-md:max-w-full">
+          <div className="px-3 mt-2 w-full max-[899px]:max-w-full">
+            <div className={`flex ${isChild ? 'overflow-hidden ' : ''}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-[899px]:max-w-full`}>
+              <div className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-[899px]:max-w-full">
                 {comment.content}
               </div>
             </div>
-            <div className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? 'whitespace-nowrap ' : ''}text-neutral-500 max-md:max-w-full`}>
+            <div className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? 'whitespace-nowrap ' : ''}text-neutral-500 max-[899px]:max-w-full`}>
               <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5">
                 <div className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? '' : 'whitespace-nowrap'}`}>
                   <ArrowUp
@@ -263,7 +262,7 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
                 <div className="flex flex-col items-start self-stretch w-full">
                   <div className="flex flex-col justify-between items-start self-stretch p-4 bg-gray-100 h-[160px] rounded-xs w-full">
                     <textarea
-                      className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+                      className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-[539px]:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
                       rows={2}
                       placeholder="Digite sua resposta..."
                       value={replyInput[comment.id] || ''}
@@ -276,7 +275,7 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
                       }}
                     />
                     <div className="flex flex-row justify-between items-end w-full mt-2">
-                      <div className="flex gap-4 items-center max-sm:gap-3">
+                      <div className="flex gap-4 items-center max-[539px]:gap-3">
                         <button type="button" aria-label="Adicionar emoji">
                           <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
                         </button>
@@ -316,13 +315,13 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
         </div>
         {/* Renderizar children recursivamente */}
         {Array.isArray(comment.children) && comment.children.length > 0 && (
-          <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]">
+          <div className="flex flex-wrap items-start self-end mt-6 w-full max-w-[592px]">
             {comment.children.map(child => renderComment(child, true))}
           </div>
         )}
         {/* Renderizar replies recursivamente */}
         {Array.isArray(comment.replies) && comment.replies.length > 0 && (
-          <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px] pl-12">
+          <div className="flex flex-wrap items-start self-end mt-6 w-full max-w-[592px] min-[900px]:pl-12">
             {comment.replies.map(child => renderComment(child, true))}
           </div>
         )}
@@ -349,7 +348,7 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
 
   return (
     <>
-      <main className="flex flex-col shrink-0 gap-8 items-start p-4 bg-white rounded border-solid border-[0.5px] border-stone-300 h-[907px] w-[680px] max-md:p-3 max-md:w-full max-md:max-w-[680px] max-sm:gap-6 max-sm:p-2 max-sm:w-full">
+      <main className="flex flex-col shrink-0 gap-8 items-start w-full max-w-[680px] p-4 bg-white rounded border-solid border-[0.5px] border-stone-300 max-[899px]:p-3 max-[539px]:gap-6 max-[539px]:p-2">
         {/* Comment Input Section */}
         <div className="flex flex-col gap-2 items-start self-stretch">
           <div className="flex flex-col items-start self-stretch">
@@ -359,7 +358,7 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
                 value={commentInput}
                 onChange={e => setCommentInput(e.target.value)}
                 placeholder="Adicione um comentário"
-                className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+                className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-[539px]:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
                 rows={2}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -369,7 +368,7 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
                 }}
               />
               <div className="flex flex-row justify-between items-end w-full mt-2">
-                <div className="flex gap-4 items-center max-sm:gap-3">
+                <div className="flex gap-4 items-center max-[539px]:gap-3">
                   <button type="button" aria-label="Adicionar emoji">
                     <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
                   </button>
@@ -399,12 +398,12 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
           </div>
         </div>
         {/* Comments Header */}
-        <header className="flex gap-4 items-center self-stretch px-2 py-0 max-md:gap-3 max-md:px-3 max-md:py-0 max-sm:flex-wrap max-sm:gap-2 max-sm:px-2 max-sm:py-0">
-          <h2 className="text-base leading-6 text-neutral-800 max-md:text-base max-sm:text-sm">
+        <header className="flex gap-4 items-center self-stretch px-2 py-0 max-[899px]:gap-3 max-[899px]:px-3 max-[899px]:py-0 max-[539px]:flex-wrap max-[539px]:gap-2 max-[539px]:px-2 max-[539px]:py-0">
+          <h2 className="text-base leading-6 text-neutral-800 max-[539px]:text-sm">
             Comentários
           </h2>
           <div className="flex flex-col gap-2.5 justify-center items-center px-2 py-1 rounded-xs bg-neutral-800">
-            <span className="self-stretch text-base leading-6 text-zinc-100 max-md:text-base max-sm:text-sm">
+            <span className="self-stretch text-base leading-6 text-zinc-100 max-[539px]:text-sm">
               {totalComments}
             </span>
           </div>
@@ -976,7 +975,7 @@ export default function PostList() {
 
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center h-full w-full pr-72 mt-62 text-center">
+      <div className="flex flex-col justify-center items-center h-full w-full px-4 mt-62 text-center">
         Carregando posts...
       </div>
     );
@@ -984,7 +983,7 @@ export default function PostList() {
 
   if (error) {
     return (
-      <div className="flex flex-col justify-center items-center h-full w-full pr-72 mt-62 text-center text-red-500">
+      <div className="flex flex-col justify-center items-center h-full w-full px-4 mt-62 text-center text-red-500">
         Erro ao carregar posts: {error.message}
       </div>
     );
@@ -992,7 +991,7 @@ export default function PostList() {
 
   if (showNoCommunitiesMessage) {
     return (
-      <div className="flex flex-col justify-center items-center h-full w-full pr-72 mt-62 text-center">
+      <div className="flex flex-col justify-center items-center h-full w-full px-4 mt-62 text-center">
         <p className="mb-4 text-lg">
           Você ainda não participa de nenhuma comunidade.
         </p>
@@ -1009,7 +1008,7 @@ export default function PostList() {
   }
 
   return (
-    <div className="flex-1 p-4 overflow-auto pr-72 flex justify-center">
+    <div className="flex-1 p-4 min-[900px]:p-6 flex justify-center">
       <main className="overflow-hidden max-w-[680px] w-full space-y-6">
         {/* Banner de novos posts fixo na tela */}
         {showNewPostsBanner && newPosts.length > 0 && (
@@ -1045,8 +1044,8 @@ export default function PostList() {
             >
               <div className="w-full max-w-[632px] max-md:max-w-full">
                 <div className="w-full max-md:max-w-full">
-                  <header className="flex flex-wrap gap-10 justify-between items-start w-full max-md:max-w-full">
-                    <div className="flex items-start min-w-60">
+                  <header className="flex items-start justify-between gap-4 w-full max-md:max-w-full">
+                    <div className="flex flex-1 min-w-0 items-start">
                       <div className="w-11 h-11 rounded-[32px] overflow-hidden shrink-0 flex items-center justify-center bg-neutral-200">
                         <img
                           src={post.avatar || "/placeholder.svg"}
@@ -1054,7 +1053,7 @@ export default function PostList() {
                           className="object-cover w-full h-full"
                         />
                       </div>
-                      <div className="flex flex-col min-w-60 w-[342px]">
+                      <div className="ml-3 flex flex-col min-w-0">
                         <div className="flex gap-2 items-center w-full h-[23px]">
                           <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                             <Link
@@ -1080,7 +1079,7 @@ export default function PostList() {
                             {post.location}
                           </div>
                         </div>
-                        <div className="self-start px-3 mt-2 text-xs font-semibold tracking-normal whitespace-nowrap text-neutral-500">
+                        <div className="self-start px-3 mt-2 text-[10px] font-semibold tracking-normal whitespace-nowrap text-neutral-500">
                           <div className="flex items-center gap-1">
                             <div className="self-stretch my-auto text-neutral-500">
                               {post.type}
@@ -1095,15 +1094,7 @@ export default function PostList() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-4 items-center">
-                      <button
-                        className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                        title="Salvar nos favoritos"
-                      >
-                        <Bookmark
-                          className={`h-4 w-4 text-gray-500`}
-                        />
-                      </button>
+                    <div className="flex gap-2 items-center flex-shrink-0">
                       <div className="relative">
                         <button
                           className="p-1 hover:bg-gray-100 rounded-full cursor-pointer transition-colors"
