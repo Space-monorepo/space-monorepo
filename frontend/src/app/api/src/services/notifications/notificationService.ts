@@ -2,123 +2,132 @@ import { API_URL } from '@/config'
 import { PostsListFeed, PostResponse } from '@/app/api/src/types/posts/Post'
 import { NotificationsResponse, CampaignNotification, AnnouncementNotification, ConnectionNotification, InteractionNotification } from '@/app/api/src/types/notifications/Notification'
 
-// Buscar campanhas (posts do tipo campaign)
+// Buscar campanhas usando a rota de notificações
 export const fetchCampaigns = async (token: string, communityId: string): Promise<CampaignNotification[]> => {
-    const url = `${API_URL}/admin/${communityId}/post/list-all-campaigns`;
+    try {
+        const response = await fetch(`${API_URL}/notifications?type=CAMPAIGN`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+        })
 
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-    })
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ao carregar campanhas: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json()
-
-    if (!data.items || !Array.isArray(data.items)) {
-        return [];
-    }
-
-    return data.items.map((campaign: any) => {
-        const post = campaign.post;
-
-        if (!post) {
-            return null;
+        if (!response.ok) {
+            throw new Error('Erro ao carregar campanhas')
         }
 
-        return {
-            id: post.id,
-            type: 'Campanha',
-            title: post.title,
-            author: {
-                id: post.user.id,
-                name: post.user.name,
-                username: post.user.username || '',
-                profile_picture: post.user.profile_picture,
-                role: post.user.role
-            },
-            community: {
-                id: post.community.id,
-                name: post.community.name
-            },
-            date: new Date(post.created_at).toLocaleDateString('pt-BR'),
-            created_at: post.created_at,
-            updated_at: post.updated_at,
-            time: `${post.likes_count + post.comments_count}`,
-            description: post.content,
-            status: campaign.status_campaign,
-            stats: {
-                published: new Date(post.created_at).toLocaleDateString('pt-BR'),
-                accesses: 0,
-                participants: campaign.current_participants || 0,
-                likes: post.likes_count,
-                comments: post.comments_count
-            },
-            image_url: post.image_url || undefined,
-            target_participants: campaign.target_participants || 0,
-            current_participants: campaign.current_participants || 0
-        }
-    }).filter(Boolean);
+        const notifications = await response.json()
+
+        return notifications.map((n: any) => {
+            const d = n.data || {}
+
+            const campaignTitle = d.campaign_title || 'Campanha'
+            const communityName = d.community_name || 'Comunidade'
+            const campaignStatusType = d.campaign_status_type || 'default'
+
+            let status = 'pending'
+            if (campaignStatusType === 'approved') status = 'approved'
+            else if (campaignStatusType === 'rejected') status = 'rejected'
+            else if (campaignStatusType === 'in_progress') status = 'in_progress'
+            else if (campaignStatusType === 'finished') status = 'finished'
+            else if (campaignStatusType === 'target_reached') status = 'under_review'
+
+            return {
+                id: n.id,
+                type: 'Campanha',
+                title: campaignTitle,
+                author: {
+                    id: d.actor_id || '',
+                    name: d.actor_name || 'Usuário',
+                    username: d.actor_username || 'user',
+                    profile_picture: d.actor_picture || null,
+                    role: d.actor_role || 'member'
+                },
+                community: {
+                    id: d.community_id || '',
+                    name: communityName
+                },
+                date: new Date(n.created_at).toLocaleDateString('pt-BR'),
+                created_at: n.created_at,
+                updated_at: n.created_at,
+                time: '0',
+                description: n.message || d.feedback_content || '',
+                status: status,
+                stats: {
+                    published: new Date(n.created_at).toLocaleDateString('pt-BR'),
+                    accesses: 0,
+                    participants: d.current_participants || 0,
+                    likes: 0,
+                    comments: 0
+                },
+                image_url: d.image_url || undefined,
+                target_participants: d.target_participants || 0,
+                current_participants: d.current_participants || 0
+            } as CampaignNotification
+        })
+    } catch (error) {
+        return []
+    }
 }
 
-// Buscar avisos oficiais (posts do tipo announcement)
+// Buscar avisos oficiais usando a rota de notificações
 export const fetchAnnouncements = async (token: string, communityId?: string): Promise<AnnouncementNotification[]> => {
-    if (!communityId) {
-        return [];
+    try {
+        const response = await fetch(`${API_URL}/notifications?type=OFFICIAL_NOTICE`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+        })
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar avisos oficiais')
+        }
+
+        const notifications = await response.json()
+
+        return notifications.map((n: any) => {
+            const d = n.data || {}
+
+            const noticeTitle = d.notice_title || 'Aviso'
+            const noticeContent = d.notice_content || n.message || ''
+
+            return {
+                id: n.id,
+                type: 'Anúncio',
+                title: noticeTitle,
+                author: {
+                    id: d.actor_id || '',
+                    name: d.actor_name || 'Administração',
+                    username: d.actor_username || 'admin',
+                    profile_picture: d.actor_picture || null,
+                    role: d.actor_role || 'admin'
+                },
+                community: {
+                    id: d.community_id || communityId || '',
+                    name: d.community_name || ''
+                },
+                date: new Date(n.created_at).toLocaleDateString('pt-BR'),
+                created_at: n.created_at,
+                updated_at: n.created_at,
+                time: '0',
+                description: noticeContent,
+                image_url: d.image_url || undefined,
+                stats: {
+                    published: new Date(n.created_at).toLocaleDateString('pt-BR'),
+                    accesses: 0,
+                    participants: 0,
+                    likes: 0,
+                    comments: 0
+                },
+                actions: ['Promover', 'Comentar']
+            } as AnnouncementNotification
+        })
+    } catch (error) {
+        return []
     }
-
-    const response = await fetch(`${API_URL}/moderation/${communityId}/list-all-announcements`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-    })
-
-    if (!response.ok) {
-        throw new Error('Erro ao carregar avisos oficiais')
-    }
-
-    const data: PostsListFeed = await response.json()
-
-    return data.items
-        .filter((post: PostResponse) => post.type_post === 'announcement')
-        .map((post: PostResponse) => ({
-            id: post.id,
-            type: 'Anúncio',
-            title: post.title,
-            author: {
-                id: post.user.id,
-                name: post.user.name,
-                username: post.user.username || '',
-                profile_picture: post.user.profile_picture,
-                role: post.user.role
-            },
-            community: {
-                id: post.community.id,
-                name: post.community.name
-            },
-            date: new Date(post.created_at).toLocaleDateString('pt-BR'),
-            created_at: post.created_at,
-            updated_at: post.updated_at,
-            time: `${post.likes_count + post.comments_count}`,
-            description: post.content,
-            image_url: post.image_url || undefined,
-            stats: {
-                published: new Date(post.created_at).toLocaleDateString('pt-BR'),
-                accesses: (post as any).accesses ?? 0,
-                participants: (post as any).participants ?? 0,
-                likes: post.likes_count,
-                comments: post.comments_count
-            },
-            actions: ['Promover', 'Comentar']
-        }))
 }
 
 // Buscar conexões reais (via notificações de tipo CONNECTION)
