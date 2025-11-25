@@ -466,6 +466,8 @@ export default function PostList() {
   const [isPostPreviewOpen, setIsPostPreviewOpen] = useState(false);
   const [postPreviewData, setPostPreviewData] = useState<any>(null);
 
+  // Adicionar estado para rastrear confirmações de problemas
+  const [confirmedProblems, setConfirmedProblems] = useState<{ [key: string]: boolean }>({});
 
   // Função para buscar posts do backend (usada tanto para inicial quanto para atualização)
   const fetchPosts = async () => {
@@ -476,8 +478,20 @@ export default function PostList() {
       return [];
     }
     try {
-      const communityId = "default-community-id";
-      const feedData: PostsListFeed = await fetchPostsByCommunity(token, communityId);
+      // Busca o feed do usuário (não precisa de communityId específico)
+      const response = await fetch(`${API_URL}/posts/feed?limit=9999`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erro ao carregar posts');
+      }
+      
+      const feedData: PostsListFeed = await response.json();
       const userCampaigns = await fetchUserCampaigns();
       const userCampaignPostIds = userCampaigns.map((c: any) => c.post?.id).filter(Boolean);
       const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).sub : null;
@@ -597,7 +611,9 @@ export default function PostList() {
   }, []);
 
   const handleLike = async (post: PostDisplay) => {
-    const communityId = post.community?.id || "default-community-id";
+    const communityId = post.community?.id;
+    if (!communityId) return;
+    
     try {
       if (!post.liked) {
         await likePost(communityId, post.id);
@@ -620,7 +636,9 @@ export default function PostList() {
   };
 
   const handleShare = async (post: PostDisplay) => {
-    const communityId = post.community?.id || "default-community-id";
+    const communityId = post.community?.id;
+    if (!communityId) return;
+    
     await sharePost(communityId, post.id);
     // Quando implementar no backend, incremente shares
     // setDisplayedPosts(posts => posts.map((p) =>
@@ -628,138 +646,81 @@ export default function PostList() {
     // ));
   };
 
+  // Função para verificar se o problema já foi confirmado pelo usuário
+  const checkProblemConfirmation = async (postId: string, communityId: string) => {
+    try {
+      const token = getTokenFromCookies();
+      const response = await fetch(`${API_URL}/communities/${communityId}/complaints/${postId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+      if (!response.ok) {
+        return false;
+      }
+      const data = await response.json();
+      // Verifica se o usuário atual está na lista de confirmações
+      const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).sub : null;
+      return data.confirmations?.some((c: any) => c.user_id === currentUserId) ?? false;
+    } catch (err) {
+      console.error('Erro ao verificar confirmação do problema:', err);
+      return false;
+    }
+  };
+
   // Confirmar problema em denúncia
   const handleConfirmComplaint = async (post: PostDisplay) => {
     try {
       const token = getTokenFromCookies();
-      await confirmComplaint(post.community?.id || "default-community-id", post.id, token ?? undefined);
-      setDisplayedPosts((prev: PostDisplay[]) => prev.map((p: PostDisplay) => p.id === post.id ? { ...p, confirmations_count: (p.confirmations_count ?? 0) + 1 } : p));
-      toast.success('Confirmação registrada!');
+      const communityId = post.community?.id;
+      
+      if (!communityId) {
+        toast.error('ID da comunidade não encontrado');
+        return;
+      }
+
+      if (!confirmedProblems[post.id]) {
+        await confirmComplaint(communityId, post.id, token ?? undefined);
+        setConfirmedProblems((prev) => ({ ...prev, [post.id]: true }));
+        setDisplayedPosts((prev: PostDisplay[]) =>
+          prev.map((p: PostDisplay) =>
+            p.id === post.id ? { ...p, confirmations_count: (p.confirmations_count ?? 0) + 1 } : p
+          )
+        );
+        toast.success('Confirmação registrada!');
+      } else {
+        toast.info('Você já confirmou este problema.');
+      }
     } catch (err) {
       toast.error('Erro ao confirmar problema');
     }
   };
 
-  // Votar em opção da enquete
-  const handleVotePoll = async (post: PostDisplay, optionId: string) => {
-    const token = getTokenFromCookies();
-    const communityId = post.community?.id || 'default-community-id';
-
-    // Se clicar na opção que já votou, retira o voto
-    if (post.userVotedOptionId === optionId) {
-      await handleUnvotePoll(post);
-      return;
-    }
-
-    // Aplicação otimista: atualiza imediatamente as contagens locais para animação
-    const previousAllPosts = allPosts.slice();
-    const previousDisplayed = displayedPosts.slice();
-    const optimisticOptions = Array.isArray(post.poll_options) ? post.poll_options.map((o: any) => ({ ...o })) : [];
-    const prevVoted = post.userVotedOptionId;
-    if (optimisticOptions.length > 0) {
-      // Se usuário já tinha votado em outra opção, decrementa essa opção
-      if (prevVoted && prevVoted !== optionId) {
-        const prevOpt = optimisticOptions.find((o: any) => o.id === prevVoted);
-        if (prevOpt) prevOpt.votes_count = Math.max(0, (prevOpt.votes_count || 0) - 1);
-      }
-      // Incrementa a opção clicada
-      const clicked = optimisticOptions.find((o: any) => o.id === optionId);
-      if (clicked) clicked.votes_count = (clicked.votes_count || 0) + 1;
-    }
-
-    // Atualiza estados localmente para mostrar animação/contagem imediatamente
-    setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptions, userVotedOptionId: optionId } as any : p));
-    setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptions, userVotedOptionId: optionId } as any : p));
-    if (postPreviewData && postPreviewData.id === post.id) {
-      setPostPreviewData((prev: any) => ({ ...prev, poll_options: optimisticOptions, userVotedOptionId: optionId }));
-    }
-
-    try {
-      const response = await voteOnPoll(communityId, optionId, token ?? undefined);
-      if (response?.alreadyVoted) {
-        toast.info('Você já votou nessa opção!');
-        // backend diz que já votou, reverte otimista para o estado anterior
-        setAllPosts(previousAllPosts);
-        setDisplayedPosts(previousDisplayed);
-        return;
-      }
-      // Atualiza contagem de votos usando os dados mais recentes do backend
-      const updatedOptions = response?.post?.poll_options ?? response?.options ?? [];
-      const updatedQuestion = response?.question ?? response?.post?.poll_question ?? post.poll_question;
-
-      // Se o backend retornar opções, atualiza contagens mas preserva a ordem
-      // das opções otimistas (optimisticOptions) para evitar reordenações visuais.
-      let finalOptions: any[] = optimisticOptions.slice();
-      if (Array.isArray(updatedOptions) && updatedOptions.length > 0) {
-        if (optimisticOptions.length > 0) {
-          const updatedMap: { [key: string]: any } = {};
-          updatedOptions.forEach((o: any) => { updatedMap[o.id] = o; });
-          // Mantém a ordem das opções otimistas, substituindo dados por aqueles retornados
-          finalOptions = optimisticOptions.map((o: any) => updatedMap[o.id] ?? o);
-          // Se backend trouxe novas opções que não existiam antes, anexá-las ao final
-          updatedOptions.forEach((o: any) => {
-            if (!finalOptions.some((f: any) => f.id === o.id)) finalOptions.push(o);
-          });
-        } else {
-          finalOptions = updatedOptions.slice();
+  // Atualizar o estado inicial ao carregar os posts
+  useEffect(() => {
+    const fetchConfirmedProblems = async () => {
+      const confirmedMap: { [key: string]: boolean } = {};
+      for (const post of allPosts) {
+        if (post.community?.id && translatePostType(post.type_post) === 'Denúncia') {
+          confirmedMap[post.id] = await checkProblemConfirmation(post.id, post.community.id);
         }
       }
+      setConfirmedProblems(confirmedMap);
+    };
 
-      let userVotedOptionId: string | undefined = undefined;
-      if (finalOptions && Array.isArray(finalOptions)) {
-        const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).sub : null;
-        const votedOption = finalOptions.find((opt: any) => Array.isArray(opt.votes) && opt.votes.some((v: any) => v.user_id === currentUserId));
-        if (votedOption) userVotedOptionId = votedOption.id;
-      }
-
-      // Se ainda não encontrou o voto, assume que votou na opção clicada
-      if (!userVotedOptionId && finalOptions) {
-        userVotedOptionId = optionId;
-      }
-
-      setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId } as any : p));
-      setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId } as any : p));
-      if (postPreviewData && postPreviewData.id === post.id) {
-        setPostPreviewData((prev: any) => ({ ...prev, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId }));
-      }
-      // Recarrega posts do backend para garantir consistência (quando backend não retorna opções atualizadas)
-      try {
-        const refreshed = await fetchPosts();
-        // Ao recarregar, preservamos a ordem das opções da enquete que acabamos de
-        // calcular (`finalOptions`) para evitar reordenação visual causada pelo backend.
-        const merged = refreshed.map((p: any) => {
-          if (p.id === post.id) {
-            return { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId };
-          }
-          return p;
-        });
-        setAllPosts(merged);
-        // mantém a mesma quantidade de posts exibidos atualmente
-        const shownCount = Math.max(displayedPosts.length, postsPerPage);
-        setDisplayedPosts(merged.slice(0, shownCount));
-        setHasMorePosts(!(merged.length <= shownCount));
-      } catch (err) {
-        // se falhar no refresh, continuamos com o estado otimista já aplicado
-        console.warn('Falha ao recarregar posts após voto:', err);
-      }
-      toast.success('Voto contabilizado');
-    } catch (err: any) {
-      console.error('Erro ao votar na enquete', err);
-      // Reverte otimista em caso de erro
-      setAllPosts(previousAllPosts);
-      setDisplayedPosts(previousDisplayed);
-      if (postPreviewData && postPreviewData.id === post.id) {
-        setPostPreviewData((prev: any) => ({ ...prev, poll_options: post.poll_options, userVotedOptionId: post.userVotedOptionId }));
-      }
-      toast.error(err?.message || 'Erro ao votar na enquete');
+    if (allPosts.length > 0) {
+      fetchConfirmedProblems();
     }
-  };
+  }, [allPosts]);
 
   // Função para retirar o voto
   const handleUnvotePoll = async (post: PostDisplay) => {
     if (!post.userVotedOptionId) return;
     const token = getTokenFromCookies();
-    const communityId = post.community?.id || 'default-community-id';
+    const communityId = post.community?.id;
+    if (!communityId) return;
     // Otimista: decrementa imediatamente a opção votada localmente
     const previousAllPostsUn = allPosts.slice();
     const previousDisplayedUn = displayedPosts.slice();
@@ -834,12 +795,50 @@ export default function PostList() {
 
   // Participar da campanha
   const handleParticipateCampaign = async (post: PostDisplay) => {
+    const communityId = post.community?.id;
+    if (!communityId) {
+      toast.error('ID da comunidade não encontrado');
+      return;
+    }
+    
     try {
-      await participate(post.community?.id || "default-community-id", post.id);
+      await participate(communityId, post.id);
       setDisplayedPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
       toast.success('Você agora faz parte da campanha!');
     } catch (err) {
       toast.error('Erro ao participar da campanha');
+    }
+  };
+
+  // Função para votar em uma enquete
+  const handleVotePoll = async (post: PostDisplay, optionId: string) => {
+    try {
+      const token = getTokenFromCookies();
+      const communityId = post.community?.id;
+      if (!communityId) return;
+
+      // Lógica otimista para atualizar o estado local
+      setDisplayedPosts((prev) =>
+        prev.map((p) =>
+          p.id === post.id
+            ? {
+                ...p,
+                poll_options: p.poll_options?.map((opt) =>
+                  opt.id === optionId
+                    ? { ...opt, votes_count: (opt.votes_count || 0) + 1 }
+                    : opt
+                ),
+                userVotedOptionId: optionId,
+              }
+            : p
+        )
+      );
+
+      // Chamada ao backend para registrar o voto
+      await voteOnPoll(communityId, optionId, token ?? undefined);
+    } catch (err) {
+      console.error('Erro ao votar na enquete:', err);
+      toast.error('Erro ao registrar o voto.');
     }
   };
 
@@ -996,7 +995,12 @@ export default function PostList() {
                                 e.stopPropagation();
                                 setOpenMenuPostId(null);
                                 try {
-                                  await reportPost(post.community?.id || 'default-community-id', post.id);
+                                  const communityId = post.community?.id;
+                                  if (!communityId) {
+                                    toast.error('ID da comunidade não encontrado');
+                                    return;
+                                  }
+                                  await reportPost(communityId, post.id);
                                 } catch { }
                               }}
                             >
@@ -1247,7 +1251,9 @@ export default function PostList() {
             </article>
             {openCommentsPostId === post.id && (
               <div className="flex justify-center w-full -mt-6">
-                <CommentsSection communityId={post.community?.id || "default-community-id"} postId={post.id} />
+                {post.community?.id && (
+                  <CommentsSection communityId={post.community.id} postId={post.id} />
+                )}
               </div>
             )}
           </React.Fragment>
