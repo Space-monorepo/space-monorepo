@@ -1048,7 +1048,10 @@ def test_create_campaign_service_success():
     mock_tm = Mock()
     mock_campaign_repo = Mock()
     # save retorna o objeto atualizado com current_participants = 1
-    mock_campaign_repo.save.side_effect = [fake_campaign_for_participate, fake_campaign_final]
+    mock_campaign_repo.save.side_effect = [
+        fake_campaign_for_participate,
+        fake_campaign_final,
+    ]
 
     fake_member_association = Mock()
     fake_member_association.id = fake_member_id
@@ -1080,26 +1083,28 @@ def test_create_campaign_service_success():
 
     # Assert
     service.create_post.assert_called_once_with(fake_post_create)
-    assert mock_campaign_repo.save.call_count == 2  # Uma no create, outra para incrementar participantes
-    
+    assert (
+        mock_campaign_repo.save.call_count == 2
+    )  # Uma no create, outra para incrementar participantes
+
     # Verificar que get_member_association foi chamado para pegar o membro criador
     mock_community_service.get_member_association.assert_called_once_with(
         fake_user_id, fake_community_id
     )
-    
+
     # Verificar que o participante foi salvo
     mock_campaign_participants_repo.save.assert_called_once()
-    
+
     # Verificar que reward_campaign_creation_to_member foi chamado
     mock_reputation_service.reward_campaign_creation_to_member.assert_called_once_with(
         fake_member_id
     )
-    
+
     # Verificar que reward_campaign_support_to_member foi chamado
     mock_reputation_service.reward_campaign_support_to_member.assert_called_once_with(
         fake_member_id
     )
-    
+
     # Verificar que get_post foi chamado uma vez (no final do create_campaign)
     service.get_post.assert_called_once_with(fake_post_id)
 
@@ -1345,7 +1350,10 @@ def test_create_complaint_service_success():
     mock_tm = Mock()
     mock_complaint_repo = Mock()
     # save retorna o objeto atualizado com confirmations_count = 1
-    mock_complaint_repo.save.side_effect = [fake_complaint_for_confirm, fake_complaint_final]
+    mock_complaint_repo.save.side_effect = [
+        fake_complaint_for_confirm,
+        fake_complaint_final,
+    ]
 
     fake_member_association = Mock()
     fake_member_association.id = fake_member_id
@@ -1369,23 +1377,25 @@ def test_create_complaint_service_success():
 
     # Assert
     service.create_post.assert_called_once_with(fake_post_create)
-    assert mock_complaint_repo.save.call_count == 2  # Uma no create, outra para incrementar confirmações
-    
+    assert (
+        mock_complaint_repo.save.call_count == 2
+    )  # Uma no create, outra para incrementar confirmações
+
     # Verificar que get_member_association foi chamado ANTES de incrementar confirmações
     mock_community_service.get_member_association.assert_called_once_with(
         fake_user_id, fake_community_id
     )
-    
+
     # Verificar que reward_complaint_creation_to_member foi chamado
     mock_reputation_service.reward_complaint_creation_to_member.assert_called_once_with(
         fake_member_id
     )
-    
+
     # Verificar que reward_complaint_confirmation_to_member foi chamado
     mock_reputation_service.reward_complaint_confirmation_to_member.assert_called_once_with(
         fake_member_id
     )
-    
+
     # Verificar que get_post foi chamado uma vez no final
     service.get_post.assert_called_once_with(fake_post_id)
 
