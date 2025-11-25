@@ -114,7 +114,7 @@ class CommentService:
 
             try:
                 notification_service = NotificationService(self.tm)
-                actor = self.tm.get_user_repository().get_by_id(comment_create.user_id)
+                actor = self.tm.get_user_repository().get_by_id(commenter_member.user_id)
                 post_author = post.user
 
                 if post_author and post_author.id != actor.id:
@@ -127,7 +127,7 @@ class CommentService:
                     )
 
                 if parent_comment:
-                    parent_author = parent_comment.user
+                    parent_author = parent_comment.member.user
                     if parent_author and parent_author.id not in {
                         actor.id,
                         post_author.id,
