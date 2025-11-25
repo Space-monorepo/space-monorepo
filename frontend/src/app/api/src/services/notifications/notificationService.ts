@@ -4,14 +4,14 @@ import { NotificationsResponse, CampaignNotification, AnnouncementNotification, 
 
 // Buscar campanhas (posts do tipo campaign)
 export const fetchCampaigns = async (token: string, communityId: string): Promise<CampaignNotification[]> => {
-    const url = `${API_URL}/notifications?type=CAMPAIGN${communityId ? `&community_id=${communityId}` : ''}`;
+    const url = `${API_URL}/admin/${communityId}/post/list-all-campaigns`;
 
     const response = await fetch(url, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-        }
+        },
     })
 
     if (!response.ok) {
@@ -19,55 +19,52 @@ export const fetchCampaigns = async (token: string, communityId: string): Promis
         throw new Error(`Erro ao carregar campanhas: ${response.status} ${response.statusText}`);
     }
 
-    const notifications = await response.json()
+    const data = await response.json()
 
-    if (!Array.isArray(notifications)) {
+    if (!data.items || !Array.isArray(data.items)) {
         return [];
     }
 
-    return notifications.map((n: any) => {
-        const d = n.data || {}
-        const campaign = d.campaign || d.campaign_data || {}
-        const post = d.post || campaign.post || null
+    return data.items.map((campaign: any) => {
+        const post = campaign.post;
 
-        if (!post) return null
-
-        const user = post.user || d.actor || { id: '', name: 'Usuário', username: '' }
-        const community = post.community || { id: d.community_id || '', name: d.community_name || '' }
+        if (!post) {
+            return null;
+        }
 
         return {
             id: post.id,
             type: 'Campanha',
             title: post.title,
             author: {
-                id: user.id,
-                name: user.name,
-                username: user.username || '',
-                profile_picture: user.profile_picture,
-                role: user.role
+                id: post.user.id,
+                name: post.user.name,
+                username: post.user.username || '',
+                profile_picture: post.user.profile_picture,
+                role: post.user.role
             },
             community: {
-                id: community.id,
-                name: community.name
+                id: post.community.id,
+                name: post.community.name
             },
             date: new Date(post.created_at).toLocaleDateString('pt-BR'),
             created_at: post.created_at,
             updated_at: post.updated_at,
-            time: `${(post.likes_count || 0) + (post.comments_count || 0)}`,
+            time: `${post.likes_count + post.comments_count}`,
             description: post.content,
-            status: campaign.status_campaign || d.status_campaign || campaign.status || 'unknown',
+            status: campaign.status_campaign,
             stats: {
                 published: new Date(post.created_at).toLocaleDateString('pt-BR'),
-                accesses: (post as any).accesses ?? 0,
-                participants: campaign.current_participants ?? d.current_participants ?? 0,
-                likes: post.likes_count ?? 0,
-                comments: post.comments_count ?? 0
+                accesses: 0,
+                participants: campaign.current_participants || 0,
+                likes: post.likes_count,
+                comments: post.comments_count
             },
             image_url: post.image_url || undefined,
-            target_participants: campaign.target_participants ?? d.target_participants ?? 0,
-            current_participants: campaign.current_participants ?? d.current_participants ?? 0
+            target_participants: campaign.target_participants || 0,
+            current_participants: campaign.current_participants || 0
         }
-    }).filter(Boolean) as CampaignNotification[];
+    }).filter(Boolean);
 }
 
 // Buscar avisos oficiais (posts do tipo announcement)
@@ -76,69 +73,52 @@ export const fetchAnnouncements = async (token: string, communityId?: string): P
         return [];
     }
 
-    const url = `${API_URL}/notifications?type=OFFICIAL_NOTICE&community_id=${communityId}`
-
-    const response = await fetch(url, {
+    const response = await fetch(`${API_URL}/moderation/${communityId}/list-all-announcements`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-        }
+        },
     })
 
     if (!response.ok) {
         throw new Error('Erro ao carregar avisos oficiais')
     }
 
-    const notifications = await response.json()
+    const data: PostsListFeed = await response.json()
 
-    if (!Array.isArray(notifications)) return []
-
-    return notifications
-        .map((n: any) => {
-            const d = n.data || {}
-            const post = d.post || d.announcement || null
-            if (!post) return null
-
-            // sometimes the notification may signal the type, prefer explicit announcement posts
-            const typePost = post.type_post || d.type_post || n.type || ''
-            if (typePost && typePost.toLowerCase() !== 'announcement' && typePost.toLowerCase() !== 'official_notice') return null
-
-            const user = post.user || d.actor || { id: '', name: 'Usuário', username: '' }
-            const community = post.community || { id: d.community_id || '', name: d.community_name || '' }
-
-            return {
-                id: post.id,
-                type: 'Anúncio',
-                title: post.title,
-                author: {
-                    id: user.id,
-                    name: user.name,
-                    username: user.username || '',
-                    profile_picture: user.profile_picture,
-                    role: user.role
-                },
-                community: {
-                    id: community.id,
-                    name: community.name
-                },
-                date: new Date(post.created_at).toLocaleDateString('pt-BR'),
-                created_at: post.created_at,
-                updated_at: post.updated_at,
-                time: `${(post.likes_count || 0) + (post.comments_count || 0)}`,
-                description: post.content,
-                image_url: post.image_url || undefined,
-                stats: {
-                    published: new Date(post.created_at).toLocaleDateString('pt-BR'),
-                    accesses: (post as any).accesses ?? 0,
-                    participants: (post as any).participants ?? 0,
-                    likes: post.likes_count ?? 0,
-                    comments: post.comments_count ?? 0
-                },
-                actions: ['Promover', 'Comentar']
-            }
-        })
-        .filter(Boolean) as AnnouncementNotification[]
+    return data.items
+        .filter((post: PostResponse) => post.type_post === 'announcement')
+        .map((post: PostResponse) => ({
+            id: post.id,
+            type: 'Anúncio',
+            title: post.title,
+            author: {
+                id: post.user.id,
+                name: post.user.name,
+                username: post.user.username || '',
+                profile_picture: post.user.profile_picture,
+                role: post.user.role
+            },
+            community: {
+                id: post.community.id,
+                name: post.community.name
+            },
+            date: new Date(post.created_at).toLocaleDateString('pt-BR'),
+            created_at: post.created_at,
+            updated_at: post.updated_at,
+            time: `${post.likes_count + post.comments_count}`,
+            description: post.content,
+            image_url: post.image_url || undefined,
+            stats: {
+                published: new Date(post.created_at).toLocaleDateString('pt-BR'),
+                accesses: (post as any).accesses ?? 0,
+                participants: (post as any).participants ?? 0,
+                likes: post.likes_count,
+                comments: post.comments_count
+            },
+            actions: ['Promover', 'Comentar']
+        }))
 }
 
 // Buscar conexões reais (via notificações de tipo CONNECTION)
