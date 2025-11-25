@@ -60,7 +60,7 @@ export default function LoginPage() {
         Cookies.set('token', newToken, { path: '/', secure: true, sameSite: 'Lax', expires: 7 });
         setToken(newToken);
         toast.success('Login realizado com sucesso!');
-        router.push('/home');
+        window.location.href = '/home';
       } else {
         toast.error('Token não encontrado na resposta do servidor');
       }

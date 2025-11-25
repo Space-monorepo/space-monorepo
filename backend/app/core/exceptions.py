@@ -11,6 +11,7 @@ from app.api.reputation.exceptions import add_reputation_exception_handler
 from app.api.users.exceptions import add_user_exception_handler
 
 
+
 def add_exception_handlers(app: FastAPI):
     add_user_exception_handler(app)
     add_post_exception_handler(app)

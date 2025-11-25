@@ -105,7 +105,7 @@ export function ModalCreatePublication({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <div className="fixed inset-0 bg-[#858585]/80 backdrop-blur-xd flex items-center justify-center">
+      <div className="fixed inset-0 bg-[#858585]/80 backdrop-blur-sm flex items-center justify-center">
         <main className="w-[640px] h-[344px] shadow-sm bg-zinc-100 border-stone-300 flex flex-col">
           <header className="flex flex-wrap gap-10 justify-between items-start p-4 w-full text-xl text-neutral-800 max-md:max-w-full">
             <h1 className="text-neutral-800">Criar publicação</h1>

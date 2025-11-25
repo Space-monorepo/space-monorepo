@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'react-toastify';
-import { 
+import {
   importUsersToCommunitya,
   listAllMembersFromCommunity,
   updateMemberRole,
@@ -22,14 +22,14 @@ interface UseCommunityUserActionsOutput {
   loadMembers: (communityId: string, params?: { offset?: number; limit?: number; name?: string }) => Promise<void>;
   addModeratorByEmail: (id: string, communityId: string, email: string) => Promise<void>;
   removeUserById: (id: string, communityId: string, memberId: string) => Promise<void>;
-  updateUserRole: (id:string, communityId: string, memberId: string, newRole: 'admin' | 'moderator' | 'member') => Promise<void>;
+  updateUserRole: (id: string, communityId: string, memberId: string, newRole: 'admin' | 'moderator' | 'member') => Promise<void>;
   importUsers: (communityId: string, emails: string[]) => Promise<void>;
   refreshMembers: () => Promise<void>;
 }
 
-const useCommunityUserActions = ({ 
-  onSuccess, 
-  onError 
+const useCommunityUserActions = ({
+  onSuccess,
+  onError
 }: UseCommunityUserActionsProps = {}): UseCommunityUserActionsOutput => {
   const [isLoading, setIsLoading] = useState(false);
   const [members, setMembers] = useState<CommunityMemberResponse[]>([]);
@@ -45,7 +45,7 @@ const useCommunityUserActions = ({
     setIsLoading(true);
     setCurrentCommunityId(communityId);
     setCurrentParams(params);
-    
+
     try {
       const token = getTokenFromCookies();
       if (!token) {
@@ -57,7 +57,7 @@ const useCommunityUserActions = ({
       console.log('DEBUG: First member structure:', response.items[0]);
       setMembers(response.items);
       setPagination(response);
-      
+
     } catch (error) {
       console.error('Erro ao carregar membros:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao carregar membros';
@@ -67,13 +67,32 @@ const useCommunityUserActions = ({
       setIsLoading(false);
     }
   }, [onError]);
+
   const refreshMembers = useCallback(async () => {
     if (currentCommunityId) {
-      await loadMembers(currentCommunityId, currentParams);
+      setIsLoading(true);
+      try {
+        const token = getTokenFromCookies();
+        if (!token) {
+          throw new Error('Token não encontrado. Faça login novamente.');
+        }
+
+        const response = await listAllMembersFromCommunity(token, currentCommunityId, currentParams);
+        setMembers(response.items);
+        setPagination(response);
+
+      } catch (error) {
+        console.error('Erro ao recarregar membros:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Erro ao recarregar membros';
+        onError?.(error instanceof Error ? error : new Error(errorMessage));
+        toast.error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [currentCommunityId, currentParams, loadMembers]);
+  }, [currentCommunityId, currentParams, onError]);
   const findMemberByEmail = (email: string): CommunityMemberResponse | null => {
-    return members.find(member => 
+    return members.find(member =>
       member.user.email.toLowerCase() === email.toLowerCase()
     ) || null;
   };
@@ -101,13 +120,13 @@ const useCommunityUserActions = ({
       }
 
       const emailLower = email.trim().toLowerCase();
-      
+
       // Verificar se o usuário já é membro da comunidade
       const existingMember = findMemberByEmail(emailLower);
-        if (existingMember) {
+      if (existingMember) {
         // Se já é membro, apenas atualizar o papel para moderador
         if (existingMember.role !== 'moderator') {
-          await updateMemberRole(id, token, communityId, existingMember.user_id, 'moderator');
+          await updateMemberRole(id, token, communityId, existingMember.id, 'moderator');
           const successMessage = 'Usuário promovido a moderador com sucesso!';
           onSuccess?.(successMessage);
           toast.success(successMessage);
@@ -118,20 +137,20 @@ const useCommunityUserActions = ({
       } else {
         // Se não é membro, importar primeiro e depois atualizar para moderador
         const importedUsers = await importUsersToCommunitya(token, communityId, [emailLower]);
-        
+
         if (importedUsers.length > 0) {
-          const user = importedUsers[0];          if (user.role !== 'moderator') {
-            await updateMemberRole(id, token, communityId, user.user_id, 'moderator');
+          const user = importedUsers[0]; if (user.role !== 'moderator') {
+            await updateMemberRole(id, token, communityId, user.id, 'moderator');
           }
           const successMessage = 'Usuário importado e promovido a moderador com sucesso!';
           onSuccess?.(successMessage);
           toast.success(successMessage);
         }
       }
-      
+
       // Recarregar a lista de membros
       await refreshMembers();
-      
+
     } catch (error) {
       console.error('Erro ao adicionar moderador:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao adicionar moderador';
@@ -151,14 +170,14 @@ const useCommunityUserActions = ({
       }
 
       await removeMemberFromCommunity(token, communityId, memberId);
-      
+
       const successMessage = 'Usuário removido com sucesso!';
       onSuccess?.(successMessage);
       toast.success(successMessage);
-      
+
       // Recarregar a lista de membros
       await refreshMembers();
-      
+
     } catch (error) {
       console.error('Erro ao remover usuário:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao remover usuário';
@@ -179,14 +198,14 @@ const useCommunityUserActions = ({
       }
 
       await updateMemberRole(id, token, communityId, memberId, newRole);
-      
+
       const successMessage = `Role atualizado para ${newRole} com sucesso!`;
       onSuccess?.(successMessage);
       toast.success(successMessage);
-      
+
       // Recarregar a lista de membros
       await refreshMembers();
-      
+
     } catch (error) {
       console.error('Erro ao atualizar role:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao atualizar role';
@@ -199,7 +218,7 @@ const useCommunityUserActions = ({
   const importUsers = async (communityId: string, emails: string[]) => {
     const cleanEmails = emails.map(email => email.trim().toLowerCase()).filter(email => email);
     const invalidEmails = cleanEmails.filter(email => !validateEmail(email));
-    
+
     if (invalidEmails.length > 0) {
       const error = new Error(`Emails inválidos: ${invalidEmails.join(', ')}`);
       onError?.(error);
@@ -224,7 +243,7 @@ const useCommunityUserActions = ({
       // Separar emails de usuários que já são membros dos que não são
       const existingMembers: string[] = [];
       const newEmails: string[] = [];
-      
+
       cleanEmails.forEach(email => {
         const existingMember = findMemberByEmail(email);
         if (existingMember) {
@@ -232,7 +251,7 @@ const useCommunityUserActions = ({
         } else {
           newEmails.push(email);
         }
-      });      let importCount = 0;
+      }); let importCount = 0;
       const skippedCount = existingMembers.length;
 
       // Importar apenas usuários que não são membros
@@ -253,10 +272,10 @@ const useCommunityUserActions = ({
 
       onSuccess?.(successMessage);
       toast.success(successMessage);
-      
+
       // Recarregar a lista de membros
       await refreshMembers();
-      
+
     } catch (error) {
       console.error('Erro ao importar usuários:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao importar usuários';

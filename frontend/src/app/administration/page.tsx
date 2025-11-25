@@ -16,11 +16,11 @@ export default function AdministrationPage() {
     return (
       <div className="min-h-screen bg-white text-[#161616]">
         <Sidebar variant="static" />
-        <div className="ml-64">
-          <main className="p-8">
-            <h1 className="text-2xl font-medium mb-6">Administração</h1>
+        <div className="ml-64 max-md:ml-0 max-md:pl-4 max-md:pr-4">
+          <main className="p-8 max-md:p-4 max-sm:p-3">
+            <h1 className="text-2xl font-medium mb-6 max-md:text-xl max-sm:text-lg">Administração</h1>
             <div className="flex items-center justify-center h-64">
-              <div className="text-[#525252]">Carregando comunidades...</div>
+              <div className="text-[#525252] text-center">Carregando comunidades...</div>
             </div>
           </main>
         </div>
@@ -32,11 +32,11 @@ export default function AdministrationPage() {
     return (
       <div className="min-h-screen bg-white text-[#161616]">
         <Sidebar variant="static" />
-        <div className="ml-64">
-          <main className="p-8">
-            <h1 className="text-2xl font-medium mb-6">Administração</h1>
+        <div className="ml-64 max-md:ml-0 max-md:pl-4 max-md:pr-4">
+          <main className="p-8 max-md:p-4 max-sm:p-3">
+            <h1 className="text-2xl font-medium mb-6 max-md:text-xl max-sm:text-lg">Administração</h1>
             <div className="flex items-center justify-center h-64">
-              <div className="text-red-500">
+              <div className="text-red-500 text-center max-w-md">
                 Erro ao carregar comunidades: {error.message}
               </div>
             </div>
@@ -48,15 +48,17 @@ export default function AdministrationPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-white text-[#161616] font-manrope">
+      <div className="min-h-screen bg-white text-[#161616] font-manrope no-scrollbar">
         <Sidebar variant="static" />
-        <div className="ml-64">
-          <main className="flex flex-col gap-8 items-start pt-10 mx-auto my-0 w-full max-w-[1600px] max-md:gap-6 max-md:px-5 max-md:pt-8 max-md:max-w-[991px] max-sm:gap-5 max-sm:px-4 max-sm:pt-6 max-sm:max-w-screen-sm">
+        <div className="ml-64 max-md:ml-0 no-scrollbar">
+          <main className="flex flex-col gap-8 items-start pt-10 mx-auto my-0 w-full max-w-[1600px] px-6 max-md:gap-6 max-md:px-5 max-md:pt-8 max-md:max-w-[991px] max-sm:gap-5 max-sm:px-4 max-sm:pt-6 max-sm:max-w-screen-sm no-scrollbar">
             <header className="flex flex-col gap-4 items-start w-full">
               <h1 className="text-xl leading-10 text-zinc-900 max-md:text-lg max-md:leading-9 max-sm:text-base max-sm:leading-8">
                 Administração
               </h1>
-              <SearchBar value={searchQuery} onChange={setSearchQuery} />
+              <div className="w-full [&>div]:!w-full [&>div]:!max-w-none max-md:[&>div]:!px-3 max-sm:[&>div]:!px-2">
+                <SearchBar value={searchQuery} onChange={setSearchQuery} />
+              </div>
             </header>
             <section className="flex flex-col items-start w-full">
               {communities.filter(
@@ -85,19 +87,22 @@ export default function AdministrationPage() {
                   .map((community) => (
                     <article
                       key={community.id}
-                      className="flex flex-col gap-4 items-start px-6 py-4 w-full bg-white max-md:gap-3.5 max-md:px-5 max-md:py-3.5 max-sm:gap-3 max-sm:px-4 max-sm:py-3"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => window.location.href = `/administration/${community.id}`}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { window.location.href = `/administration/${community.id}`; } }}
+                      className="flex flex-col gap-4 items-start px-6 py-4 w-full bg-white max-md:gap-3.5 max-md:px-5 max-md:py-3.5 max-sm:gap-3 max-sm:px-4 max-sm:py-3 text-left cursor-pointer outline-none"
                     >
                       <div className="flex justify-between items-start w-full max-sm:items-center">
                         <div className="w-12 h-12 flex items-center justify-center max-sm:w-10 max-sm:h-10">
                           <Image
-                            src={`/icons/community/${
-                              [
-                                "Coffee.png",
-                                "Lantern.png",
-                                "Myrobot.png",
-                                "Reindeer.png",
-                              ][Math.floor(Math.random() * 4)]
-                            }`}
+                            src={`/icons/community/${[
+                              "Coffee.png",
+                              "Lantern.png",
+                              "Myrobot.png",
+                              "Reindeer.png",
+                            ][Math.floor(Math.random() * 4)]
+                              }`}
                             alt="Community icon"
                             width={52}
                             height={52}
@@ -107,7 +112,8 @@ export default function AdministrationPage() {
                         <button
                           type="button"
                           aria-label="Menu options"
-                          className="p-1"
+                          className="p-1 cursor-pointer hover:bg-gray-200 rounded-full transition max-sm:hidden"
+                          onClick={e => { e.stopPropagation(); /* menu logic aqui */ }}
                         >
                           <OverflowMenuHorizontal size={20} />
                         </button>
@@ -137,15 +143,9 @@ export default function AdministrationPage() {
                             </p>
                           )}
                         </div>
-                        <Link href={`/administration/${community.id}`}>
-                          <button
-                            type="button"
-                            aria-label="View community details"
-                            className="p-1"
-                          >
-                            <ArrowRight size={20} />
-                          </button>
-                        </Link>
+                        <span className="p-1 rounded-full transition">
+                          <ArrowRight size={20} />
+                        </span>
                       </div>
                     </article>
                   ))

@@ -1,4 +1,4 @@
-export const PUBLIC_ROUTES = ['/', '/login', '/signup'];
+export const PUBLIC_ROUTES = ['/', '/login', '/signup', '/explore', '/auth/callback'];
 
 export const REDIRECT_WHEN_AUTHENTICATED = '/home';
 export const REDIRECT_WHEN_NOT_AUTHENTICATED = '/login';

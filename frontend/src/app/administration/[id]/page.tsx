@@ -1,17 +1,38 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Filter, SortDesc, Eye, Plus } from "lucide-react";
+import { ArrowLeft, Filter, Eye } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
+import { CheckmarkFilled, Search, ChevronDown, FilterEdit, ChevronSort, Email } from "@carbon/icons-react";
+// import removido, já existe acima
+import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
+import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import ApproveCampaignModal from "@/components/modals/community/ApproveCampaignModal";
 import RejectCampaignModal from "@/components/modals/community/RejectCampaignModal";
+import { useCampaignAdminActions } from "@/app/api/src/hooks/post/useCampaignAdminActions";
+import { useAuth } from "@/app/api/src/auth/useAuth";
 import useCommunityById from "@/app/api/src/hooks/community/useCommunityById";
 import useCommunityUserActions from "@/app/api/src/hooks/community/useCommunityUserActions";
 import useCommunityPosts from "@/app/api/src/hooks/post/useCommunityPosts";
+import useCampaignDetails from "@/app/api/src/hooks/post/useCampaignDetails";
 import { PostResponse } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
+import {
+  PendenteBadge,
+  EmAnaliseBadge,
+  AprovadaBadge,
+  RejeitadaBadge,
+  EmProgressoBadge,
+  CanceladaBadge,
+  FinalizadaBadge
+} from "@/components/badges/campaign/CampaignBadges";
+import { LeveBadge, ModeradaBadge, CriticaBadge } from "@/components/badges/complaints/ComplaintsBadges";
+import ModalAnnouncement from "@/components/modals/posts/ModalAnnouncement";
+import RejectComplaintModal from "@/components/modals/community/RejectComplaintModal";
+import ApproveComplaintModal from "@/components/modals/community/ApproveComplaintModal";
+import ImportUserModal from "@/components/modals/community/ImportUserModal";
 
 type UserInfo = {
   id: string;
@@ -21,13 +42,13 @@ type UserInfo = {
 };
 
 type Campaign = {
-  id: number;
+  id: string;
   title: string;
   leader: string;
   user: UserInfo;
   participants: number;
   date: string;
-  status: "Em análise" | "Aprovado" | "Rejeitado";
+  status: "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada";
   description?: string;
   accesses?: number;
   likes?: number;
@@ -48,6 +69,9 @@ type Report = {
   severity: "Crítica" | "Moderada" | "Leve";
   confirmations: number;
   image?: string;
+  likes?: number;
+  comments?: number;
+  accesses?: number;
 };
 
 type Announcement = {
@@ -60,6 +84,8 @@ type Announcement = {
   views?: number;
   description?: string;
   image?: string;
+  likes?: number;
+  comments?: number;
 };
 
 export default function CommunityAdminPage({
@@ -67,6 +93,7 @@ export default function CommunityAdminPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { user } = useAuth();
   const { id } = React.use(params);
   // Hook para buscar dados da comunidade específica
   const {
@@ -93,7 +120,7 @@ export default function CommunityAdminPage({
       // O toast já é exibido no hook, mas podemos adicionar lógica extra aqui se necessário
     },
     onError: (error) => {
-      console.error("Erro na ação do usuário:", error);
+      toast.error("Erro ao realizar ação: " + error.message);
       // O toast de erro já é exibido no hook
     },
   });
@@ -108,6 +135,15 @@ export default function CommunityAdminPage({
     fetchCommunityPosts,
   } = useCommunityPosts();
 
+  // Hook para buscar detalhes específicos de campanhas
+  const {
+    campaignDetails,
+    loading: campaignDetailsLoading,
+    error: campaignDetailsError,
+    fetchCampaignDetailsById,
+    clearDetails,
+  } = useCampaignDetails();
+
   // Estados existentes
   const [activeTab, setActiveTab] = useState("Campanhas");
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
@@ -116,75 +152,165 @@ export default function CommunityAdminPage({
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [selectedAnnouncement, setSelectedAnnouncement] =
     useState<Announcement | null>(null);
+  const [selectedAnnouncementIndex, setSelectedAnnouncementIndex] = useState<number | null>(null);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [newModeratorEmail, setNewModeratorEmail] = useState("");
   const [excludeUserEmail, setExcludeUserEmail] = useState("");
   // Estados para importação em lote
   const [emailsToImport, setEmailsToImport] = useState("");
+  const [isImportUserModalOpen, setIsImportUserModalOpen] = useState(false);
   const [hasLoadedMembers, setHasLoadedMembers] = useState(false);
   const loadMembersRef = useRef(loadMembers);
+
+  // Estados para a aba Comunidades
+  const [dropdown1Value, setDropdown1Value] = useState('Opção 1');
+  const [dropdown1Open, setDropdown1Open] = useState(false);
+  const [dropdown2Value, setDropdown2Value] = useState('Opção 2');
+  const [dropdown2Open, setDropdown2Open] = useState(false);
+  const [toggleChecked, setToggleChecked] = useState(false);
 
   // Buscar dados da comunidade quando o componente monta ou o ID muda
   useEffect(() => {
     if (id) {
-      console.log("ID da comunidade:", id); // Aqui você tem acesso ao ID
       fetchCommunity(id);
       fetchCommunityPosts(id);
-    }
-  }, [id, fetchCommunity, fetchCommunityPosts]); // Carregar membros quando a aba de usuários for ativa
-  useEffect(() => {
-    if (id && activeTab === "Usuários" && !hasLoadedMembers) {
+      // Carregar membros sempre para permitir operações de moderação
       loadMembersRef.current(id);
-      setHasLoadedMembers(true);
     }
-  }, [id, activeTab, hasLoadedMembers]); // Sem dependência de loadMembers
+  }, [id, fetchCommunity, fetchCommunityPosts]);
 
-  // Atualizar ref quando loadMembers mudar
+  // Atualizar a ref quando loadMembers mudar
   useEffect(() => {
     loadMembersRef.current = loadMembers;
   }, [loadMembers]);
-  const tabs = ["Campanhas", "Denúncias", "Usuários", "Anúncios"];
-  // Funções auxiliares para converter dados da API para o formato do componente
-  const convertPostToCampaign = (post: PostResponse): Campaign => ({
-    id: parseInt(post.id) || 0,
-    title: post.title,
-    leader: post.user.name,
-    user: {
-      id: post.user.id,
-      name: post.user.name,
-      profile_picture: post.user.profile_picture,
-      role: post.user.role,
-    },
-    participants: 0, // Zerar participantes temporariamente
-    date: new Date(post.created_at).toLocaleDateString("pt-BR"),
-    status: post.status === "active" ? "Em análise" : "Aprovado",
-    description: post.content,
-    accesses: 0,
-    likes: 0,
-    comments: 0,
-    image: post.image_url || undefined,
-  });
 
-  const convertPostToReport = (post: PostResponse): Report => ({
-    id: parseInt(post.id) || 0,
-    title: post.title,
-    reporter: post.user.name,
-    user: {
-      id: post.user.id,
-      name: post.user.name,
-      profile_picture: post.user.profile_picture,
-      role: post.user.role,
-    },
-    reported: "Usuário Denunciado", // Placeholder - ajustar conforme API
-    date: new Date(post.created_at).toLocaleDateString("pt-BR"),
-    status: post.status === "active" ? "Em análise" : "Resolvido",
-    description: post.content,
-    category: "Comportamento", // Placeholder - ajustar conforme API
-    severity: "Moderada" as const, // Placeholder - ajustar conforme API
-    confirmations: post.report_count || 0,
-    image: post.image_url || undefined,
-  });
+  // Marcar que membros foram carregados quando a aba usuários for acessada  
+  useEffect(() => {
+    if (activeTab === "Usuários") {
+      setHasLoadedMembers(true);
+    }
+  }, [activeTab]);
+
+  const tabs = ["Campanhas", "Denúncias", "Usuários", "Anúncios", "Comunidade"];
+
+  // Função para mapear status da API para status do frontend
+  const mapApiStatusToFrontendStatus = (apiStatus: string): "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada" => {
+    if (!apiStatus) return 'Pendente';
+    switch (apiStatus.toLowerCase()) {
+      // Pendência inicial
+      case 'pending':
+        return 'Pendente';
+      // Backend usa 'under_analysis' para campanha em análise
+      case 'under_analysis':
+      // Algumas rotas antigas podem usar 'active' como estado de revisão
+      case 'active':
+        return 'Em análise';
+      // Aprovação / reprovação explícita
+      case 'approved':
+        return 'Aprovado';
+      case 'rejected':
+        return 'Rejeitado';
+      // Em execução
+      case 'in_progress':
+        return 'Em progresso';
+      // Cancelado (aceita ambas grafias vindas de fontes externas)
+      case 'canceled':
+      case 'cancelled':
+        return 'Cancelada';
+      // Finalizado
+      case 'finished':
+      case 'completed':
+        return 'Finalizada';
+      default:
+        return 'Pendente';
+    }
+  };
+
+  // Funções auxiliares para converter dados da API para o formato do componente
+  const convertPostToCampaign = (post: PostResponse): Campaign => {
+    return {
+      id: post.id,
+      title: post.title,
+      leader: post.user.name,
+      user: {
+        id: post.user.id,
+        name: post.user.name,
+        profile_picture: post.user.profile_picture,
+        role: post.user.role,
+      },
+      participants: post.current_participants || 0, // Usar participantes reais do backend
+      date: new Date(post.created_at).toLocaleDateString("pt-BR"),
+      // Usar status_campaign do backend se existir, igual ao notifications
+      status: mapApiStatusToFrontendStatus(post.status_campaign ?? post.status),
+      description: post.content,
+      accesses: 0, // Backend não fornece esse campo ainda
+      likes: post.likes_count || 0,
+      comments: post.comments_count || 0,
+      image: post.image_url || undefined,
+    };
+  };
+
+  const convertPostToReport = (post: PostResponse, index: number): Report => {
+    // Mapear level_complaint do backend (low, medium, high) para o frontend (Leve, Moderada, Crítica)
+    const mapSeverity = (level?: string): "Crítica" | "Moderada" | "Leve" => {
+      if (!level) return "Leve";
+      switch (level.toLowerCase()) {
+        case "high":
+        case "critical":
+          return "Crítica";
+        case "medium":
+        case "moderate":
+          return "Moderada";
+        case "low":
+        default:
+          return "Leve";
+      }
+    };
+
+    // Mapear status_complaint do backend para o frontend
+    const mapComplaintStatus = (statusComplaint?: string): "Em análise" | "Resolvido" | "Arquivado" => {
+      if (!statusComplaint) return "Em análise";
+      switch (statusComplaint.toLowerCase()) {
+        case "resolved":
+        case "completed":
+          return "Resolvido";
+        case "archived":
+        case "dismissed":
+          return "Arquivado";
+        case "under_analysis":
+        case "active":
+        case "pending":
+        default:
+          return "Em análise";
+      }
+    };
+
+    return {
+      id: parseInt(post.id) || index,
+      title: post.title,
+      reporter: post.user.name,
+      user: {
+        id: post.user.id,
+        name: post.user.name,
+        profile_picture: post.user.profile_picture,
+        role: post.user.role,
+      },
+      reported: "Usuário Denunciado", // Placeholder - ajustar conforme API
+      date: new Date(post.created_at).toLocaleDateString("pt-BR"),
+      status: mapComplaintStatus(post.status_complaint),
+      description: post.content,
+      category: "Comportamento", // Placeholder - ajustar conforme API
+      severity: mapSeverity(post.level_complaint),
+      confirmations: post.report_count || 0,
+      image: post.image_url || undefined,
+      likes: post.likes_count || 0,
+      comments: post.comments_count || 0,
+      accesses: 0,
+    };
+  };
 
   const convertPostToAnnouncement = (post: PostResponse): Announcement => ({
     id: parseInt(post.id) || 0,
@@ -198,13 +324,15 @@ export default function CommunityAdminPage({
     },
     date: new Date(post.created_at).toLocaleDateString("pt-BR"),
     status: post.status === "active" ? "Publicado" : "Rascunho",
-    views: 0,
+    views: 0, // Não existe campo de views no backend, manter 0 ou ajustar se backend mudar
+    likes: post.likes_count ?? 0,
+    comments: post.comments_count ?? 0,
     description: post.content,
     image: post.image_url || undefined,
   });
   // Converter dados da API para o formato esperado pelos componentes
   const campaigns: Campaign[] = apiCampaigns.map(convertPostToCampaign);
-  const reports: Report[] = apiReports.map(convertPostToReport);
+  const reports: Report[] = apiReports.map((post, index) => convertPostToReport(post, index));
   const announcements: Announcement[] = apiAnnouncements.map(
     convertPostToAnnouncement
   );
@@ -224,6 +352,8 @@ export default function CommunityAdminPage({
     setSelectedCampaign(null);
     setSelectedReport(null);
     setSelectedAnnouncement(null);
+    setSelectedAnnouncementIndex(null);
+    clearDetails(); // Limpar detalhes da campanha
 
     // Set the first item of the active tab as selected
     if (tab === "Campanhas" && campaigns.length > 0) {
@@ -232,12 +362,117 @@ export default function CommunityAdminPage({
       setSelectedReport(reports[0]);
     } else if (tab === "Anúncios" && announcements.length > 0) {
       setSelectedAnnouncement(announcements[0]);
+      setSelectedAnnouncementIndex(0);
+    }
+  };
+
+  // Função para buscar detalhes da campanha quando selecionada
+  const handleCampaignSelection = async (campaign: Campaign) => {
+    setSelectedCampaign(campaign);
+    if (id) {
+      try {
+        await fetchCampaignDetailsById(id, campaign.id);
+      } catch (error) {
+        toast.error("Erro ao carregar detalhes da campanha");
+      }
+    }
+  };
+
+  // Hook para aprovar/rejeitar campanha
+  const { approveCampaign, rejectCampaign, changeCampaignStatus, loading: adminActionLoading } = useCampaignAdminActions();
+
+  // Handler para aprovação real
+  const handleApproveCampaign = async (subject: string, message: string) => {
+    if (!selectedCampaign) return;
+    try {
+      const response = await approveCampaign(id, selectedCampaign.id, subject, message);
+      // Se a API retornar o objeto da campanha, usar o status retornado
+      if (response && response.status_campaign) {
+        const mappedStatus = mapApiStatusToFrontendStatus(response.status_campaign);
+        setSelectedCampaign({ ...selectedCampaign, status: mappedStatus });
+      } else {
+        // fallback otimista
+        setSelectedCampaign({ ...selectedCampaign, status: "Aprovado" });
+      }
+      toast.success("Campanha aprovada com sucesso!");
+      // Recarregar posts da comunidade para garantir consistência
+      try {
+        if (id) await fetchCommunityPosts(id);
+        if (id && selectedCampaign?.id) {
+          await fetchCampaignDetailsById(id, selectedCampaign.id as any);
+        }
+      } catch (err) {
+        console.warn("Falha ao atualizar posts após aprovação:", err);
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao aprovar campanha");
+    } finally {
+      setIsApproveModalOpen(false);
+    }
+  };
+
+  // Handler para rejeição real
+  const handleRejectCampaign = async (subject: string, reason: string) => {
+    if (!selectedCampaign) return;
+    try {
+      const response = await rejectCampaign(id, selectedCampaign.id, subject, reason);
+      if (response && response.status_campaign) {
+        const mappedStatus = mapApiStatusToFrontendStatus(response.status_campaign);
+        setSelectedCampaign({ ...selectedCampaign, status: mappedStatus });
+      } else {
+        setSelectedCampaign({ ...selectedCampaign, status: "Rejeitado" });
+      }
+      toast.success("Campanha rejeitada com sucesso!");
+      try {
+        if (id) await fetchCommunityPosts(id);
+        if (id && selectedCampaign?.id) {
+          await fetchCampaignDetailsById(id, selectedCampaign.id as any);
+        }
+      } catch (err) {
+        console.warn("Falha ao atualizar posts após rejeição:", err);
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao rejeitar campanha");
+    } finally {
+      setIsRejectModalOpen(false);
+    }
+  };
+
+  // Handler para mudança de status da campanha
+  const handleChangeStatus = async (newStatus: 'in_progress' | 'canceled' | 'finished') => {
+    if (!selectedCampaign) return;
+    try {
+      const response = await changeCampaignStatus(id, selectedCampaign.id, newStatus);
+      if (response && response.status_campaign) {
+        const mappedStatus = mapApiStatusToFrontendStatus(response.status_campaign);
+        setSelectedCampaign({ ...selectedCampaign, status: mappedStatus });
+      }
+      toast.success("Status da campanha atualizado com sucesso!");
+      try {
+        if (id) await fetchCommunityPosts(id);
+        if (id && selectedCampaign?.id) {
+          await fetchCampaignDetailsById(id, selectedCampaign.id as any);
+        }
+      } catch (err) {
+        console.warn("Falha ao atualizar posts após mudança de status:", err);
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao atualizar status da campanha");
+    } finally {
+      setIsStatusDropdownOpen(false);
     }
   };
 
   // Initialize default selected items if none are selected
   if (activeTab === "Campanhas" && !selectedCampaign && campaigns.length > 0) {
-    setSelectedCampaign(campaigns[0]);
+    const firstCampaign = campaigns[0];
+    setSelectedCampaign(firstCampaign);
+    // Buscar detalhes da primeira campanha automaticamente
+    if (id) {
+      fetchCampaignDetailsById(id, firstCampaign.id).catch(error => {
+        toast.error("Erro ao carregar detalhes da campanha");
+      });
+    }
   } else if (
     activeTab === "Denúncias" &&
     !selectedReport &&
@@ -249,39 +484,11 @@ export default function CommunityAdminPage({
     !selectedAnnouncement &&
     announcements.length > 0
   ) {
-    setSelectedAnnouncement(announcements[0]);
+    const firstAnnouncement = announcements[0];
+    setSelectedAnnouncement(firstAnnouncement);
+    setSelectedAnnouncementIndex(0);
   }
-  const handleApproveCampaign = (subject: string, message: string) => {
-    console.log("Approving campaign with:", {
-      subject,
-      message,
-      communityId: id,
-    });
-    if (selectedCampaign) {
-      const updatedCampaign = {
-        ...selectedCampaign,
-        status: "Aprovado" as const,
-      };
-      setSelectedCampaign(updatedCampaign);
-    }
-    setIsApproveModalOpen(false);
-  };
-
-  const handleRejectCampaign = (subject: string, reason: string) => {
-    console.log("Rejecting campaign with:", {
-      subject,
-      reason,
-      communityId: id,
-    });
-    if (selectedCampaign) {
-      const updatedCampaign = {
-        ...selectedCampaign,
-        status: "Rejeitado" as const,
-      };
-      setSelectedCampaign(updatedCampaign);
-    }
-    setIsRejectModalOpen(false);
-  };
+  // Removidas as versões duplicadas dos handlers (mantendo apenas as assíncronas reais)
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "Crítica":
@@ -292,6 +499,28 @@ export default function CommunityAdminPage({
         return "bg-[#defbe6] text-[#0e6027]";
       default:
         return "bg-[#f4f4f4] text-[#525252]";
+    }
+  };
+
+  // Função para mapear status da campanha para o componente de badge correto
+  const getCampaignStatusBadge = (status: string) => {
+    switch (status) {
+      case "Em análise":
+        return <EmAnaliseBadge />;
+      case "Aprovado":
+        return <AprovadaBadge />;
+      case "Rejeitado":
+        return <RejeitadaBadge />;
+      case "Pendente":
+        return <PendenteBadge />;
+      case "Em progresso":
+        return <EmProgressoBadge />;
+      case "Cancelada":
+        return <CanceladaBadge />;
+      case "Finalizada":
+        return <FinalizadaBadge />;
+      default:
+        return <PendenteBadge />;
     }
   };
   // Handlers para gerenciamento de usuários
@@ -306,7 +535,7 @@ export default function CommunityAdminPage({
       return;
     }
 
-    await addModeratorByEmail(id, newModeratorEmail, "moderator");
+    await addModeratorByEmail(id, id, newModeratorEmail);
   };
 
   const handleRemoveUser = async () => {
@@ -335,13 +564,13 @@ export default function CommunityAdminPage({
       `Tem certeza que deseja excluir o usuário "${memberToRemove.user.name}" (${memberToRemove.user.email})? Esta ação é permanente e não pode ser desfeita.`
     );
     if (confirmRemoval) {
-      await removeUserById(id, id, memberToRemove.user_id);
+      await removeUserById(id, id, memberToRemove.id);
     }
   };
 
   const handleImportUsers = async () => {
     if (!emailsToImport.trim()) {
-      toast.error("Por favor, digite os emails para importar");
+      toast.error("Por favor, digite o email para importar");
       return;
     }
 
@@ -350,18 +579,146 @@ export default function CommunityAdminPage({
       return;
     }
 
-    const emails = emailsToImport
-      .split(/[,\n]/)
-      .map((e) => e.trim())
-      .filter((e) => e);
-
-    if (emails.length === 0) {
-      toast.error("Nenhum email válido encontrado");
-      return;
-    }
-    await importUsers(id, emails);
+    const email = emailsToImport.trim();
+    await importUsers(id, [email]);
     setEmailsToImport("");
+    setIsImportUserModalOpen(false);
   };
+
+  // Função para mapear severidade para o badge correto
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case "Leve":
+        return <LeveBadge />;
+      case "Moderada":
+        return <ModeradaBadge />;
+      case "Crítica":
+        return <CriticaBadge />;
+      default:
+        return <LeveBadge />;
+    }
+  };
+
+  // Estados para modais de denúncia
+  const [isDissolveModalOpen, setIsDissolveModalOpen] = useState(false);
+  const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
+
+  // Handlers para ações de denúncia
+  const handleDissolveReport = () => {
+    setIsDissolveModalOpen(true);
+  };
+
+  const handleResolveReport = () => {
+    setIsResolveModalOpen(true);
+  };
+
+  // Componentes inline para a aba Comunidades
+  const SectionHeader = ({ title }: { title: string }) => (
+    <header className="w-full text-xl leading-none text-black max-md:max-w-full">
+      <h2 className="max-md:max-w-full">{title}</h2>
+      <div className="flex mt-4 w-full bg-stone-300 min-h-px max-md:max-w-full" />
+    </header>
+  );
+
+  const ConfigurationItem = ({
+    description,
+    value,
+    children
+  }: {
+    description: string;
+    value?: string;
+    children?: React.ReactNode;
+  }) => (
+    <div className="flex flex-wrap gap-10 justify-between items-center mt-2 w-full max-md:max-w-full">
+      <div className="self-stretch my-auto text-xs leading-none text-justify text-neutral-500 max-md:max-w-full">
+        {description}
+      </div>
+      {value && (
+        <div className="self-stretch my-auto text-sm leading-none text-center text-neutral-800 w-[60px]">
+          {value}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+
+  const DropdownSelect = ({
+    options,
+    value,
+    onChange,
+    isOpen,
+    onToggle,
+    variant = 'primary'
+  }: {
+    options: string[];
+    value: string;
+    onChange: (value: string) => void;
+    isOpen: boolean;
+    onToggle: () => void;
+    variant?: 'primary' | 'secondary';
+  }) => {
+    const textColorClass = variant === 'primary' ? 'text-neutral-800' : 'text-neutral-500';
+
+    return (
+      <div className="relative">
+        <button
+          className={`flex gap-2.5 justify-center items-center self-stretch p-2.5 my-auto text-sm leading-none text-justify ${textColorClass}`}
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+        >
+          <span className="self-stretch my-auto">{value}</span>
+          <ChevronDown
+            className="object-contain shrink- w-6 aspect-square"
+            aria-label="Dropdown arrow"
+          />
+        </button>
+
+        {isOpen && (
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-10 min-w-full">
+            <ul role="listbox" className="py-1">
+              {options.map((option, index) => (
+                <li key={index}>
+                  <button
+                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${textColorClass}`}
+                    onClick={() => {
+                      onChange(option);
+                      onToggle();
+                    }}
+                    role="option"
+                    aria-selected={value === option}
+                  >
+                    {option}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const ToggleSwitch = ({
+    checked,
+    onChange
+  }: {
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+  }) => (
+    <button
+      className="flex gap-2.5 items-center self-stretch px-1.5 py-1 my-auto w-12 rounded-2xl border border-solid bg-neutral-800 border-zinc-900"
+      onClick={() => onChange(!checked)}
+      role="switch"
+      aria-checked={checked}
+      aria-label="Toggle switch"
+    >
+      <div
+        className={`flex self-stretch my-auto w-4 h-4 rounded-full min-h-4 transition-all duration-200 ${checked ? 'bg-white ml-auto' : 'bg-gray-200'
+          }`}
+      />
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 text-[#161616]">
@@ -370,7 +727,7 @@ export default function CommunityAdminPage({
         {/* Left Navigation - Fixed */}
         <div className="fixed left-64 top-1 w-64 bg-white border-r border-[#e0e0e0] h-screen z-20 overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 p-6 border-b border-[#e0e0e0] bg-white">
+          <div className="sticky top-0 p-6 border-[#e0e0e0] bg-white">
             <div className="flex items-center gap-3 mb-4">
               <Link href="/administration" className="p-1 hover:bg-[#e5e5e5]">
                 <ArrowLeft className="h-5 w-5 text-[#525252]" />
@@ -398,11 +755,10 @@ export default function CommunityAdminPage({
             {tabs.map((tab) => (
               <button
                 key={tab}
-                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] ${
-                  activeTab === tab
-                    ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
-                    : "text-[#525252]"
-                }`}
+                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${activeTab === tab
+                  ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
+                  : "text-[#525252]"
+                  }`}
                 onClick={() => handleTabChange(tab)}
               >
                 {tab}
@@ -413,20 +769,24 @@ export default function CommunityAdminPage({
         {/* Main Content Area */}
         <div className="ml-[512px] flex-1">
           {/* Middle Section - Content List (only for Campanhas, Denúncias, Anúncios) */}
-          {activeTab !== "Usuários" && (
+          {activeTab !== "Usuários" && activeTab !== "Comunidade" && (
             <div className="w-80 fixed top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
               {/* Header with filters */}
               <div className="sticky top-0 p-4 border-b border-[#e0e0e0] flex items-center gap-2 bg-white z-20">
                 <button className="p-2 hover:bg-[#f4f4f4]">
-                  <Filter className="h-4 w-4 text-[#525252]" />
+                  <FilterEdit className="h-4 w-4 text-[#525252]" />
                 </button>
                 <button className="p-2 hover:bg-[#f4f4f4]">
-                  <SortDesc className="h-4 w-4 text-[#525252]" />
+                  <ChevronSort className="h-4 w-4 text-[#525252]" />
                 </button>
                 {activeTab === "Anúncios" && (
-                  <button className="ml-auto px-3 py-1.5 bg-[#161616] text-white text-sm hover:bg-[#262626] flex items-center gap-1">
+                  <button
+                    className="ml-auto cursor-pointer px-3 min-w-[138px] min-h-[56px] py-1.5 bg-[#161616]
+                     text-white text-sm hover:bg-[#262626] flex items-center gap-10"
+                    onClick={() => setIsAnnouncementModalOpen(true)}
+                  >
                     Anunciar
-                    <Plus className="h-4 w-4" />
+                    <Email className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -492,12 +852,11 @@ export default function CommunityAdminPage({
                   campaigns.map((campaign) => (
                     <div
                       key={campaign.id}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
-                        selectedCampaign?.id === campaign.id
-                          ? "bg-[#f4f4f4]"
-                          : ""
-                      }`}
-                      onClick={() => setSelectedCampaign(campaign)}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedCampaign?.id === campaign.id
+                        ? "bg-[#f4f4f4]"
+                        : ""
+                        }`}
+                      onClick={() => handleCampaignSelection(campaign)}
                     >
                       <div className="mb-2">
                         <h3 className="font-medium text-sm mb-1">
@@ -514,17 +873,7 @@ export default function CommunityAdminPage({
                         </p>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span
-                          className={`text-xs px-2 py-1 ${
-                            campaign.status === "Em análise"
-                              ? "bg-[#fff8e1] text-[#b28600]"
-                              : campaign.status === "Aprovado"
-                              ? "bg-[#defbe6] text-[#0e6027]"
-                              : "bg-[#fff1f1] text-[#da1e28]"
-                          }`}
-                        >
-                          {campaign.status}
-                        </span>
+                        {getCampaignStatusBadge(campaign.status)}
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-[#525252]">0</span>
                           <Eye className="h-3 w-3 text-[#525252]" />
@@ -539,9 +888,8 @@ export default function CommunityAdminPage({
                   reports.map((report) => (
                     <div
                       key={report.id}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
-                        selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
-                      }`}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
+                        }`}
                       onClick={() => setSelectedReport(report)}
                     >
                       <div className="mb-2">
@@ -559,13 +907,7 @@ export default function CommunityAdminPage({
                         </p>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span
-                          className={`text-xs px-2 py-1 ${getSeverityColor(
-                            report.severity
-                          )}`}
-                        >
-                          {report.severity}
-                        </span>
+                        <div className="mr-2">{getSeverityBadge(report.severity)}</div>
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-[#525252]">0</span>
                           <Eye className="h-3 w-3 text-[#525252]" />
@@ -577,15 +919,14 @@ export default function CommunityAdminPage({
                 {activeTab === "Anúncios" &&
                   !postsLoading &&
                   announcements.length > 0 &&
-                  announcements.map((announcement) => (
+                  announcements.map((announcement, index) => (
                     <div
-                      key={announcement.id}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
-                        selectedAnnouncement?.id === announcement.id
-                          ? "bg-[#f4f4f4]"
-                          : ""
-                      }`}
-                      onClick={() => setSelectedAnnouncement(announcement)}
+                      key={`${announcement.id}-${index}`}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-gray-100 ${selectedAnnouncementIndex === index
+                        ? "bg-[#f8f8f8]"
+                        : ""
+                        }`}
+                      onClick={() => { setSelectedAnnouncement(announcement); setSelectedAnnouncementIndex(index); }}
                     >
                       <div className="mb-2">
                         <p className="text-xs text-[#525252] mb-1">
@@ -599,7 +940,7 @@ export default function CommunityAdminPage({
                         </p>{" "}
                       </div>
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-[#525252]">0</span>
+                        <span className="text-xs text-[#525252]">{announcement.views || 0}</span>
                         <Eye className="h-3 w-3 text-[#525252]" />
                       </div>
                     </div>
@@ -608,9 +949,9 @@ export default function CommunityAdminPage({
             </div>
           )}
           {/* Right Section - Details */}
-          <div className="flex-1 bg-gray-100 px-6 py-8 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto">
+          <div className="flex-1 bg-gray-100 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             {/* Loading State for Details */}
-            {postsLoading && activeTab !== "Usuários" && (
+            {postsLoading && activeTab !== "Usuários" && activeTab !== "Comunidade" && (
               <div className="bg-white p-6 text-center">
                 <div className="flex items-center justify-center mb-4">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#161616]"></div>
@@ -619,7 +960,7 @@ export default function CommunityAdminPage({
               </div>
             )}
             {/* No Selection State */}
-            {!postsLoading && activeTab !== "Usuários" && (
+            {!postsLoading && activeTab !== "Usuários" && activeTab !== "Comunidade" && (
               <>
                 {activeTab === "Campanhas" &&
                   !selectedCampaign &&
@@ -652,488 +993,720 @@ export default function CommunityAdminPage({
                   )}
               </>
             )}{" "}
-            {/* Campaign Details */}
+            {/* Campaign Details - Updated with Figma Layout */}
             {activeTab === "Campanhas" && selectedCampaign && !postsLoading && (
-              <div className="bg-white p-6">
-                {/* Author info */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={
-                        selectedCampaign.user.profile_picture ||
-                        "/no-profile-pic.png"
-                      }
-                      alt={selectedCampaign.user.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>{" "}
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {selectedCampaign.leader}
-                    </span>
-                    <div className="w-1 h-1 rounded-full bg-[#525252]"></div>
-                    <span className="text-xs px-2 py-1 bg-[#393939] text-white">
-                      {translateUserRole(
-                        selectedCampaign.user.role || "leader"
-                      )}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Campaign content */}
-                <div className="space-y-4 mb-8">
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Título:</p>
-                    <h2 className="text-lg font-medium">
-                      {selectedCampaign.title}
-                    </h2>
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Descrição:</p>
-                    <p className="text-[#161616] whitespace-pre-line leading-relaxed">
-                      {selectedCampaign.description}
-                    </p>
-                  </div>
-                  {selectedCampaign.image && (
-                    <div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={selectedCampaign.image || "/placeholder.svg"}
-                        alt="Campaign"
-                        className="w-full max-w-md"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8">
-                  <div>
-                    <p className="text-sm text-[#525252]">Data publicada:</p>
-                    <p className="font-medium">{selectedCampaign.date}</p>
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252]">Curtidas:</p>
-                    <p className="font-medium">0 curtidas</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Número de acessos:</p>
-                    <p className="font-medium">0 acessos</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Comentários:</p>
-                    <p className="font-medium">0 comentários</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Participantes:</p>
-                    <p className="font-medium">
-                      {selectedCampaign.participants} pessoas
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Status:</p>
-                    <span
-                      className={`inline-block px-2 py-1 text-sm ${
-                        selectedCampaign.status === "Em análise"
-                          ? "bg-[#fff8e1] text-[#b28600]"
-                          : selectedCampaign.status === "Aprovado"
-                          ? "bg-[#defbe6] text-[#0e6027]"
-                          : "bg-[#fff1f1] text-[#da1e28]"
-                      }`}
-                    >
-                      {selectedCampaign.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                {selectedCampaign.status === "Em análise" && (
-                  <div className="flex gap-4">
-                    <button
-                      className="flex-1 py-3 px-4 border border-[#e0e0e0] hover:bg-[#f8f8f8] transition-colors"
-                      onClick={() => setIsRejectModalOpen(true)}
-                    >
-                      Rejeitar
-                    </button>
-                    <button
-                      className="flex-1 py-3 px-4 bg-[#161616] text-white hover:bg-[#262626] transition-colors"
-                      onClick={() => setIsApproveModalOpen(true)}
-                    >
-                      Aprovar
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-            {/* Report Details */}
-            {activeTab === "Denúncias" && selectedReport && (
-              <div className="bg-white p-6">
-                {/* Report header */}{" "}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={
-                        selectedReport.user.profile_picture ||
-                        "/no-profile-pic.png"
-                      }
-                      alt={selectedReport.user.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>{" "}
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {selectedReport.user.name}
-                    </span>
-                    <div className="w-1 h-1 rounded-full bg-[#525252]"></div>
-                    <span className="text-xs px-2 py-1 bg-[#393939] text-white">
-                      {selectedReport.user.role || "Membro"}
-                    </span>
-                  </div>
-                </div>
-                {/* Report content */}
-                <div className="space-y-4 mb-8">
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Nível:</p>
-                    <span
-                      className={`px-2 py-1 text-sm ${getSeverityColor(
-                        selectedReport.severity
-                      )}`}
-                    >
-                      {selectedReport.severity}
-                    </span>
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Título:</p>
-                    <h2 className="text-lg font-medium">
-                      {selectedReport.title}
-                    </h2>
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Descrição:</p>
-                    <p className="text-[#161616] whitespace-pre-line leading-relaxed">
-                      {selectedReport.description}
-                    </p>
-                  </div>
-                  {selectedReport.image && (
-                    <div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={selectedReport.image || "/placeholder.svg"}
-                        alt="Report"
-                        className="w-full max-w-md"
-                      />
-                    </div>
-                  )}
-                </div>
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8">
-                  <div>
-                    <p className="text-sm text-[#525252]">Data publicada:</p>
-                    <p className="font-medium">{selectedReport.date}</p>{" "}
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252]">Curtidas:</p>
-                    <p className="font-medium">0 curtidas</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Número de acessos:</p>
-                    <p className="font-medium">0 acessos</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Comentários:</p>
-                    <p className="font-medium">0 comentários</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Confirmações:</p>
-                    <p className="font-medium">
-                      {selectedReport.confirmations} pessoas
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Status:</p>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 text-sm bg-[#fff8e1] text-[#b28600]">
-                      <div className="w-2 h-2 rounded-full bg-[#b28600]"></div>
-                      Em apuração
-                    </span>
-                  </div>
-                </div>
-                {/* Action buttons */}
-                <div className="flex gap-4">
-                  <button className="flex-1 py-3 px-4 border border-[#e0e0e0] hover:bg-[#f8f8f8] transition-colors">
-                    Dissolver
-                  </button>
-                  <button className="flex-1 py-3 px-4 bg-[#161616] text-white hover:bg-[#262626] transition-colors">
-                    Resolver
-                  </button>
-                </div>
-              </div>
-            )}{" "}
-            {/* Users Management */}
-            {activeTab === "Usuários" && (
-              <div className="flex flex-col shrink-0 items-start mx-auto max-w-none w-full max-md:px-6 max-md:py-0 max-sm:px-4 max-sm:py-0 bg-white fixed top-0 right-0 bottom-0 left-[512px] overflow-y-auto mt-4">
-                {/* Header Section */}
-                <header className="flex relative flex-col gap-1 items-start self-stretch mb-12 p-6">
-                  <p className="relative gap-2.5 self-stretch text-xs font-medium flex-[1_0_0] text-neutral-500">
-                    Usuários
-                  </p>
-                  <h1 className="relative gap-2.5 self-stretch text-xl text-black flex-[1_0_0] max-sm:text-lg">
-                    Gerenciamento de Usuários
-                  </h1>
-                </header>
-
-                {/* Import Section */}
-                <section className="flex relative flex-col gap-4 items-start self-stretch px-6 py-12 border-b border-solid border-b-stone-300 flex-[1_0_0] max-sm:px-4 max-sm:py-8">
-                  <div className="flex relative flex-col gap-2 items-start self-stretch">
-                    <h2 className="relative self-stretch text-sm font-semibold leading-6 text-neutral-800 max-sm:text-sm">
-                      Importar base de dados de usuários
-                    </h2>
-                    <p className="relative text-sm text-neutral-500 w-[497px] max-md:w-full max-md:max-w-[497px] max-sm:text-sm">
-                      Tamanho máximo do arquivo é 2MB. Tipos de arquivos
-                      suportados são .jpg e .png.
-                    </p>
-                  </div>
-                  <button
-                    className="flex relative gap-8 items-center py-3 pr-16 pl-4 cursor-pointer bg-neutral-800 max-sm:justify-center max-sm:px-4 max-sm:py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleImportUsers}
-                    disabled={isUserActionLoading}
-                  >
-                    <span className="relative text-sm leading-6 text-zinc-100">
-                      {isUserActionLoading ? "Importando..." : "Importar base"}
-                    </span>
-                  </button>
-                </section>
-
-                {/* Add Moderator Section */}
-                <section className="flex relative gap-10 items-center self-stretch px-6 py-12 border-b border-solid border-b-stone-300 flex-[1_0_0] max-md:flex-col max-md:gap-4 max-md:items-start max-sm:flex-col max-sm:gap-4 max-sm:items-start max-sm:px-4 max-sm:py-8">
-                  <div className="flex relative flex-col gap-2 items-start w-[608px] max-md:w-full max-md:max-w-[608px]">
-                    <h2 className="relative self-stretch text-sm font-semibold leading-6 text-neutral-800 max-sm:text-sm">
-                      Adicionar moderador
-                    </h2>
-                    <div className="flex relative gap-8 items-center self-stretch px-4 py-2 border-b border-solid bg-zinc-100 border-b-neutral-500">
-                      <input
-                        type="email"
-                        value={newModeratorEmail}
-                        onChange={(e) => setNewModeratorEmail(e.target.value)}
-                        placeholder="Digite o email do usuário"
-                        className="relative text-sm leading-6 text-neutral-500 bg-transparent border-none outline-none flex-1"
-                        disabled={isUserActionLoading}
-                      />
-                    </div>
-                    <p className="relative text-xs leading-4 text-neutral-500 w-[496px] max-md:w-full max-md:max-w-[496px] max-sm:text-xs">
-                      Ao clicar em adicionar o usuário terá seu papel da
-                      comunidade alterado para moderador.
-                    </p>
-                  </div>
-                  <button
-                    className="flex relative gap-8 items-center px-4 py-2 cursor-pointer bg-neutral-800 max-sm:justify-center max-sm:px-4 max-sm:py-2 max-sm:w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleAddModerator}
-                    disabled={isUserActionLoading}
-                  >
-                    <span className="relative text-sm leading-6 text-zinc-100">
-                      {isUserActionLoading ? "Adicionando..." : "Adicionar"}
-                    </span>
-                    <div>
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html:
-                            '<svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg" class="add-icon" style="width: 16px; height: 16px; position: relative"> <path d="M8.5 8V4.5H7.5V8H4V9H7.5V12.5H8.5V9H12V8H8.5Z" fill="#F4F4F4"></path> </svg>',
-                        }}
-                      />
-                    </div>
-                  </button>
-                </section>
-
-                {/* Delete User Section */}
-                <section className="flex relative gap-10 items-center self-stretch px-6 py-12 border-b border-solid border-b-stone-300 flex-[1_0_0] max-md:flex-col max-md:gap-4 max-md:items-start max-sm:flex-col max-sm:gap-4 max-sm:items-start max-sm:px-4 max-sm:py-8">
-                  <div className="flex relative flex-col gap-2 items-start w-[608px] max-md:w-full max-md:max-w-[608px]">
-                    <h2 className="relative self-stretch text-sm font-semibold leading-6 text-neutral-800 max-sm:text-sm">
-                      Excluir usuário
-                    </h2>
-                    <div className="flex relative gap-8 items-center self-stretch px-4 py-2 border-b border-solid bg-zinc-100 border-b-neutral-500">
-                      <input
-                        type="email"
-                        value={excludeUserEmail}
-                        onChange={(e) => setExcludeUserEmail(e.target.value)}
-                        placeholder="Digite o email do usuário"
-                        className="relative text-sm leading-6 text-neutral-500 bg-transparent border-none outline-none flex-1"
-                        disabled={isUserActionLoading}
-                      />
-                    </div>
-                    <p className="relative text-xs leading-4 text-neutral-500 w-[496px] max-md:w-full max-md:max-w-[496px] max-sm:text-xs">
-                      A exclusão é permanente, então certifique-se de digitar o
-                      e-mail corretamente.
-                    </p>
-                  </div>
-                  <button
-                    className="flex relative gap-8 items-center px-4 py-2 bg-red-600 cursor-pointer max-sm:justify-center max-sm:px-4 max-sm:py-2 max-sm:w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleRemoveUser}
-                    disabled={isUserActionLoading}
-                  >
-                    <span className="relative text-sm leading-6 text-zinc-100">
-                      {isUserActionLoading ? "Excluindo..." : "Excluir"}
-                    </span>
-                    <div>
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html:
-                            '<svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg" class="close-icon" style="width: 16px; height: 16px; position: relative"> <path d="M12 4.86675L11.3 4.16675L8 7.46675L4.7 4.16675L4 4.86675L7.3 8.16675L4 11.4667L4.7 12.1667L8 8.86675L11.3 12.1667L12 11.4667L8.7 8.16675L12 4.86675Z" fill="#F4F4F4"></path> </svg>',
-                        }}
-                      />
-                    </div>
-                  </button>
-                </section>
-
-                {/* Members List Section */}
-                {members.length > 0 && (
-                  <section className="flex relative flex-col gap-4 items-start self-stretch px-6 py-12 max-sm:px-4 max-sm:py-8">
-                    <h3 className="relative self-stretch text-sm font-semibold leading-6 text-neutral-800 max-sm:text-sm">
-                      Membros da Comunidade ({members.length})
-                    </h3>
-                    <div className="space-y-2 max-h-[32rem] overflow-y-auto border border-[#e0e0e0] p-4 w-full bg-white rounded-lg">
-                      {members.map((member) => (
-                        <div
-                          key={member.user_id}
-                          className="flex items-center justify-between p-2 hover:bg-[#f8f8f8] bg-white"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full overflow-hidden">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={
-                                  member.user.profile_image_url ||
-                                  "/no-profile-pic.png"
-                                }
-                                alt={member.user.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm text-neutral-800">
-                                {member.user.name}
-                              </p>
-                              <p className="text-xs text-neutral-500">
-                                {member.user.email}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span
-                                  className={`text-xs px-2 py-0.5 rounded-full ${
-                                    member.status_participation === "active"
-                                      ? "bg-green-100 text-green-800"
-                                      : member.status_participation ===
-                                        "suspended"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-red-100 text-red-800"
-                                  }`}
-                                >
-                                  {member.status_participation === "active"
-                                    ? "Ativo"
-                                    : member.status_participation ===
-                                      "suspended"
-                                    ? "Suspenso"
-                                    : "Banido"}
-                                </span>
-                                <span className="text-xs text-neutral-500">
-                                  Rep: {member.reputation}
-                                </span>
-                                <span className="text-xs text-neutral-500">
-                                  Desde:{" "}
-                                  {new Date(
-                                    member.entered_in
-                                  ).toLocaleDateString("pt-BR")}
-                                </span>
+              <div className="max-w-full">
+                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                  <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
+                    <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                      <div className="w-full max-md:max-w-full">
+                        <div className="flex justify-between items-start w-full max-md:max-w-full">
+                          <div className="flex items-center min-w-60">
+                            <img
+                              src={selectedCampaign.user.profile_picture || "/no-profile-pic.png"}
+                              alt={`${selectedCampaign.user.name} profile picture`}
+                              className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                            />
+                            <div className="self-stretch my-auto min-w-60 w-[342px]">
+                              <div className="flex gap-2 items-center w-full h-[23px]">
+                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                  <span className="self-stretch my-auto text-sm text-neutral-800">
+                                    {selectedCampaign.leader}
+                                  </span>
+                                  <CheckmarkFilled
+                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedCampaign.user.role)}`}
+                                    aria-label="Verificado"
+                                  />
+                                  <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedCampaign.user.role)}`}>
+                                    {translateUserRole(selectedCampaign.user.role || "leader")}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                    {pagination && (
-                      <p className="text-xs leading-4 text-neutral-500">
-                        {pagination.items.length} de {pagination.total} membros
-                      </p>
-                    )}
-                  </section>
-                )}
+                        <div className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                          <div className="flex flex-wrap gap-4 items-center w-full leading-6 max-md:max-w-full">
+                            <span className="self-stretch my-auto font-semibold text-neutral-800">
+                              Título:{" "}
+                            </span>
+                            <span className="self-stretch my-auto text-neutral-800">
+                              {selectedCampaign.title}
+                            </span>
+                          </div>
+                          <div className="mt-2 w-full max-md:max-w-full">
+                            <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                              Descrição:
+                            </h3>
+                            <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                              {selectedCampaign.description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </header>
+                    <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
+                      <div className="w-full text-sm leading-none max-md:max-w-full">
+                        <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
+                          <div className="flex flex-col items-start">
+                            <div className="flex gap-2 items-center">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Data publicada:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedCampaign.date}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center self-stretch mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Número de acessos:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {campaignDetails?.views_count || selectedCampaign.accesses || 0} acessos
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Participantes:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {campaignDetails?.participants_count || selectedCampaign.participants || 0} pessoas
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col w-[198px]">
+                            <div className="flex gap-2 items-center self-start">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Curtidas:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {campaignDetails?.likes_count || selectedCampaign.likes || 0} curtidas
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4 w-full">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Comentários:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {campaignDetails?.comments_count || selectedCampaign.comments || 0} comentários
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 items-center self-start mt-10">
+                        <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
+                          Status:
+                        </span>
+                        {campaignDetailsLoading ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neutral-800"></div>
+                            <span className="text-sm text-neutral-500">Carregando...</span>
+                          </div>
+                        ) : (
+                          getCampaignStatusBadge(selectedCampaign.status)
+                        )}
+                      </div>
+                      {/* Botões de Aprovar/Rejeitar para status Pendente */}
+                      {selectedCampaign.status === "Pendente" && (
+                        <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                          <button
+                            onClick={() => setIsRejectModalOpen(true)}
+                            className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                          >
+                            <span className="self-stretch my-auto text-neutral-800">
+                              Rejeitar
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => setIsApproveModalOpen(true)}
+                            className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                          >
+                            <span className="self-stretch my-auto text-zinc-100">
+                              Aprovar
+                            </span>
+                          </button>
+                        </div>
+                      )}
+                      {/* Botão Atualizar Status para status Aprovado e Em análise */}
+                      {(selectedCampaign.status === "Aprovado" || selectedCampaign.status === "Em análise" || selectedCampaign?.status === "Em progresso") && (
+                        <div className="relative mt-10 max-w-[698px]">
+                          <button
+                            onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                            disabled={adminActionLoading}
+                            className="flex gap-8 cursor-pointer items-center pt-4 pr-4 pb-6 pl-4 bg-neutral-800 text-zinc-100 w-full max-md:pr-5 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span className="flex-1 text-left text-zinc-100">
+                              Atualizar status
+                            </span>
+                            <ChevronDown
+                              className="object-contain shrink-0 w-6 aspect-square"
+                              aria-label="Dropdown arrow"
+                            />
+                          </button>
+                          {isStatusDropdownOpen && (
+                            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 shadow-lg z-10 w-full">
+                              <ul role="listbox" className="py-1">
+                                <li>
+                                  <button
+                                    className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
+                                    onClick={() => handleChangeStatus('in_progress')}
+                                    disabled={adminActionLoading}
+                                  >
+                                    Em progresso
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
+                                    onClick={() => handleChangeStatus('canceled')}
+                                    disabled={adminActionLoading}
+                                  >
+                                    Cancelar
+                                  </button>
+                                </li>
+                                <li>
+                                  <button
+                                    className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
+                                    onClick={() => handleChangeStatus('finished')}
+                                    disabled={adminActionLoading}
+                                  >
+                                    Finalizar
+                                  </button>
+                                </li>
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {/* Sem botões para status Finalizada, Cancelada e Rejeitada */}
+                    </section>
+                  </article>
+                </div>
               </div>
             )}
-            {/* Announcement Details */}
-            {activeTab === "Anúncios" && selectedAnnouncement && (
-              <div className="bg-white p-6">
-                {/* Author info */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={
-                        selectedAnnouncement.user.profile_picture ||
-                        "/no-profile-pic.png"
-                      }
-                      alt={selectedAnnouncement.user.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {selectedAnnouncement.author}
-                    </span>
-                    <div className="w-1 h-1 rounded-full bg-[#525252]"></div>
-                    <span className="text-xs px-2 py-1 bg-black text-white">
-                      {selectedAnnouncement.user.role}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Announcement content */}
-                <div className="space-y-4 mb-8">
-                  {" "}
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Título:</p>
-                    <h2 className="text-lg font-medium">
-                      {selectedAnnouncement.title}
-                    </h2>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252] mb-1">Descrição:</p>
-                    <p className="text-[#161616] whitespace-pre-line leading-relaxed mb-4">
-                      {selectedAnnouncement.description}
-                    </p>
-                    <p className="text-[#161616] mb-4">Atenciosamente,</p>
-                    <p className="text-[#161616]">
-                      Equipe de Administração da Comunidade
-                    </p>
-                  </div>
-                  {selectedAnnouncement.image && (
-                    <div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={selectedAnnouncement.image || "/placeholder.svg"}
-                        alt="Announcement"
-                        className="w-full max-w-md"
-                      />
+            {/* Report Details - Updated with Figma Layout */}
+            {activeTab === "Denúncias" && selectedReport && !postsLoading && (
+              <div className="max-w-full">
+                <div className="px-4 pt-4 pb-72 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                  <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
+                    <div className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                      <div className="w-full max-md:max-w-full">
+                        <div className="flex justify-between items-start w-full max-md:max-w-full">
+                          <div className="flex items-center min-w-60">
+                            <img
+                              src={selectedReport.user.profile_picture || "/no-profile-pic.png"}
+                              className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
+                              alt={`${selectedReport.user.name} avatar`}
+                            />
+                            <div className="self-stretch my-auto min-w-60 w-[342px]">
+                              <div className="flex gap-2 items-center w-full h-[23px]">
+                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                                  <span className="self-stretch my-auto text-sm text-neutral-800">
+                                    {selectedReport.user.name}
+                                  </span>
+                                  <CheckmarkFilled
+                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedReport.user.role)}`}
+                                    aria-label="Verificado"
+                                  />
+                                  <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedReport.user.role)}`}>
+                                    {translateUserRole(selectedReport.user.role || "member")}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col mt-6 w-full max-md:max-w-full">
+                          <div className="flex gap-2 items-center self-start whitespace-nowrap">
+                            <span className="self-stretch my-auto text-sm font-semibold leading-none text-neutral-800">
+                              Nível:
+                            </span>
+                            <div className="flex gap-2.5 items-start self-stretch my-auto">
+                              {getSeverityBadge(selectedReport.severity)}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-4 items-center mt-2 w-full text-sm text-neutral-800 max-md:max-w-full">
+                            <h2 className="self-stretch my-auto font-semibold leading-6 text-neutral-800">
+                              Título:
+                            </h2>
+                            <p className="self-stretch my-auto leading-8 text-neutral-800">
+                              {selectedReport.title}
+                            </p>
+                          </div>
+                          <div className="mt-2 w-full text-sm text-neutral-800 max-md:max-w-full">
+                            <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                              Descrição:
+                            </h3>
+                            <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                              {selectedReport.description || "Descrição não disponível."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
+                    <div className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
+                      <section className="w-full text-sm leading-none max-md:max-w-full">
+                        <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
+                          <div className="flex flex-col items-start">
+                            <div className="flex gap-2 items-center">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Data publicada:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedReport.date}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center self-stretch mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Número de acessos:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedReport.accesses || 0} acessos
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Confirmações:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedReport.confirmations} pessoas
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col w-[198px]">
+                            <div className="flex gap-2 items-center self-start">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Curtidas:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedReport.likes || 0} curtidas
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4 w-full">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Comentários:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedReport.comments || 0} comentários
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                      <div className="flex gap-2 items-center self-start mt-10 text-neutral-800">
+                        <span className="self-stretch my-auto text-sm font-medium leading-none text-neutral-800">
+                          Status:
+                        </span>
+                        <div className="flex gap-2.5 justify-center items-center self-stretch px-3 py-2 my-auto text-xs leading-none rounded-sm bg-zinc-100">
+                          <Search
+                            className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square text-neutral-800"
+                            aria-label="Status"
+                          />
+                          <span className="self-stretch my-auto text-neutral-800">
+                            {selectedReport.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full text-sm leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                        <button
+                          onClick={handleDissolveReport}
+                          className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                        >
+                          <span className="self-stretch my-auto text-neutral-800">
+                            Dissolver
+                          </span>
+                        </button>
+                        <button
+                          onClick={handleResolveReport}
+                          className="flex gap-8 cursor-pointer items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                        >
+                          <span className="self-stretch my-auto text-zinc-100">
+                            Resolver
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </article>
                 </div>
+              </div>
+            )}
+            {/* Users Management */}
+            {activeTab === "Usuários" && (
+              <div className="bg-white fixed top-0 right-0 bottom-0 left-[512px] overflow-y-auto">
+                <main className="flex flex-col gap-12 items-start px-6 py-6 w-full max-w-[894px]">
+                  {/* Header Section */}
+                  <header className="flex flex-col gap-1 items-start w-full">
+                    <div className="flex gap-2.5 justify-center items-center w-full">
+                      <p className="text-xs font-medium flex-[1_0_0] text-neutral-500">
+                        Usuários
+                      </p>
+                    </div>
+                    <div className="flex gap-2.5 justify-center items-center w-full">
+                      <h1 className="text-xl text-black flex-[1_0_0]">
+                        Gerenciamento de Usuários
+                      </h1>
+                    </div>
+                  </header>
 
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div>
-                    <p className="text-sm text-[#525252]">Data publicada:</p>
-                    <p className="font-medium">{selectedAnnouncement.date}</p>
-                  </div>{" "}
-                  <div>
-                    <p className="text-sm text-[#525252]">Curtidas:</p>
-                    <p className="font-medium">0 curtidas</p>
+                  {/* Import Database Section */}
+                  <section className="flex flex-col gap-4 items-start px-0 py-12 w-full border-b border-solid border-b-stone-300">
+                    <div className="flex flex-col gap-2 items-start w-full">
+                      <h2 className="w-full text-sm font-semibold leading-6 text-neutral-800">
+                        Importar usuário por e-mail
+                      </h2>
+                      <p className="text-sm text-neutral-500">
+                        Adicione um usuário à comunidade informando o e-mail.
+                      </p>
+                    </div>
+                    <button
+                      className="flex gap-8 items-center py-3 pr-16 pl-4 cursor-pointer bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => setIsImportUserModalOpen(true)}
+                      disabled={isUserActionLoading}
+                    >
+                      <span className="text-sm leading-6 text-zinc-100">
+                        Importar base
+                      </span>
+                    </button>
+                  </section>
+
+                  {/* Add Moderator Section */}
+                  <section className="flex gap-10 items-start px-0 py-12 w-full border-b border-solid border-b-stone-300">
+                    <div className="flex flex-col flex-1 gap-2 items-start">
+                      <h2 className="w-full text-sm leading-6 text-neutral-800">
+                        Adicionar moderador
+                      </h2>
+                      <div className="flex gap-8 items-center px-4 py-2 w-full border-b border-solid bg-zinc-100 border-b-neutral-500">
+                        <input
+                          type="email"
+                          value={newModeratorEmail}
+                          onChange={(e) => setNewModeratorEmail(e.target.value)}
+                          placeholder="Digite o email do usuário"
+                          className="text-sm leading-6 text-neutral-500 bg-transparent border-none outline-none w-full placeholder:text-neutral-500"
+                          disabled={isUserActionLoading}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs leading-4 text-neutral-500">
+                        Ao clicar em adicionar o usuário terá seu papel da comunidade alterado para moderador.
+                      </p>
+                    </div>
+                    <button
+                      className="flex gap-2 items-center mt-8 px-4 py-2 cursor-pointer bg-neutral-800 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleAddModerator}
+                      disabled={isUserActionLoading}
+                    >
+                      <span className="text-sm leading-6 text-zinc-100">
+                        {isUserActionLoading ? "Adicionando..." : "Adicionar"}
+                      </span>
+                      <div>
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html:
+                              "<svg width=\"16\" height=\"17\" viewBox=\"0 0 16 17\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" class=\"add-icon\"> <path d=\"M8.5 8V4.5H7.5V8H4V9H7.5V12.5H8.5V9H12V8H8.5Z\" fill=\"#F4F4F4\"></path> </svg>",
+                          }}
+                        />
+                      </div>
+                    </button>
+                  </section>
+
+                  {/* Delete User Section */}
+                  <section className="flex gap-10 items-start px-0 py-12 w-full border-b border-solid border-b-stone-300">
+                    <div className="flex flex-col flex-1 gap-2 items-start">
+                      <h2 className="w-full text-sm leading-6 text-neutral-800">
+                        Excluir usuário
+                      </h2>
+                      <div className="flex gap-8 items-center px-4 py-2 w-full border-b border-solid bg-zinc-100 border-b-neutral-500">
+                        <input
+                          type="email"
+                          value={excludeUserEmail}
+                          onChange={(e) => setExcludeUserEmail(e.target.value)}
+                          placeholder="Digite o email do usuário"
+                          className="text-sm leading-6 text-neutral-500 bg-transparent border-none outline-none w-full placeholder:text-neutral-500"
+                          disabled={isUserActionLoading}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-neutral-500">
+                        A exclusão é permanente, então certifique-se de digitar o e-mail corretamente.
+                      </p>
+                    </div>
+                    <button
+                      className="flex gap-2 items-center mt-8 px-4 py-2 bg-red-600 cursor-pointer hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleRemoveUser}
+                      disabled={isUserActionLoading}
+                    >
+                      <span className="text-sm leading-6 text-zinc-100">
+                        {isUserActionLoading ? "Excluindo..." : "Excluir"}
+                      </span>
+                      <div>
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html:
+                              "<svg width=\"16\" height=\"17\" viewBox=\"0 0 16 17\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" class=\"close-icon\"> <path d=\"M12 4.86675L11.3 4.16675L8 7.46675L4.7 4.16675L4 4.86675L7.3 8.16675L4 11.4667L4.7 12.1667L8 8.86675L11.3 12.1667L12 11.4667L8.7 8.16675L12 4.86675Z\" fill=\"#F4F4F4\"></path> </svg>",
+                          }}
+                        />
+                      </div>
+                    </button>
+                  </section>
+                </main>
+              </div>
+            )}
+
+            {/* Communities Settings Tab */}
+            {activeTab === "Comunidade" && (
+              <div className="bg-white fixed top-0 right-0 bottom-0 left-[512px] overflow-y-auto no-scrollbar">
+                <main className="flex flex-col justify-center p-20 bg-white max-md:px-5 max-md:max-w-full">
+                  <div className="w-full max-w-[894px] min-h-[832px] max-md:max-w-full">
+                    <div className="w-full max-md:max-w-full">
+                      <div className="w-full whitespace-nowrap max-md:max-w-full">
+                        <nav className="text-xs font-medium text-neutral-500">
+                          Configurações
+                        </nav>
+                        <div className="mt-1 w-full text-xl text-black max-md:max-w-full">
+                          <SectionHeader title="Comunidade" />
+                        </div>
+                      </div>
+
+                      <section className="flex justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
+                        <div className="self-stretch my-auto min-w-60 w-[894px] max-md:max-w-full">
+                          <h3 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                            Reporte
+                          </h3>
+                          <ConfigurationItem
+                            description="Quantidade de reportes necessárias para investigação"
+                            value="30"
+                          />
+                          <div className="flex flex-wrap mt-6 gap-10 justify-between items-center w-full max-md:max-w-full">
+                            <div className="self-stretch my-auto min-w-60 w-[680px] max-md:max-w-full">
+                              <h4 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                                Item 1
+                              </h4>
+                            </div>
+                            <DropdownSelect
+                              options={['Opção 1', 'Opção 2', 'Opção 3']}
+                              value={dropdown1Value}
+                              onChange={setDropdown1Value}
+                              isOpen={dropdown1Open}
+                              onToggle={() => setDropdown1Open(!dropdown1Open)}
+                              variant="primary"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2.5 self-stretch py-2.5 my-auto min-h-9" />
+                      </section>
+
+                      <div className="mt-10 w-full text-xl text-black max-md:max-w-full">
+                        <SectionHeader title="Publicações" />
+                      </div>
+                      <section className="flex justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
+                        <div className="self-stretch my-auto min-w-60 w-[894px] max-md:max-w-full">
+                          <h3 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                            Denúncia
+                          </h3>
+                          <ConfigurationItem
+                            description="Limite de confirmações para denúncia leve"
+                            value="30"
+                          />
+                          <ConfigurationItem
+                            description="Limite de confirmações para denúncia moderada"
+                            value="50"
+                          />
+                          <ConfigurationItem
+                            description="Limite de confirmações para denúncia crítica"
+                            value="100"
+                          />
+                        </div>
+                        <div className="flex gap-2.5 self-stretch py-2.5 my-auto min-h-9" />
+                      </section>
+
+
+                      <section className="flex justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
+                        <div className="flex-1 shrink self-stretch my-auto w-full basis-0 min-w-60 max-md:max-w-full">
+                          <h3 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                            Campanha
+                          </h3>
+                          <ConfigurationItem
+                            description="Número mínimo de participantes necessários para que a campanha seja analisada"
+                            value="30"
+                          />
+                        </div>
+                      </section>
+                    </div>
+
+                    <section className="mt-20 w-full max-md:mt-10 max-md:max-w-full">
+                      <SectionHeader title="Exemplo 1" />
+                      <div className="mt-12 w-full max-md:mt-10 max-md:max-w-full">
+                        <div className="flex flex-wrap gap-10 justify-between items-center w-full max-md:max-w-full">
+                          <div className="self-stretch my-auto min-w-60 w-[680px] max-md:max-w-full">
+                            <h4 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                              Item 2
+                            </h4>
+                            <p className="mt-2 text-xs leading-none text-justify text-neutral-500 max-md:max-w-full">
+                              Descrição
+                            </p>
+                          </div>
+                          <DropdownSelect
+                            options={['Opção 2', 'Opção 1', 'Opção 3']}
+                            value={dropdown1Value}
+                            onChange={setDropdown1Value}
+                            isOpen={dropdown1Open}
+                            onToggle={() => setDropdown1Open(!dropdown1Open)}
+                            variant="primary"
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-10 justify-between items-center mt-6 w-full max-md:max-w-full">
+                          <div className="self-stretch my-auto min-w-60 w-[680px] max-md:max-w-full">
+                            <h4 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                              Item 3
+                            </h4>
+                            <p className="mt-2 text-xs leading-none text-justify text-neutral-500 max-md:max-w-full">
+                              Descrição
+                            </p>
+                          </div>
+                          <DropdownSelect
+                            options={['Opção 3', 'Opção 1', 'Opção 2']}
+                            value={dropdown2Value}
+                            onChange={setDropdown2Value}
+                            isOpen={dropdown2Open}
+                            onToggle={() => setDropdown2Open(!dropdown2Open)}
+                            variant="secondary"
+                          />
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="mt-20 w-full max-md:mt-10 max-md:max-w-full">
+                      <SectionHeader title="Exemplo 2" />
+                      <div className="flex flex-wrap gap-10 justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
+                        <div className="self-stretch my-auto min-w-60 w-[680px] max-md:max-w-full">
+                          <h4 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
+                            Item 1
+                          </h4>
+                          <p className="mt-2 text-xs leading-none text-justify text-neutral-500 max-md:max-w-full">
+                            Descrição
+                          </p>
+                        </div>
+                        <ToggleSwitch
+                          checked={toggleChecked}
+                          onChange={setToggleChecked}
+                        />
+                      </div>
+                    </section>
                   </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Número de acessos:</p>
-                    <p className="font-medium">0 acessos</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[#525252]">Comentários:</p>
-                    <p className="font-medium">0 comentários</p>
-                  </div>
+                </main>
+              </div>
+            )}
+
+            {/* Announcement Details - Updated with Figma Layout */}
+            {activeTab === "Anúncios" && selectedAnnouncement && !postsLoading && (
+              <div className="max-w-full">
+                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                  <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
+                    <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                      <div className="w-full max-md:max-w-full">
+                        <div className="flex justify-between items-start w-full max-md:max-w-full">
+                          <div className="flex items-center min-w-60">
+                            <img
+                              src={selectedAnnouncement.user.profile_picture || "/no-profile-pic.png"}
+                              alt={`${selectedAnnouncement.user.name} profile picture`}
+                              className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]"
+                            />
+                            <div className="self-stretch my-auto min-w-60 w-[342px]">
+                              <div className="flex gap-2 items-center w-full h-[23px]">
+                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto min-w-60">
+                                  <h2 className="self-stretch my-auto text-sm text-neutral-800">
+                                    {selectedAnnouncement.author}
+                                  </h2>
+                                  <CheckmarkFilled
+                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedAnnouncement.user.role)}`}
+                                    aria-label="Verificado"
+                                  />
+                                  <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedAnnouncement.user.role)}`}>
+                                    {translateUserRole(selectedAnnouncement.user.role || "admin")}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <section className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                          <div className="flex flex-wrap gap-4 items-center w-full max-md:max-w-full">
+                            <h3 className="self-stretch my-auto font-semibold leading-6 text-neutral-800">
+                              Título:{" "}
+                            </h3>
+                            <p className="self-stretch my-auto leading-8 text-neutral-800">
+                              {selectedAnnouncement.title}
+                            </p>
+                          </div>
+                          <div className="mt-2 w-full max-md:max-w-full">
+                            <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                              Descrição:
+                            </h3>
+                            <div className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                              {selectedAnnouncement.description ? (
+                                selectedAnnouncement.description.split('\n').map((paragraph, index) => (
+                                  <React.Fragment key={index}>
+                                    {paragraph}
+                                    {index < selectedAnnouncement.description!.split('\n').length - 1 && <br />}
+                                  </React.Fragment>
+                                ))
+                              ) : (
+                                "Descrição não disponível."
+                              )}
+                            </div>
+                          </div>
+                        </section>
+                        {selectedAnnouncement.image && (
+                          <img
+                            src={selectedAnnouncement.image}
+                            alt="Announcement illustration"
+                            className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
+                          />
+                        )}
+                      </div>
+                    </header>
+                    <footer className="flex flex-col justify-center py-8 pr-4 pl-8 w-full text-sm leading-none max-md:pl-5 max-md:max-w-full">
+                      <div className="w-full max-w-[698px] max-md:max-w-full">
+                        <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                          <div className="flex flex-col">
+                            <div className="flex gap-2 items-center self-start">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Data publicada:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedAnnouncement.date}
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Número de acessos:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedAnnouncement.views || 0} acessos
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col w-[198px]">
+                            <div className="flex gap-2 items-center self-start">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Curtidas:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedAnnouncement.likes || 0} curtidas
+                              </span>
+                            </div>
+                            <div className="flex gap-2 items-center mt-4 w-full">
+                              <span className="self-stretch my-auto font-medium text-neutral-800">
+                                Comentários:
+                              </span>
+                              <span className="self-stretch my-auto text-neutral-500">
+                                {selectedAnnouncement.comments || 0} comentários
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </footer>
+                  </article>
                 </div>
               </div>
             )}
@@ -1142,12 +1715,22 @@ export default function CommunityAdminPage({
       </div>
 
       {/* Modals */}
+      {/* Modal para importar usuário por e-mail */}
+      <ImportUserModal
+        isOpen={isImportUserModalOpen}
+        onClose={() => setIsImportUserModalOpen(false)}
+        onImport={handleImportUsers}
+        loading={isUserActionLoading}
+        emailValue={emailsToImport}
+        onEmailChange={setEmailsToImport}
+      />
+
       <ApproveCampaignModal
         isOpen={isApproveModalOpen}
         onClose={() => setIsApproveModalOpen(false)}
         onApprove={handleApproveCampaign}
         campaignTitle={selectedCampaign?.title || ""}
-        campaignAuthor={selectedCampaign?.leader || ""}
+        loading={adminActionLoading}
       />
 
       <RejectCampaignModal
@@ -1155,7 +1738,33 @@ export default function CommunityAdminPage({
         onClose={() => setIsRejectModalOpen(false)}
         onReject={handleRejectCampaign}
         campaignTitle={selectedCampaign?.title || ""}
-        campaignAuthor={selectedCampaign?.leader || ""}
+        loading={adminActionLoading}
+      />
+
+      {/* Modal de anúncio */}
+      {isAnnouncementModalOpen && (
+        <ModalAnnouncement
+          onClose={() => setIsAnnouncementModalOpen(false)}
+          communityId={id}
+        />
+      )}
+      {/* Modais de denúncia */}
+      <RejectComplaintModal
+        isOpen={isDissolveModalOpen}
+        onClose={() => setIsDissolveModalOpen(false)}
+        onReject={(subject, reason) => {
+          setIsDissolveModalOpen(false);
+        }}
+        complaintTitle={selectedReport?.title || ""}
+      />
+
+      <ApproveComplaintModal
+        isOpen={isResolveModalOpen}
+        onClose={() => setIsResolveModalOpen(false)}
+        onApprove={(subject, message) => {
+          setIsResolveModalOpen(false);
+        }}
+        complaintTitle={selectedReport?.title || ""}
       />
     </div>
   );

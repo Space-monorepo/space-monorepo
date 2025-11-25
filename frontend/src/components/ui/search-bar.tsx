@@ -12,7 +12,10 @@ export function SearchBar({
   placeholder = "Pesquisar",
 }: SearchBarProps) {
   return (
-    <div className="box-border flex gap-2.5 items-center px-3 py-2 w-[675px] bg-white border border-solid border-stone-300 max-md:px-3.5 max-md:py-2.5 max-sm:gap-2 max-sm:px-4 max-sm:py-3">
+    <div
+      className="box-border flex gap-2.5 items-center px-3 py-2 w-[675px] bg-white border border-solid border-stone-300
+        max-xl:w-[400px] max-lg:w-[300px] max-md:w-full max-md:px-3.5 max-md:py-2.5 max-sm:gap-2 max-sm:px-2 max-sm:py-2"
+    >
       <div>
         <Search size={20} />
       </div>

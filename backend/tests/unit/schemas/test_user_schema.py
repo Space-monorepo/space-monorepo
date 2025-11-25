@@ -16,6 +16,7 @@ from app.api.users.schema import (
 )
 
 
+
 @pytest.mark.unit
 def test_user_input_schema():
     user = UserCreate(

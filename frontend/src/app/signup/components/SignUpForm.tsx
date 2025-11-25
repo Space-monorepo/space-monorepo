@@ -33,7 +33,19 @@ export default function SignUpForm() {
     const lastNameInput = document.querySelector<HTMLInputElement>('input[name="lastName"]');
     const lastName = lastNameInput ? lastNameInput.value.trim() : '';
     const fullName = `${data.name.trim()}${lastName ? ' ' + lastName : ''}`;
-    const dataToSend = { ...data, name: fullName };
+
+    // Seleciona aleatoriamente uma imagem padrão de perfil
+    const profilePics = [
+      '/ProfilePic1.svg',
+      '/ProfilePic2.svg',
+      '/ProfilePic3.svg',
+      '/ProfilePic4.svg',
+      '/ProfilePic5.svg',
+      '/ProfilePic6.svg',
+    ];
+    const randomPic = profilePics[Math.floor(Math.random() * profilePics.length)];
+
+    const dataToSend = { ...data, name: fullName, profile_image_url: randomPic };
     try {
       const response = await registerUser(dataToSend);
       if (response.id) {

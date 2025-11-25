@@ -36,6 +36,12 @@ export interface PostAuthor {
   role: string; // Você pode definir um Enum para CommunityMemberRoleEnum também
 }
 
+export interface PollOption {
+  id: string; // UUID
+  answer: string;
+  votes_count: number;
+}
+
 export interface PostResponse {
   id: string; // UUID
   community: CommunityRelated;
@@ -45,11 +51,18 @@ export interface PostResponse {
   content: string;
   image_url?: string | null;
   status: PostStatusEnum;
+  status_campaign?: string; // Status específico da campanha (approved, rejected, under_analysis, etc.)
+  target_participants?: number; // Meta de participantes da campanha
+  current_participants?: number; // Participantes atuais da campanha
   likes_count: number;
   comments_count: number;
   report_count: number;
   created_at: string; // ou Date, se você for converter
   updated_at: string; // ou Date
+  level_complaint?: string; // Nível de denúncia vindo do backend (low, medium, high)
+  status_complaint?: string; // Status da denúncia vindo do backend (pending, under_analysis, resolved, archived)
+  poll_question?: string | null; // Apenas para posts do tipo poll
+  poll_options?: PollOption[] | null; // Apenas para posts do tipo poll
 }
 
 // Você também definiria tipos para PollCreate, CampaignResponse, etc.

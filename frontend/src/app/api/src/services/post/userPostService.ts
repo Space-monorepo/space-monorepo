@@ -23,8 +23,8 @@ export const fetchUserPosts = async (token: string): Promise<PostsListFeed> => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ 
-      message: 'Erro ao carregar posts do usuário' 
+    const errorData = await response.json().catch(() => ({
+      message: 'Erro ao carregar posts do usuário'
     }));
     throw new Error(errorData.message || 'Erro ao carregar posts do usuário');
   }
@@ -35,7 +35,7 @@ export const fetchUserPosts = async (token: string): Promise<PostsListFeed> => {
 // Função para buscar campanhas específicas do usuário
 export const fetchUserCampaigns = async (token: string): Promise<PostsListFeed> => {
   console.log('Fetching user campaigns');
-  
+
   try {
     // Primeiro, busca o perfil do usuário para obter suas comunidades
     const userResponse = await fetch(`${API_URL}/users/me`, {
@@ -55,17 +55,17 @@ export const fetchUserCampaigns = async (token: string): Promise<PostsListFeed> 
 
     // Tenta diferentes abordagens para buscar campanhas do usuário
     let response;
-    
+
     // Tentativa 1: Endpoint específico para posts do usuário por tipo
     try {
-      response = await fetch(`${API_URL}/users/me/posts?type=campaign`, {
+      response = await fetch(`${API_URL}/users/me/posts?type=campaign&limit=50`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
       });
-      
+
       if (response.ok) {
         console.log('User campaigns fetched via /users/me/posts');
         return response.json();
@@ -76,24 +76,24 @@ export const fetchUserCampaigns = async (token: string): Promise<PostsListFeed> 
 
     // Tentativa 2: Buscar no feed geral filtrando por user_id
     try {
-      response = await fetch(`${API_URL}/posts/feed?type=campaign`, {
+      response = await fetch(`${API_URL}/posts/feed?type=campaign&limit=50`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
       });
-      
+
       if (response.ok) {
         const feedData = await response.json();
         console.log('Campaigns fetched via feed, filtering by user');
-        
+
         // Filtra apenas as campanhas do usuário atual
         const userCampaigns = {
           ...feedData,
           items: (feedData.items || []).filter((post: PostResponse) => post.user?.id === user.id)
         };
-        
+
         console.log('User campaigns after filtering:', userCampaigns.items?.length || 0);
         return userCampaigns;
       }
@@ -106,24 +106,24 @@ export const fetchUserCampaigns = async (token: string): Promise<PostsListFeed> 
       try {
         const communityId = user.communities[0]?.id || user.communities[0]?._id;
         if (communityId) {
-          response = await fetch(`${API_URL}/posts/feed?community_id=${communityId}&type=campaign`, {
+          response = await fetch(`${API_URL}/posts/feed?community_id=${communityId}&type=campaign&limit=50`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
           });
-          
+
           if (response.ok) {
             const feedData = await response.json();
             console.log('Campaigns fetched via community, filtering by user');
-            
+
             // Filtra apenas as campanhas do usuário atual
             const userCampaigns = {
               ...feedData,
               items: (feedData.items || []).filter((post: PostResponse) => post.user?.id === user.id)
             };
-            
+
             console.log('User campaigns from community after filtering:', userCampaigns.items?.length || 0);
             return userCampaigns;
           }
@@ -152,7 +152,7 @@ export const fetchUserCampaigns = async (token: string): Promise<PostsListFeed> 
 // Função para buscar posts em discussão (posts com mais atividade recente)
 export const fetchTrendingPosts = async (token: string): Promise<PostsListFeed> => {
   console.log('Fetching trending posts');
-  
+
   let response;
   try {
     response = await fetch(`${API_URL}/posts/trending`, {
@@ -165,7 +165,7 @@ export const fetchTrendingPosts = async (token: string): Promise<PostsListFeed> 
   } catch {
     // Fallback para posts ordenados por atividade recente
     console.log('Trying fallback endpoint for trending posts');
-    response = await fetch(`${API_URL}/posts/feed?sort=activity&limit=10`, {
+    response = await fetch(`${API_URL}/posts/feed?sort=activity&limit=50`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -175,8 +175,8 @@ export const fetchTrendingPosts = async (token: string): Promise<PostsListFeed> 
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ 
-      message: 'Erro ao carregar posts em discussão' 
+    const errorData = await response.json().catch(() => ({
+      message: 'Erro ao carregar posts em discussão'
     }));
     throw new Error(errorData.message || 'Erro ao carregar posts em discussão');
   }
@@ -187,7 +187,7 @@ export const fetchTrendingPosts = async (token: string): Promise<PostsListFeed> 
 // Função para buscar eventos da agenda comunitária
 export const fetchCommunityEvents = async (token: string): Promise<PostsListFeed> => {
   console.log('Fetching community events');
-  
+
   let response;
   try {
     response = await fetch(`${API_URL}/events/community`, {
@@ -200,7 +200,7 @@ export const fetchCommunityEvents = async (token: string): Promise<PostsListFeed
   } catch {
     // Fallback para posts do tipo anúncio que podem incluir eventos
     console.log('Trying fallback endpoint for community events');
-    response = await fetch(`${API_URL}/posts/feed?type=announcement&limit=10`, {
+    response = await fetch(`${API_URL}/posts/feed?type=announcement&limit=50`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -210,8 +210,8 @@ export const fetchCommunityEvents = async (token: string): Promise<PostsListFeed
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ 
-      message: 'Erro ao carregar agenda comunitária' 
+    const errorData = await response.json().catch(() => ({
+      message: 'Erro ao carregar agenda comunitária'
     }));
     throw new Error(errorData.message || 'Erro ao carregar agenda comunitária');
   }

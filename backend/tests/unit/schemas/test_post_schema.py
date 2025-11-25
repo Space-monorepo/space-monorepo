@@ -18,6 +18,7 @@ from app.api.post.schemas import (
     PollCreate,
     PollOptionResponse,
     PollResponse,
+    PollVoteResponse,
     PostAuthor,
     PostCreate,
     PostFeedbackCreate,
@@ -26,7 +27,6 @@ from app.api.post.schemas import (
     PostStatusEnum,
     PostTypeEnum,
     PostUpdate,
-    PollVoteResponse,
 )
 
 

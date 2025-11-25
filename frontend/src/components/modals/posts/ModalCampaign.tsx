@@ -312,24 +312,10 @@ export function ModalCampaign({
         return;
       }
 
-      // Se não houver arquivos, adiciona a imagem padrão
-      let filesToSend = campaignData.files;
-      if (filesToSend.length === 0) {
-        try {
-          // Busca a imagem padrão da pasta public
-          const response = await fetch("/publication-image.jpg");
-          const blob = await response.blob();
-          const defaultFile = new File([blob], "publication-image.jpg", { type: blob.type });
-          filesToSend = [defaultFile];
-        } catch (e) {
-          toast.warn("Não foi possível carregar a imagem padrão. Tente novamente.");
-          return;
-        }
-      }
-
+      // Enviar conforme preenchido; permitir publicar sem arquivos
       setIsLoading(true);
       try {
-        await createCampaign({ ...campaignData, files: filesToSend });
+        await createCampaign(campaignData);
       } catch {
         setIsLoading(false);
       }
@@ -347,7 +333,7 @@ export function ModalCampaign({
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#858585]/80 backdrop-blur-xd z-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#858585]/80 backdrop-blur-sm z-50">
       <article className={`flex relative flex-col items-start mx-auto my-0 shadow-sm bg-zinc-100 border-stone-300 ${currentStep === 2 ? 'h-[673px] w-[926px]' : 'h-[372px] w-[640px]'} max-md:max-w-screen-sm max-md:w-[90%] max-sm:mx-auto max-sm:my-5 max-sm:h-auto max-sm:w-[95%]`}>
         <header className="flex relative justify-between items-start self-stretch p-4 max-sm:p-3">
           <h1 className="relative text-xl leading-8 text-neutral-800">
