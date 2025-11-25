@@ -88,56 +88,6 @@ def test_create_community_service_success():
 
 
 @pytest.mark.unit
-def test_create_community_with_image_url_service_success():
-    """
-    Tests the `create_community` method of CommunityService with image_url.
-
-    Scenario:
-    - Given valid community creation data including an image_url
-    - When the service creates the community successfully
-    - Then it should convert HttpUrl to string and return the expected Community model
-    """
-    # Arrange
-    fake_community_id = uuid4()
-    fake_community_data = CommunityCreate(
-        name='Test Community',
-        description='Test Description',
-        type_community=CommunityTypeEnum.UNIVERSITY,
-        image_url='https://example.com/test-image.jpg',
-    )
-
-    expect_community_model = Mock(spec=Community)
-    expect_community_model.id = fake_community_id
-    expect_community_model.name = 'Test Community'
-    expect_community_model.description = 'Test Description'
-    expect_community_model.type_community = CommunityTypeEnum.UNIVERSITY
-    expect_community_model.image_url = 'https://example.com/test-image.jpg'
-
-    mock_tm = Mock()
-    mock_community_repo = Mock()
-    mock_community_repo.save.return_value = expect_community_model
-
-    service = CommunityService(mock_tm)
-    service.community_repo = mock_community_repo
-
-    # Act
-    result = service.create_community(fake_community_data)
-
-    # Assert
-    mock_community_repo.save.assert_called_once()
-    # Verify that the Community model was created with string image_url, not HttpUrl
-    saved_community_args = mock_community_repo.save.call_args[0][0]
-    assert hasattr(saved_community_args, '__dict__')
-
-    assert result is not None
-    assert result.id == fake_community_id
-    assert result.name == 'Test Community'
-    assert result.description == 'Test Description'
-    assert result.type_community == CommunityTypeEnum.UNIVERSITY
-    assert result.image_url == 'https://example.com/test-image.jpg'
-
-
-@pytest.mark.unit
 def test_create_community_service_unexpected_error():
     """
     Tests the `create_community` method of CommunityService - unexpected error scenario.
@@ -253,7 +203,6 @@ def test_list_communities_service_success():
     fake_community_model.name = 'Test Community'
     fake_community_model.description = 'Test Description'
     fake_community_model.type_community = CommunityTypeEnum.UNIVERSITY
-    fake_community_model.image_url = 'https://example.com/community-image.jpg'
     fake_community_model.created_at = fake_datetime
     fake_community_model.updated_at = fake_datetime
 
@@ -303,7 +252,6 @@ def test_list_communities_with_search_service_success():
     fake_community_model.name = fake_community_name
     fake_community_model.description = 'Test Description'
     fake_community_model.type_community = CommunityTypeEnum.UNIVERSITY
-    fake_community_model.image_url = 'https://example.com/community-image.jpg'
     fake_community_model.created_at = fake_datetime
     fake_community_model.updated_at = fake_datetime
 
@@ -375,55 +323,6 @@ def test_update_community_service_success():
     assert result.name == 'Updated Community'
     assert result.description == 'Updated Description'
     assert result.type_community == CommunityTypeEnum.COMMERCIAL
-
-
-@pytest.mark.unit
-def test_update_community_with_image_url_service_success():
-    """
-    Tests the `update_community` method of CommunityService with image_url.
-
-    Scenario:
-    - Given a community ID and update data including an image_url
-    - When the service updates the community successfully
-    - Then it should convert HttpUrl to string and return the updated Community model
-    """
-    # Arrange
-    fake_community_id = str(uuid4())
-    fake_community_update = CommunityUpdate(
-        name='Updated Community',
-        image_url='https://example.com/new-image.jpg',
-    )
-
-    fake_existing_community = Mock(spec=Community)
-    fake_existing_community.id = fake_community_id
-    fake_existing_community.name = 'Original Community'
-    fake_existing_community.image_url = None
-
-    fake_updated_community = Mock(spec=Community)
-    fake_updated_community.id = fake_community_id
-    fake_updated_community.name = 'Updated Community'
-    fake_updated_community.image_url = 'https://example.com/new-image.jpg'
-
-    mock_tm = Mock()
-    mock_community_repo = Mock()
-    mock_community_repo.get_by_id.return_value = fake_existing_community
-    mock_community_repo.save.return_value = fake_updated_community
-
-    service = CommunityService(mock_tm)
-    service.community_repo = mock_community_repo
-
-    # Act
-    result = service.update_community(fake_community_id, fake_community_update)
-
-    # Assert
-    mock_community_repo.get_by_id.assert_called_once_with(fake_community_id)
-    mock_community_repo.save.assert_called_once_with(fake_existing_community)
-
-    # Verify that setattr was called with string value, not HttpUrl object
-    assert fake_existing_community.image_url == 'https://example.com/new-image.jpg'
-    assert result is not None
-    assert result.name == 'Updated Community'
-    assert result.image_url == 'https://example.com/new-image.jpg'
 
 
 @pytest.mark.unit
@@ -699,7 +598,6 @@ def test_list_user_communities_service_success():
     fake_community_model.name = 'Test Community'
     fake_community_model.description = 'Test Description'
     fake_community_model.type_community = CommunityTypeEnum.UNIVERSITY
-    fake_community_model.image_url = 'https://example.com/community-image.jpg'
     fake_community_model.created_at = datetime.now()
     fake_community_model.updated_at = datetime.now()
 
