@@ -84,11 +84,7 @@ class PostService:
     ) -> PostFeedResponse:
         return PostFeedResponse(
             id=post.id,
-            community=CommunityRelated(
-                id=post.community_id,
-                name=post.community.name,
-                image_url=post.community.image_url,
-            ),
+            community=CommunityRelated(id=post.community_id, name=post.community.name),
             user=PostAuthor(
                 id=post.user_id,
                 name=post.user.name,

@@ -205,7 +205,6 @@ def community_on_db(session_sql):
         name='Test Community',
         description='Test Description',
         type_community=CommunityTypeEnum.UNIVERSITY,
-        image_url='https://example.com/test-community-image.jpg',
     )
 
     session_sql.add(community)

@@ -59,7 +59,6 @@ def test_community_create_schema():
         name='Test Community',
         description='Test Description',
         type_community=CommunityTypeEnum.UNIVERSITY,
-        image_url='https://example.com/image.jpg',
     )
 
     assert community.model_dump() == {
@@ -75,7 +74,6 @@ def test_community_update_schema():
         name='Updated Community',
         description='Updated Description',
         type_community=CommunityTypeEnum.COMMERCIAL,
-        image_url='https://example.com/updated-image.jpg',
     )
 
     assert community_update.model_dump() == {
@@ -106,7 +104,6 @@ def test_community_response_schema():
         name='Test Community',
         description='Test Description',
         type_community=CommunityTypeEnum.UNIVERSITY,
-        image_url='https://example.com/image.jpg',
         created_at=created_at,
         updated_at=updated_at,
     )
@@ -250,15 +247,6 @@ def test_community_create_invalid_schema():
             name='Test Community',
             description='a' * 1001,
             type_community=CommunityTypeEnum.UNIVERSITY,
-        )
-
-    # Test invalid image_url (invalid URL format)
-    with pytest.raises(ValidationError):
-        CommunityCreate(
-            name='Test Community',
-            description='Test Description',
-            type_community=CommunityTypeEnum.UNIVERSITY,
-            image_url='invalid-url-format',
         )
 
     # Test invalid community type
