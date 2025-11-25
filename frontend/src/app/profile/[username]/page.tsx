@@ -551,7 +551,7 @@ export default function ProfilePage() {
                                 <div className="flex items-start min-w-60">
                                   <div className="w-11 h-11 rounded-[32px] overflow-hidden shrink-0 flex items-center justify-center bg-neutral-200">
                                     <img
-                                      src={post.user?.profile_picture || "/placeholder.svg"}
+                                      src={post.user?.profile_image_url || post.user?.profile_picture || "/no-profile-pic.png"}
                                       alt={`${post.user?.name} avatar`}
                                       className="object-cover w-full h-full"
                                     />
