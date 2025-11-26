@@ -26,6 +26,16 @@ def get_user_notifications(
     return service.get_user_notifications(user=current_user, notification_type=type)
 
 
+@router.get('/unread-count', response_model=schema.NotificationCount)
+def get_unread_notifications_count(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    tm = TransactionManager(db)
+    service = NotificationService(tm)
+    return service.get_unread_count(user=current_user)
+
+
 @router.post('/read-all', response_model=schema.NotificationMarkAllRead)
 def mark_all_notifications_as_read(
     current_user: User = Depends(get_current_user),
