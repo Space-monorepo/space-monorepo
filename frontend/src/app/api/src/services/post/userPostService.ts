@@ -14,22 +14,101 @@ interface UserProfile {
 // Função para buscar posts do usuário (todas as campanhas que ele criou)
 export const fetchUserPosts = async (token: string): Promise<PostsListFeed> => {
   console.log('Fetching user posts');
-  const response = await fetch(`${API_URL}/users/me/posts`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-  });
+  
+  try {
+    // Primeiro, buscar o perfil do usuário
+    const userResponse = await fetch(`${API_URL}/users/me`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({
-      message: 'Erro ao carregar posts do usuário'
-    }));
-    throw new Error(errorData.message || 'Erro ao carregar posts do usuário');
+    if (!userResponse.ok) {
+      throw new Error('Erro ao buscar perfil do usuário');
+    }
+
+    const user: UserProfile = await userResponse.json();
+    console.log('User profile loaded for posts:', user);
+
+    // Buscar as comunidades do usuário
+    const communitiesResponse = await fetch(`${API_URL}/communities/user/${user.id}/communities`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
+
+    if (communitiesResponse.ok) {
+      const communitiesData = await communitiesResponse.json();
+      const communities = communitiesData.items || [];
+      
+      if (communities.length > 0) {
+        let allPosts: PostResponse[] = [];
+        
+        for (const community of communities) {
+          const communityId = community.id || community._id;
+          if (!communityId) continue;
+
+          try {
+            const postsResponse = await fetch(
+              `${API_URL}/posts/${communityId}/user/${user.id}/list-posts?limit=100`,
+              {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+              }
+            );
+
+            if (postsResponse.ok) {
+              const postsData = await postsResponse.json();
+              const posts = postsData.items || [];
+              allPosts = [...allPosts, ...posts];
+            }
+          } catch (error) {
+            console.log(`Failed to fetch posts from community ${communityId}:`, error);
+          }
+        }
+
+        if (allPosts.length > 0) {
+          return {
+            current_limit: allPosts.length,
+            current_offset: 0,
+            has_more: false,
+            items: allPosts,
+            total: allPosts.length
+          };
+        }
+      }
+    }
+
+    // Fallback: Buscar no feed filtrando por usuário
+    const feedResponse = await fetch(`${API_URL}/posts/feed`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
+
+    if (feedResponse.ok) {
+      const feedData = await feedResponse.json();
+      const userPosts = {
+        ...feedData,
+        items: (feedData.items || []).filter((post: PostResponse) => post.user?.id === user.id)
+      };
+      return userPosts;
+    }
+
+    throw new Error('Erro ao carregar posts do usuário');
+  } catch (error) {
+    console.error('Error fetching user posts:', error);
+    throw new Error('Erro ao carregar posts do usuário');
   }
-
-  return response.json();
 };
 
 // Função para buscar campanhas específicas do usuário
@@ -53,84 +132,77 @@ export const fetchUserCampaigns = async (token: string): Promise<PostsListFeed> 
     const user: UserProfile = await userResponse.json();
     console.log('User profile loaded for campaigns:', user);
 
-    // Tenta diferentes abordagens para buscar campanhas do usuário
-    let response;
+    // Buscar as comunidades do usuário
+    const communitiesResponse = await fetch(`${API_URL}/communities/user/${user.id}/communities`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
 
-    // Tentativa 1: Endpoint específico para posts do usuário por tipo
-    try {
-      response = await fetch(`${API_URL}/users/me/posts?type=campaign&limit=50`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
+    if (communitiesResponse.ok) {
+      const communitiesData = await communitiesResponse.json();
+      const communities = communitiesData.items || [];
+      
+      if (communities.length > 0) {
+        let allCampaigns: PostResponse[] = [];
+        
+        for (const community of communities) {
+          const communityId = community.id || community._id;
+          if (!communityId) continue;
 
-      if (response.ok) {
-        console.log('User campaigns fetched via /users/me/posts');
-        return response.json();
-      }
-    } catch (error) {
-      console.log('First attempt failed:', error);
-    }
+          try {
+            const postsResponse = await fetch(
+              `${API_URL}/posts/${communityId}/user/${user.id}/list-posts?limit=100`,
+              {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+              }
+            );
 
-    // Tentativa 2: Buscar no feed geral filtrando por user_id
-    try {
-      response = await fetch(`${API_URL}/posts/feed?type=campaign&limit=50`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
-
-      if (response.ok) {
-        const feedData = await response.json();
-        console.log('Campaigns fetched via feed, filtering by user');
-
-        // Filtra apenas as campanhas do usuário atual
-        const userCampaigns = {
-          ...feedData,
-          items: (feedData.items || []).filter((post: PostResponse) => post.user?.id === user.id)
-        };
-
-        console.log('User campaigns after filtering:', userCampaigns.items?.length || 0);
-        return userCampaigns;
-      }
-    } catch (error) {
-      console.log('Second attempt failed:', error);
-    }
-
-    // Tentativa 3: Se o usuário tem comunidades, busca nas comunidades dele
-    if (user.communities && user.communities.length > 0) {
-      try {
-        const communityId = user.communities[0]?.id || user.communities[0]?._id;
-        if (communityId) {
-          response = await fetch(`${API_URL}/posts/feed?community_id=${communityId}&type=campaign&limit=50`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-          });
-
-          if (response.ok) {
-            const feedData = await response.json();
-            console.log('Campaigns fetched via community, filtering by user');
-
-            // Filtra apenas as campanhas do usuário atual
-            const userCampaigns = {
-              ...feedData,
-              items: (feedData.items || []).filter((post: PostResponse) => post.user?.id === user.id)
-            };
-
-            console.log('User campaigns from community after filtering:', userCampaigns.items?.length || 0);
-            return userCampaigns;
+            if (postsResponse.ok) {
+              const postsData = await postsResponse.json();
+              const posts = postsData.items || [];
+              const campaigns = posts.filter((post: PostResponse) => post.type_post === 'campaign');
+              allCampaigns = [...allCampaigns, ...campaigns];
+            }
+          } catch (error) {
+            console.log(`Failed to fetch campaigns from community ${communityId}:`, error);
           }
         }
-      } catch (error) {
-        console.log('Third attempt failed:', error);
+
+        if (allCampaigns.length > 0) {
+          return {
+            current_limit: allCampaigns.length,
+            current_offset: 0,
+            has_more: false,
+            items: allCampaigns,
+            total: allCampaigns.length
+          };
+        }
       }
+    }
+
+    // Fallback: Buscar no feed filtrando por usuário
+    const feedResponse = await fetch(`${API_URL}/posts/feed`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
+
+    if (feedResponse.ok) {
+      const feedData = await feedResponse.json();
+      const userCampaigns = {
+        ...feedData,
+        items: (feedData.items || []).filter((post: PostResponse) => post.user?.id === user.id && post.type_post === 'campaign')
+      };
+      return userCampaigns;
     }
 
     // Se todas as tentativas falharem, retorna estrutura vazia

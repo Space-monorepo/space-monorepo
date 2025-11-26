@@ -11,18 +11,17 @@ interface UserProfile {
   }>;
 }
 
-// Função para buscar denúncias específicas do usuário
-export const fetchUserComplaints = async (token: string, userData?: { id: string, username: string }): Promise<PostsListFeed> => {
-  console.log('Fetching user complaints for:', userData || 'current user');
+// Função para buscar TODOS os posts do usuário
+export const fetchUserPosts = async (token: string, userData?: { id: string, username: string }): Promise<PostsListFeed> => {
+  console.log('Fetching ALL user posts for:', userData || 'current user');
   
   try {
     let user: UserProfile;
     
     if (userData) {
-      // Se userData foi fornecido, use-o diretamente
       user = { id: userData.id };
     } else {
-      // Caso contrário, busca o perfil do usuário logado
+      // Busca o perfil do usuário logado
       const userResponse = await fetch(`${API_URL}/users/me`, {
         method: 'GET',
         headers: {
@@ -36,7 +35,7 @@ export const fetchUserComplaints = async (token: string, userData?: { id: string
       }
 
       user = await userResponse.json();
-      console.log('User profile loaded for complaints:', user);
+      console.log('User profile loaded for posts:', user);
     }
 
     // Primeiro, buscar as comunidades do usuário
@@ -56,7 +55,7 @@ export const fetchUserComplaints = async (token: string, userData?: { id: string
 
         // Se temos comunidades, buscar posts de cada uma
         if (communities.length > 0) {
-          let allComplaints: PostResponse[] = [];
+          let allPosts: PostResponse[] = [];
 
           // Buscar posts de cada comunidade
           for (const community of communities) {
@@ -78,24 +77,22 @@ export const fetchUserComplaints = async (token: string, userData?: { id: string
               if (postsResponse.ok) {
                 const postsData = await postsResponse.json();
                 const posts = postsData.items || [];
-                // Filtrar apenas denúncias (complaints)
-                const complaints = posts.filter((post: PostResponse) => post.type_post === 'complaint');
-                console.log(`Fetched ${complaints.length} complaints from community ${communityId}`);
-                allComplaints = [...allComplaints, ...complaints];
+                console.log(`Fetched ${posts.length} posts from community ${communityId}`);
+                allPosts = [...allPosts, ...posts];
               }
             } catch (error) {
-              console.log(`Failed to fetch complaints from community ${communityId}:`, error);
+              console.log(`Failed to fetch posts from community ${communityId}:`, error);
             }
           }
 
-          if (allComplaints.length > 0) {
-            console.log(`Total complaints fetched: ${allComplaints.length}`);
+          if (allPosts.length > 0) {
+            console.log(`Total posts fetched: ${allPosts.length}`);
             return {
-              current_limit: allComplaints.length,
+              current_limit: allPosts.length,
               current_offset: 0,
               has_more: false,
-              items: allComplaints,
-              total: allComplaints.length
+              items: allPosts,
+              total: allPosts.length
             };
           }
         }
@@ -106,7 +103,7 @@ export const fetchUserComplaints = async (token: string, userData?: { id: string
 
     // Fallback: Buscar no feed geral filtrando por user_id
     try {
-      const response = await fetch(`${API_URL}/posts/feed`, {
+      const response = await fetch(`${API_URL}/posts/feed`, { 
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -116,19 +113,19 @@ export const fetchUserComplaints = async (token: string, userData?: { id: string
       
       if (response.ok) {
         const feedData = await response.json();
-        console.log('Complaints fetched via feed, filtering by user');
+        console.log('Posts fetched via feed, filtering by user');
         
-        // Filtra apenas as denúncias do usuário atual
-        const userComplaints = {
+        // Filtra apenas as publicações do usuário atual
+        const userPosts = {
           ...feedData,
-          items: (feedData.items || []).filter((post: PostResponse) => post.user?.id === user.id && post.type_post === 'complaint')
+          items: (feedData.items || []).filter((post: PostResponse) => post.user?.id === user.id)
         };
         
-        console.log('User complaints after filtering:', userComplaints.items?.length || 0);
-        return userComplaints;
+        console.log('User posts after filtering:', userPosts.items?.length || 0);
+        return userPosts;
       }
     } catch (error) {
-      console.log('Fallback attempt failed:', error);
+      console.log('Fallback attempt (feed) failed:', error);
     }
 
     // Se todas as tentativas falharem, retorna estrutura vazia
@@ -142,7 +139,7 @@ export const fetchUserComplaints = async (token: string, userData?: { id: string
     };
 
   } catch (error) {
-    console.error('Error fetching user complaints:', error);
-    throw new Error('Erro ao carregar denúncias do usuário');
+    console.error('Error fetching user posts:', error);
+    throw new Error('Erro ao carregar publicações do usuário');
   }
 };
