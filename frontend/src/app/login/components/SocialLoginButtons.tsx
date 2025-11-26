@@ -12,7 +12,9 @@ export default function SocialLoginButtons() {
           Outlook
         </Button>
       </div>
-      <Image src="/space-escrita.svg" alt="Space escrita" width={150} height={150} className="fixed bottom-8 left-8 p-4 text-sm text-gray-500" />
+      <div className="fixed bottom-8 left-8 max-[770px]:hidden">
+        <Image src="/space-escrita.svg" alt="Space escrita" width={150} height={150} className="w-32 h-auto max-sm:w-28" />
+      </div>
     </>
   );
 }
