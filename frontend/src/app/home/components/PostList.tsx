@@ -514,11 +514,11 @@ export default function PostList() {
           'Content-Type': 'application/json'
         },
       });
-
+      
       if (!response.ok) {
         throw new Error('Erro ao carregar posts');
       }
-
+      
       const feedData: PostsListFeed = await response.json();
       const userCampaigns = await fetchUserCampaigns();
       const userCampaignPostIds = userCampaigns.map((c: any) => c.post?.id).filter(Boolean);
@@ -681,7 +681,7 @@ export default function PostList() {
   const handleLike = async (post: PostDisplay) => {
     const communityId = post.community?.id;
     if (!communityId) return;
-
+    
     try {
       if (!post.liked) {
         await likePost(communityId, post.id);
@@ -706,7 +706,7 @@ export default function PostList() {
   const handleShare = async (post: PostDisplay) => {
     const communityId = post.community?.id;
     if (!communityId) return;
-
+    
     await sharePost(communityId, post.id);
     // Quando implementar no backend, incremente shares
     // setDisplayedPosts(posts => posts.map((p) =>
@@ -743,7 +743,7 @@ export default function PostList() {
     try {
       const token = getTokenFromCookies();
       const communityId = post.community?.id;
-
+      
       if (!communityId) {
         toast.error('ID da comunidade não encontrado');
         return;
@@ -868,7 +868,7 @@ export default function PostList() {
       toast.error('ID da comunidade não encontrado');
       return;
     }
-
+    
     try {
       await participate(communityId, post.id);
       setDisplayedPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
@@ -880,8 +880,8 @@ export default function PostList() {
 
   // Função para votar em uma enquete (suporta troca de voto e remover voto clicando na mesma opção)
   const handleVotePoll = async (post: PostDisplay, optionId: string) => {
-    const communityId = post.community?.id;
-    if (!communityId) return;
+      const communityId = post.community?.id;
+      if (!communityId) return;
     const token = getTokenFromCookies();
 
     // Se já estamos processando um voto para este post, ignore
@@ -954,7 +954,7 @@ export default function PostList() {
         const shownCount = Math.max(displayedPosts.length, postsPerPage);
         setDisplayedPosts(merged.slice(0, shownCount));
         setHasMorePosts(!(merged.length <= shownCount));
-      } catch (err) {
+    } catch (err) {
         // ignora falha de refresh
       }
 

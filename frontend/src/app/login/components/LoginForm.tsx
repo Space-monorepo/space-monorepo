@@ -16,7 +16,7 @@ export default function LoginForm({ onSubmit }: { onSubmit: (data: LoginFormData
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <form className="flex flex-col gap-6 items-start w-full" onSubmit={handleSubmit(onSubmit)} autoComplete="on">
+    <form className="flex flex-col gap-6 items-start w-full min-w-0" onSubmit={handleSubmit(onSubmit)} autoComplete="on">
       {/* Campo oculto para ajudar o navegador a identificar login */}
       <input type="text" name="username" autoComplete="username" style={{ display: 'none' }} tabIndex={-1} />
       <div className="flex flex-col items-start w-full">
