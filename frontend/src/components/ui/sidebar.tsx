@@ -47,7 +47,7 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
     <aside
       className={cn(
         "bg-gray-100 text-gray-900 flex flex-col h-screen border-r fixed border-gray-200 transition-all duration-300 ease-in-out",
-        "max-md:hidden", // Esconde a sidebar em telas menores que md
+        "hidden min-[900px]:flex", // some quando o card ficaria <500px (sidebar 256px + gap 24px + card 500px + paddings ~120px)
         isOpen ? "w-64" : "w-26"
       )}
       onMouseEnter={() => variant === "hover" && setIsHovered(true)}
@@ -146,7 +146,7 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
       <div className="p-7 py-4 border-gray-200">
         <div className="flex items-center justify-between overflow-hidden">
           <Link
-            href="/profile"
+            href={user?.username ? `/profile/${user.username}` : "/profile"}
             className="flex items-center gap-3 overflow-hidden"
           >
             <div

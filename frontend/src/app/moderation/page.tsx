@@ -327,8 +327,8 @@ export default function ModerationPage() {
                             </header>
                             <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                                 <div className="w-full leading-none max-md:max-w-full">
-                                    <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                                        <div className="flex flex-col">
+                                    <div className="flex flex-col gap-6 w-full max-md:max-w-full min-[1440px]:flex-row min-[1440px]:items-start min-[1440px]:gap-10 min-[1600px]:gap-16">
+                                        <div className="flex flex-col w-full min-[1440px]:flex-1 min-[1440px]:min-w-0">
                                             <div className="flex gap-2 items-center">
                                                 <span className="self-stretch my-auto font-medium text-neutral-800">
                                                     Número de reportes:
@@ -348,7 +348,7 @@ export default function ModerationPage() {
                                                 </time>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col grow shrink w-[182px]">
+                                        <div className="flex flex-col w-full min-[1440px]:w-[220px] min-[1600px]:w-[260px]">
                                             <div className="flex gap-2 items-center self-start">
                                                 <span className="self-stretch my-auto font-medium text-neutral-800">
                                                     Reputação:
@@ -507,8 +507,8 @@ export default function ModerationPage() {
                             </header>
                             <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                                 <div className="w-full leading-none max-md:max-w-full">
-                                    <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                                        <div className="flex flex-col">
+                                    <div className="flex flex-col gap-6 w-full max-md:max-w-full min-[1200px]:flex-row min-[1200px]:items-start min-[1200px]:gap-8 min-[1360px]:gap-12 min-[1440px]:gap-16 min-[1600px]:gap-36">
+                                        <div className="flex flex-col w-full min-[1200px]:flex-1 min-[1200px]:min-w-0">
                                             <div className="flex gap-2 items-center">
                                                 <span className="self-stretch my-auto font-medium text-neutral-800">
                                                     Número de reportes:
@@ -526,7 +526,7 @@ export default function ModerationPage() {
                                                 </time>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col grow shrink w-[182px]">
+                                        <div className="flex flex-col w-full min-[1200px]:w-[200px] min-[1440px]:w-[182px] min-[1600px]:w-[220px]">
                                             <div className="flex gap-2 items-center self-start">
                                                 <span className="self-stretch my-auto font-medium text-neutral-800">
                                                     Curtidas:
@@ -673,8 +673,8 @@ export default function ModerationPage() {
                             </header>
                             <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                                 <div className="w-full leading-none max-md:max-w-full">
-                                    <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                                        <div className="flex flex-col">
+                                                <div className="flex flex-col gap-6 w-full max-md:max-w-full min-[1200px]:flex-row min-[1200px]:items-start min-[1200px]:gap-8 min-[1360px]:gap-12 min-[1440px]:gap-16 min-[1600px]:gap-36">
+                                                    <div className="flex flex-col w-full min-[1200px]:flex-1 min-[1200px]:min-w-0">
                                             <div className="flex gap-2 items-center">
                                                 <span className="self-stretch my-auto font-medium text-neutral-800">
                                                     Número de reportes:
@@ -692,7 +692,7 @@ export default function ModerationPage() {
                                                 </time>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col grow shrink w-[182px]">
+                                        <div className="flex flex-col w-full min-[1200px]:w-[200px] min-[1440px]:w-[182px] min-[1600px]:w-[220px]">
                                             <div className="flex gap-2 items-center self-start">
                                                 <span className="self-stretch my-auto font-medium text-neutral-800">
                                                     Curtidas:
@@ -2055,8 +2055,8 @@ export default function ModerationPage() {
 
                                         <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                                             <div className="w-full leading-none max-md:max-w-full">
-                                                <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                                                    <div className="flex flex-col items-start">
+                                                <div className="flex flex-col gap-6 w-full max-md:max-w-full min-[1440px]:flex-row min-[1440px]:items-start min-[1440px]:gap-10 min-[1600px]:gap-16">
+                                                    <div className="flex flex-col items-start w-full min-[1440px]:flex-1 min-[1440px]:min-w-0">
                                                         <div className="flex gap-2 items-center">
                                                             <span className="self-stretch my-auto font-medium text-neutral-800">
                                                                 Data publicada:
@@ -2386,8 +2386,8 @@ export default function ModerationPage() {
 
                                         <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                                             <div className="w-full leading-none max-md:max-w-full">
-                                                <div className="flex flex-wrap gap-20 items-start w-full max-md:max-w-full">
-                                                    <div className="flex flex-col">
+                                                <div className="flex flex-col gap-6 w-full max-md:max-w-full min-[1600px]:flex-row min-[1600px]:items-start min-[1600px]:gap-16">
+                                                    <div className="flex flex-col w-full min-[1600px]:flex-1 min-[1600px]:min-w-0">
                                                         <div className="flex gap-2 items-center">
                                                             <span className="self-stretch my-auto font-medium text-neutral-800">
                                                                 Número de visualizações:
@@ -2405,8 +2405,8 @@ export default function ModerationPage() {
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex flex-col grow shrink w-[182px]">
-                                                        <div className="flex gap-2 items-center self-start">
+                                                    <div className="flex flex-col w-full min-[1600px]:w-[280px] min-[1800px]:w-[320px]">
+                                                        <div className="flex gap-2 items-center self-start whitespace-nowrap">
                                                             <span className="self-stretch my-auto font-medium text-neutral-800">
                                                                 Status:
                                                             </span>
@@ -2414,7 +2414,7 @@ export default function ModerationPage() {
                                                                 {selectedAnnouncement.status}
                                                             </span>
                                                         </div>
-                                                        <div className="flex gap-2 items-center mt-4 w-full">
+                                                        <div className="flex gap-2 items-center mt-4 w-full whitespace-nowrap">
                                                             <span className="self-stretch my-auto font-medium text-neutral-800">
                                                                 Interações:
                                                             </span>
@@ -2648,8 +2648,8 @@ function UserReportDetails({ reportId, onTolerate, onSuspend }: {
                     </header>
                     <section className="py-8 pr-4 pl-8 w-full text-sm max-md:pl-5 max-md:max-w-full">
                         <div className="w-full leading-none max-md:max-w-full">
-                            <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                                <div className="flex flex-col">
+                            <div className="flex flex-col gap-6 w-full max-md:max-w-full min-[1200px]:flex-row min-[1200px]:items-start min-[1200px]:gap-8 min-[1360px]:gap-12 min-[1440px]:gap-16 min-[1600px]:gap-36">
+                                <div className="flex flex-col w-full min-[1200px]:flex-1 min-[1200px]:min-w-0">
                                     <div className="flex gap-2 items-center">
                                         <span className="self-stretch my-auto font-medium text-neutral-800">
                                             Número de reportes:
@@ -2669,7 +2669,7 @@ function UserReportDetails({ reportId, onTolerate, onSuspend }: {
                                         </time>
                                     </div>
                                 </div>
-                                <div className="flex flex-col grow shrink w-[182px]">
+                                <div className="flex flex-col w-full min-[1200px]:w-[200px] min-[1440px]:w-[182px] min-[1600px]:w-[220px]">
                                     <div className="flex gap-2 items-center self-start">
                                         <span className="self-stretch my-auto font-medium text-neutral-800">
                                             Reputação:

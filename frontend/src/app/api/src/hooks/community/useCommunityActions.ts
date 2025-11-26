@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { Community, UpdateCommunity } from "../../types/community/Community";
 import {
-  fetchAllCommunities,
+  fetchUserCommunities,
   updateCommunity,
   deleteCommunity,
 } from "../../services/community/communityService";
 import getTokenFromCookies from "../../controllers/getTokenFromCookies";
+import { loadUserProfile } from "../../controllers/userController";
 
 interface UseCommunityActionsOutput {
   communities: Community[];
@@ -34,7 +35,13 @@ const useCommunityActions = (): UseCommunityActionsOutput => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchAllCommunities(token);
+      // Obter o usuário logado para pegar seu ID
+      const user = await loadUserProfile(token);
+      if (!user.id) {
+        throw new Error("ID do usuário não encontrado");
+      }
+      
+      const data = await fetchUserCommunities(token, user.id);
       setCommunities(data.items);
     } catch (err) {
       setError(err as Error);

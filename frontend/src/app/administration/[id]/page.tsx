@@ -1047,8 +1047,8 @@ export default function CommunityAdminPage({
                     </header>
                     <section className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
                       <div className="w-full text-sm leading-none max-md:max-w-full">
-                        <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                          <div className="flex flex-col items-start">
+                        <div className="flex flex-col items-start gap-6 w-full max-md:max-w-full min-[1200px]:flex-row min-[1200px]:gap-8 min-[1360px]:gap-12 min-[1440px]:gap-16 min-[1600px]:gap-36">
+                          <div className="flex flex-col items-start w-full min-[1200px]:flex-1 min-[1200px]:min-w-0">
                             <div className="flex gap-2 items-center">
                               <span className="self-stretch my-auto font-medium text-neutral-800">
                                 Data publicada:
@@ -1074,7 +1074,7 @@ export default function CommunityAdminPage({
                               </span>
                             </div>
                           </div>
-                          <div className="flex flex-col w-[198px]">
+                          <div className="flex flex-col w-full min-[1200px]:w-[220px] min-[1440px]:w-[198px] min-[1600px]:w-[240px]">
                             <div className="flex gap-2 items-center self-start">
                               <span className="self-stretch my-auto font-medium text-neutral-800">
                                 Curtidas:
@@ -1247,8 +1247,8 @@ export default function CommunityAdminPage({
                     </div>
                     <div className="flex flex-col py-8 pr-4 pl-8 w-full max-md:pl-5 max-md:max-w-full">
                       <section className="w-full text-sm leading-none max-md:max-w-full">
-                        <div className="flex flex-wrap gap-36 items-start w-full max-md:max-w-full">
-                          <div className="flex flex-col items-start">
+                        <div className="flex flex-col items-start gap-6 w-full max-md:max-w-full min-[1200px]:flex-row min-[1200px]:gap-8 min-[1360px]:gap-12 min-[1440px]:gap-16 min-[1600px]:gap-36">
+                          <div className="flex flex-col items-start w-full min-[1200px]:flex-1 min-[1200px]:min-w-0">
                             <div className="flex gap-2 items-center">
                               <span className="self-stretch my-auto font-medium text-neutral-800">
                                 Data publicada:
@@ -1274,7 +1274,7 @@ export default function CommunityAdminPage({
                               </span>
                             </div>
                           </div>
-                          <div className="flex flex-col w-[198px]">
+                          <div className="flex flex-col w-full min-[1200px]:w-[220px] min-[1440px]:w-[198px] min-[1600px]:w-[240px]">
                             <div className="flex gap-2 items-center self-start">
                               <span className="self-stretch my-auto font-medium text-neutral-800">
                                 Curtidas:

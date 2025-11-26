@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 import { useCampaignParticipation } from "@/app/api/src/hooks/post/useCampaignParticipation";
 import Link from "next/link";
 import {
-  Bookmark,
   EllipsisVerticalIcon as OverflowMenuVertical,
   Activity,
 } from "lucide-react";
@@ -49,7 +48,7 @@ interface Comment {
   likes_count?: number;
 }
 
-function CommentsSection({ communityId, postId }: { communityId: string; postId: string }) {
+function CommentsSection({ communityId, postId, refreshSignal }: { communityId: string; postId: string; refreshSignal?: number }) {
   const { listComments, addComment, replyComment, likeComment, unlikeComment } = usePostActions();
   const [likedComments, setLikedComments] = React.useState<{ [key: string]: boolean }>({});
   const [comments, setComments] = React.useState<Comment[]>([]);
@@ -99,6 +98,14 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
     fetchComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [communityId, postId]);
+
+  // Quando o sinal de refresh mudar (vindo do polling global), refazemos os comentários
+  React.useEffect(() => {
+    if (typeof refreshSignal !== 'undefined') {
+      fetchComments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
 
   const handleAddComment = async () => {
     if (!commentInput.trim()) return;
@@ -169,7 +176,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
       (userObj as any)?.role;
 
     return (
-      <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]' : 'flex flex-wrap justify-between w-full max-md:max-w-full'}`}>
+      <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 w-full max-w-[592px]' : 'flex flex-wrap justify-between w-full max-[899px]:max-w-full'}`}>
         <div className="flex flex-col items-center w-11">
           <img
             src={userObj?.profile_image_url || userObj?.profile_picture || '/no-profile-pic.png'}
@@ -180,10 +187,10 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
             <div className="flex mt-2 w-px bg-zinc-300 min-h-[78px]" />
           )}
         </div>
-        <div className="flex-1 shrink basis-0 min-w-60 max-md:max-w-full">
-          <div className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
-            <div className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
-              <div className={`self-stretch my-auto min-w-60 ${isChild ? 'w-[360px]' : 'w-[380px]'}`}>
+        <div className="flex-1 shrink basis-0 min-w-0 max-[899px]:max-w-full min-[900px]:min-w-60">
+          <div className="flex flex-wrap gap-3 items-center py-3 w-full max-[899px]:max-w-full">
+            <div className={`flex items-center self-stretch my-auto text-neutral-800 min-w-0 w-full min-[900px]:min-w-60 ${isChild ? 'min-[900px]:w-[360px]' : 'min-[900px]:w-[380px]'}`}>
+              <div className={`self-stretch my-auto min-w-0 w-full min-[900px]:min-w-60 ${isChild ? 'min-[900px]:w-[360px]' : 'min-[900px]:w-[380px]'}`}>
                 <div className="flex gap-2 items-center w-full h-[23px]">
                   <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                     <div className="self-stretch my-auto whitespace-nowrap text-sm text-neutral-800">
@@ -219,13 +226,13 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
               {/* Menu de opções para comentários pode ser implementado aqui se necessário */}
             </div>
           </div>
-          <div className="px-3 mt-2 w-full max-md:max-w-full">
-            <div className={`flex ${isChild ? 'overflow-hidden ' : ''}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-md:max-w-full`}>
-              <div className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-md:max-w-full">
+          <div className="px-3 mt-2 w-full max-[899px]:max-w-full">
+            <div className={`flex ${isChild ? 'overflow-hidden ' : ''}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-[899px]:max-w-full`}>
+              <div className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-[899px]:max-w-full">
                 {comment.content}
               </div>
             </div>
-            <div className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? 'whitespace-nowrap ' : ''}text-neutral-500 max-md:max-w-full`}>
+            <div className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? 'whitespace-nowrap ' : ''}text-neutral-500 max-[899px]:max-w-full`}>
               <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5">
                 <div className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? '' : 'whitespace-nowrap'}`}>
                   <ArrowUp
@@ -255,7 +262,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
                 <div className="flex flex-col items-start self-stretch w-full">
                   <div className="flex flex-col justify-between items-start self-stretch p-4 bg-gray-100 h-[160px] rounded-xs w-full">
                     <textarea
-                      className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+                      className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-[539px]:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
                       rows={2}
                       placeholder="Digite sua resposta..."
                       value={replyInput[comment.id] || ''}
@@ -268,7 +275,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
                       }}
                     />
                     <div className="flex flex-row justify-between items-end w-full mt-2">
-                      <div className="flex gap-4 items-center max-sm:gap-3">
+                      <div className="flex gap-4 items-center max-[539px]:gap-3">
                         <button type="button" aria-label="Adicionar emoji">
                           <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
                         </button>
@@ -308,13 +315,13 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
         </div>
         {/* Renderizar children recursivamente */}
         {Array.isArray(comment.children) && comment.children.length > 0 && (
-          <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]">
+          <div className="flex flex-wrap items-start self-end mt-6 w-full max-w-[592px]">
             {comment.children.map(child => renderComment(child, true))}
           </div>
         )}
         {/* Renderizar replies recursivamente */}
         {Array.isArray(comment.replies) && comment.replies.length > 0 && (
-          <div className="flex flex-wrap items-start self-end mt-6 max-w-full w-[592px] pl-12">
+          <div className="flex flex-wrap items-start self-end mt-6 w-full max-w-[592px] min-[900px]:pl-12">
             {comment.replies.map(child => renderComment(child, true))}
           </div>
         )}
@@ -341,7 +348,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
 
   return (
     <>
-      <main className="flex flex-col shrink-0 gap-8 items-start p-4 bg-white rounded border-solid border-[0.5px] border-stone-300 h-[907px] w-[680px] max-md:p-3 max-md:w-full max-md:max-w-[680px] max-sm:gap-6 max-sm:p-2 max-sm:w-full">
+      <main className="flex flex-col shrink-0 gap-8 items-start w-full max-w-[680px] p-4 bg-white rounded border-solid border-[0.5px] border-stone-300 max-[899px]:p-3 max-[539px]:gap-6 max-[539px]:p-2">
         {/* Comment Input Section */}
         <div className="flex flex-col gap-2 items-start self-stretch">
           <div className="flex flex-col items-start self-stretch">
@@ -351,7 +358,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
                 value={commentInput}
                 onChange={e => setCommentInput(e.target.value)}
                 placeholder="Adicione um comentário"
-                className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-sm:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
+                className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-[539px]:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
                 rows={2}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -361,7 +368,7 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
                 }}
               />
               <div className="flex flex-row justify-between items-end w-full mt-2">
-                <div className="flex gap-4 items-center max-sm:gap-3">
+                <div className="flex gap-4 items-center max-[539px]:gap-3">
                   <button type="button" aria-label="Adicionar emoji">
                     <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
                   </button>
@@ -391,12 +398,12 @@ function CommentsSection({ communityId, postId }: { communityId: string; postId:
           </div>
         </div>
         {/* Comments Header */}
-        <header className="flex gap-4 items-center self-stretch px-2 py-0 max-md:gap-3 max-md:px-3 max-md:py-0 max-sm:flex-wrap max-sm:gap-2 max-sm:px-2 max-sm:py-0">
-          <h2 className="text-base leading-6 text-neutral-800 max-md:text-base max-sm:text-sm">
+        <header className="flex gap-4 items-center self-stretch px-2 py-0 max-[899px]:gap-3 max-[899px]:px-3 max-[899px]:py-0 max-[539px]:flex-wrap max-[539px]:gap-2 max-[539px]:px-2 max-[539px]:py-0">
+          <h2 className="text-base leading-6 text-neutral-800 max-[539px]:text-sm">
             Comentários
           </h2>
           <div className="flex flex-col gap-2.5 justify-center items-center px-2 py-1 rounded-xs bg-neutral-800">
-            <span className="self-stretch text-base leading-6 text-zinc-100 max-md:text-base max-sm:text-sm">
+            <span className="self-stretch text-base leading-6 text-zinc-100 max-[539px]:text-sm">
               {totalComments}
             </span>
           </div>
@@ -468,6 +475,27 @@ export default function PostList() {
 
   // Adicionar estado para rastrear confirmações de problemas
   const [confirmedProblems, setConfirmedProblems] = useState<{ [key: string]: boolean }>({});
+  // Estado para bloquear requisições de voto por post (previne votos duplicados)
+  const [votingPosts, setVotingPosts] = useState<{ [key: string]: boolean }>({});
+  // Sinal para forçar refresh dos comentários por post (incremental)
+  const [commentsRefreshSignal, setCommentsRefreshSignal] = useState<{ [key: string]: number }>({});
+  // Refs para evitar recriar o intervalo de polling quando estados mudam
+  const allPostsRef = useRef<PostDisplay[]>(allPosts);
+  const votingPostsRef = useRef<{ [key: string]: boolean }>(votingPosts);
+  const displayedPostsRef = useRef<PostDisplay[]>(displayedPosts);
+
+  // Sincroniza refs com os estados correspondentes
+  useEffect(() => {
+    allPostsRef.current = allPosts;
+  }, [allPosts]);
+
+  useEffect(() => {
+    votingPostsRef.current = votingPosts;
+  }, [votingPosts]);
+
+  useEffect(() => {
+    displayedPostsRef.current = displayedPosts;
+  }, [displayedPosts]);
 
   // Função para buscar posts do backend (usada tanto para inicial quanto para atualização)
   const fetchPosts = async () => {
@@ -486,11 +514,11 @@ export default function PostList() {
           'Content-Type': 'application/json'
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Erro ao carregar posts');
       }
-      
+
       const feedData: PostsListFeed = await response.json();
       const userCampaigns = await fetchUserCampaigns();
       const userCampaignPostIds = userCampaigns.map((c: any) => c.post?.id).filter(Boolean);
@@ -545,23 +573,63 @@ export default function PostList() {
     setLoading(false);
   };
 
-  // Atualização periódica: busca novos posts a cada 5s
+  // Polling global otimizado: cria apenas UM intervalo e usa refs para acessar estados mais recentes
   useEffect(() => {
     const interval = setInterval(async () => {
-      const fetchedPosts = await fetchPosts();
-      if (fetchedPosts.length > 0 && allPosts.length > 0) {
-        // Verifica se há posts novos (comparando IDs)
-        const currentIds = new Set(allPosts.map(p => p.id));
-        const onlyNew = fetchedPosts.filter(p => !currentIds.has(p.id));
-        if (onlyNew.length > 0) {
-          setNewPosts(onlyNew);
-          setShowNewPostsBanner(true);
-        }
+      try {
+        const fetched = await fetchPosts();
+        if (!fetched || fetched.length === 0) return;
+
+        // Mesclar fetched com snapshot atual de allPosts (via ref)
+        const prevAllSnapshot = allPostsRef.current;
+        const prevMap = new Map(prevAllSnapshot.map(p => [p.id, p]));
+        const merged: PostDisplay[] = [];
+
+        fetched.forEach((fp) => {
+          const existing = prevMap.get(fp.id);
+          if (!existing) {
+            merged.push(fp);
+          } else {
+            if (votingPostsRef.current[fp.id]) {
+              merged.push(existing);
+            } else {
+              const updated: PostDisplay = {
+                ...existing,
+                ...fp,
+                likes: (fp as any).likes_count ?? existing.likes,
+                comments: (fp as any).comments_count ?? existing.comments,
+                shares: (fp as any).report_count ?? existing.shares,
+                poll_options: (fp as any).poll_options ?? existing.poll_options,
+                poll_question: (fp as any).poll_question ?? existing.poll_question,
+                userVotedOptionId: fp.userVotedOptionId ?? existing.userVotedOptionId,
+                confirmations_count: (fp as any).confirmations_count ?? existing.confirmations_count,
+              } as PostDisplay;
+              merged.push(updated);
+
+              if ((fp as any).comments_count !== undefined && (fp as any).comments_count !== existing.comments) {
+                setCommentsRefreshSignal(prev => ({ ...prev, [fp.id]: (prev[fp.id] || 0) + 1 }));
+              }
+            }
+          }
+          prevMap.delete(fp.id);
+        });
+        prevMap.forEach(p => merged.push(p));
+
+        // Atualiza estados a partir do merged
+        setAllPosts(merged);
+
+        const shownCount = Math.max(displayedPostsRef.current.length, postsPerPage);
+        setDisplayedPosts(merged.slice(0, shownCount));
+
+        setHasMorePosts(!(fetched.length <= shownCount));
+      } catch (err) {
+        console.warn('Polling failed:', err);
       }
     }, 5000);
+
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allPosts]);
+  }, []);
 
   // Função para carregar mais posts (scroll infinito)
   const loadMorePosts = useCallback(async () => {
@@ -613,7 +681,7 @@ export default function PostList() {
   const handleLike = async (post: PostDisplay) => {
     const communityId = post.community?.id;
     if (!communityId) return;
-    
+
     try {
       if (!post.liked) {
         await likePost(communityId, post.id);
@@ -638,7 +706,7 @@ export default function PostList() {
   const handleShare = async (post: PostDisplay) => {
     const communityId = post.community?.id;
     if (!communityId) return;
-    
+
     await sharePost(communityId, post.id);
     // Quando implementar no backend, incremente shares
     // setDisplayedPosts(posts => posts.map((p) =>
@@ -675,7 +743,7 @@ export default function PostList() {
     try {
       const token = getTokenFromCookies();
       const communityId = post.community?.id;
-      
+
       if (!communityId) {
         toast.error('ID da comunidade não encontrado');
         return;
@@ -800,7 +868,7 @@ export default function PostList() {
       toast.error('ID da comunidade não encontrado');
       return;
     }
-    
+
     try {
       await participate(communityId, post.id);
       setDisplayedPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
@@ -810,41 +878,104 @@ export default function PostList() {
     }
   };
 
-  // Função para votar em uma enquete
+  // Função para votar em uma enquete (suporta troca de voto e remover voto clicando na mesma opção)
   const handleVotePoll = async (post: PostDisplay, optionId: string) => {
+    const communityId = post.community?.id;
+    if (!communityId) return;
+    const token = getTokenFromCookies();
+
+    // Se já estamos processando um voto para este post, ignore
+    if (votingPosts[post.id]) return;
+
+    // Se o usuário clicou na mesma opção que já votou -> trata como remover voto
+    if (post.userVotedOptionId === optionId) {
+      await handleUnvotePoll(post);
+      return;
+    }
+
+    // Otimista: aplique mudança localmente (incrementa nova opção, decrementa antiga se houver)
+    const previousAllPosts = allPosts.slice();
+    const previousDisplayed = displayedPosts.slice();
+
+    const optimisticOptions = Array.isArray(post.poll_options) ? post.poll_options.map((o: any) => ({ ...o })) : [];
+    // decrement previous vote
+    if (post.userVotedOptionId) {
+      const prevOpt = optimisticOptions.find((o: any) => o.id === post.userVotedOptionId);
+      if (prevOpt) prevOpt.votes_count = Math.max(0, (prevOpt.votes_count || 0) - 1);
+    }
+    // increment new vote
+    const newOpt = optimisticOptions.find((o: any) => o.id === optionId);
+    if (newOpt) newOpt.votes_count = (newOpt.votes_count || 0) + 1;
+
+    setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptions, userVotedOptionId: optionId } as any : p));
+    setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptions, userVotedOptionId: optionId } as any : p));
+    if (postPreviewData && postPreviewData.id === post.id) {
+      setPostPreviewData((prev: any) => ({ ...prev, poll_options: optimisticOptions, userVotedOptionId: optionId }));
+    }
+
+    setVotingPosts(prev => ({ ...prev, [post.id]: true }));
+
     try {
-      const token = getTokenFromCookies();
-      const communityId = post.community?.id;
-      if (!communityId) return;
+      const response = await voteOnPoll(communityId, optionId, token ?? undefined);
+      const updatedOptions = response?.post?.poll_options ?? response?.options ?? [];
+      const updatedQuestion = response?.question ?? response?.post?.poll_question ?? post.poll_question;
 
-      // Lógica otimista para atualizar o estado local
-      setDisplayedPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? {
-                ...p,
-                poll_options: p.poll_options?.map((opt) =>
-                  opt.id === optionId
-                    ? { ...opt, votes_count: (opt.votes_count || 0) + 1 }
-                    : opt
-                ),
-                userVotedOptionId: optionId,
-              }
-            : p
-        )
-      );
+      // Preserva ordem das opções otimistas ao mesclar com as atualizadas do backend
+      let finalOptions: any[] = optimisticOptions.slice();
+      if (Array.isArray(updatedOptions) && updatedOptions.length > 0) {
+        if (optimisticOptions.length > 0) {
+          const updatedMap: { [key: string]: any } = {};
+          updatedOptions.forEach((o: any) => { updatedMap[o.id] = o; });
+          finalOptions = optimisticOptions.map((o: any) => updatedMap[o.id] ?? o);
+          updatedOptions.forEach((o: any) => {
+            if (!finalOptions.some((f: any) => f.id === o.id)) finalOptions.push(o);
+          });
+        } else {
+          finalOptions = updatedOptions.slice();
+        }
+      }
 
-      // Chamada ao backend para registrar o voto
-      await voteOnPoll(communityId, optionId, token ?? undefined);
-    } catch (err) {
+      setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId } as any : p));
+      setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId } as any : p));
+      if (postPreviewData && postPreviewData.id === post.id) {
+        setPostPreviewData((prev: any) => ({ ...prev, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId }));
+      }
+
+      // Opcional: recarrega posts para garantir consistência
+      try {
+        const refreshed = await fetchPosts();
+        const merged = refreshed.map((p: any) => {
+          if (p.id === post.id) {
+            return { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId };
+          }
+          return p;
+        });
+        setAllPosts(merged);
+        const shownCount = Math.max(displayedPosts.length, postsPerPage);
+        setDisplayedPosts(merged.slice(0, shownCount));
+        setHasMorePosts(!(merged.length <= shownCount));
+      } catch (err) {
+        // ignora falha de refresh
+      }
+
+      toast.success('Voto registrado');
+    } catch (err: any) {
       console.error('Erro ao votar na enquete:', err);
-      toast.error('Erro ao registrar o voto.');
+      // Reverter otimista
+      setAllPosts(previousAllPosts);
+      setDisplayedPosts(previousDisplayed);
+      if (postPreviewData && postPreviewData.id === post.id) {
+        setPostPreviewData((prev: any) => ({ ...prev, poll_options: post.poll_options, userVotedOptionId: post.userVotedOptionId }));
+      }
+      toast.error(err?.message || 'Erro ao registrar o voto.');
+    } finally {
+      setVotingPosts(prev => ({ ...prev, [post.id]: false }));
     }
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col justify-center items-center h-full w-full pr-72 mt-62 text-center">
+      <div className="flex flex-col justify-center items-center h-full w-full px-4 mt-62 text-center">
         Carregando posts...
       </div>
     );
@@ -852,7 +983,7 @@ export default function PostList() {
 
   if (error) {
     return (
-      <div className="flex flex-col justify-center items-center h-full w-full pr-72 mt-62 text-center text-red-500">
+      <div className="flex flex-col justify-center items-center h-full w-full px-4 mt-62 text-center text-red-500">
         Erro ao carregar posts: {error.message}
       </div>
     );
@@ -860,7 +991,7 @@ export default function PostList() {
 
   if (showNoCommunitiesMessage) {
     return (
-      <div className="flex flex-col justify-center items-center h-full w-full pr-72 mt-62 text-center">
+      <div className="flex flex-col justify-center items-center h-full w-full px-4 mt-62 text-center">
         <p className="mb-4 text-lg">
           Você ainda não participa de nenhuma comunidade.
         </p>
@@ -877,7 +1008,7 @@ export default function PostList() {
   }
 
   return (
-    <div className="flex-1 p-4 overflow-auto pr-72 flex justify-center">
+    <div className="flex-1 p-4 min-[900px]:p-6 flex justify-center">
       <main className="overflow-hidden max-w-[680px] w-full space-y-6">
         {/* Banner de novos posts fixo na tela */}
         {showNewPostsBanner && newPosts.length > 0 && (
@@ -913,8 +1044,8 @@ export default function PostList() {
             >
               <div className="w-full max-w-[632px] max-md:max-w-full">
                 <div className="w-full max-md:max-w-full">
-                  <header className="flex flex-wrap gap-10 justify-between items-start w-full max-md:max-w-full">
-                    <div className="flex items-start min-w-60">
+                  <header className="flex items-start justify-between gap-4 w-full max-md:max-w-full">
+                    <div className="flex flex-1 min-w-0 items-start">
                       <div className="w-11 h-11 rounded-[32px] overflow-hidden shrink-0 flex items-center justify-center bg-neutral-200">
                         <img
                           src={post.avatar || "/placeholder.svg"}
@@ -922,7 +1053,7 @@ export default function PostList() {
                           className="object-cover w-full h-full"
                         />
                       </div>
-                      <div className="flex flex-col min-w-60 w-[342px]">
+                      <div className="ml-3 flex flex-col min-w-0">
                         <div className="flex gap-2 items-center w-full h-[23px]">
                           <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                             <Link
@@ -948,7 +1079,7 @@ export default function PostList() {
                             {post.location}
                           </div>
                         </div>
-                        <div className="self-start px-3 mt-2 text-xs font-semibold tracking-normal whitespace-nowrap text-neutral-500">
+                        <div className="self-start px-3 mt-2 text-[10px] font-semibold tracking-normal whitespace-nowrap text-neutral-500">
                           <div className="flex items-center gap-1">
                             <div className="self-stretch my-auto text-neutral-500">
                               {post.type}
@@ -963,15 +1094,7 @@ export default function PostList() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-4 items-center">
-                      <button
-                        className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                        title="Salvar nos favoritos"
-                      >
-                        <Bookmark
-                          className={`h-4 w-4 text-gray-500`}
-                        />
-                      </button>
+                    <div className="flex gap-2 items-center flex-shrink-0">
                       <div className="relative">
                         <button
                           className="p-1 hover:bg-gray-100 rounded-full cursor-pointer transition-colors"
@@ -1135,11 +1258,12 @@ export default function PostList() {
                                 className={`mb-4 cursor-pointer hover:opacity-80 transition-opacity`}
                               >
                                 <button
-                                  className={`w-full text-left bg-transparent border-none outline-none p-0 m-0 cursor-pointer`}
+                                  className={`w-full text-left bg-transparent border-none outline-none p-0 m-0 ${votingPosts[post.id] ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleVotePoll(post, option.id);
+                                    if (!votingPosts[post.id]) handleVotePoll(post, option.id);
                                   }}
+                                  disabled={votingPosts[post.id]}
                                 >
                                   <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none">
                                     <div className="flex gap-2 items-center self-stretch my-auto">
@@ -1252,7 +1376,7 @@ export default function PostList() {
             {openCommentsPostId === post.id && (
               <div className="flex justify-center w-full -mt-6">
                 {post.community?.id && (
-                  <CommentsSection communityId={post.community.id} postId={post.id} />
+                  <CommentsSection communityId={post.community.id} postId={post.id} refreshSignal={commentsRefreshSignal[post.id]} />
                 )}
               </div>
             )}
