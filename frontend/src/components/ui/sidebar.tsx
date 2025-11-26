@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import Cookies from "js-cookie";
 import { cn } from "@/lib/utils";
 import { getSidebarPermissions } from "@/lib/sidebarPermissions";
+import { useUnreadNotificationsCount } from "@/app/api/src/hooks/notifications/useUnreadNotificationsCount";
 
 type SidebarProps = {
   variant?: "hover" | "static";
@@ -27,6 +28,8 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
   const isAdminOrModerator = user?.hasAdminOrModeratorRole === true;
 
   const isOpen = variant === "static" || isHovered;
+
+  const { unreadCount, loading: unreadLoading } = useUnreadNotificationsCount(20000);
 
   const handleLogout = () => {
     try {
@@ -54,159 +57,161 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
         onMouseEnter={() => variant === "hover" && setIsHovered(true)}
         onMouseLeave={() => variant === "hover" && setIsHovered(false)}
       >
-      {/* Logo */}
-      <div className="p-9 flex items-center gap-3 border-gray-200">
-        <Link href="/home" className="flex items-center space-x-2">
-          <Image src="/Vector.svg" alt="Space Logo" width={24} height={24} />
-          <Image
-            src="/space-escrita.svg"
-            alt="Space-escrita"
-            width={60}
-            height={40}
+        {/* Logo */}
+        <div className="p-9 flex items-center gap-3 border-gray-200">
+          <Link href="/home" className="flex items-center space-x-2">
+            <Image src="/Vector.svg" alt="Space Logo" width={24} height={24} />
+            <Image
+              src="/space-escrita.svg"
+              alt="Space-escrita"
+              width={60}
+              height={40}
+              className={cn(
+                "transition-opacity duration-200",
+                isOpen
+                  ? "opacity-100 pointer-events-auto"
+                  : "opacity-0 pointer-events-none"
+              )}
+            />
+          </Link>
+        </div>
+
+        {/* Navegação principal */}
+        <div className="mt-8 px-6 flex-1 flex flex-col overflow-y-auto">
+          <div
             className={cn(
-              "transition-opacity duration-200",
+              "text-xs font-medium text-zinc-500 mb-4 transition-opacity duration-200",
               isOpen
                 ? "opacity-100 pointer-events-auto"
                 : "opacity-0 pointer-events-none"
             )}
-          />
-        </Link>
-      </div>
+          >
+            MENU
+          </div>
 
-      {/* Navegação principal */}
-      <div className="mt-8 px-6 flex-1 flex flex-col overflow-y-auto">
-        <div
-          className={cn(
-            "text-xs font-medium text-zinc-500 mb-4 transition-opacity duration-200",
-            isOpen
-              ? "opacity-100 pointer-events-auto"
-              : "opacity-0 pointer-events-none"
-          )}
-        >
-          GENERAL
+          <nav className="space-y-4 flex-1 flex flex-col">
+            <div className="space-y-4">
+              <SidebarItem
+                icon={<Events size={20} />}
+                label="Comunidades"
+                href="/communities"
+                active={isActive("/communities")}
+                isOpen={isOpen}
+              />
+              <SidebarItem
+                icon={<Notification size={20} />}
+                label="Notificações"
+                href="/notifications"
+                active={isActive("/notifications")}
+                isOpen={isOpen}
+                badgeCount={unreadLoading ? undefined : unreadCount}
+              />
+              <SidebarItem
+                icon={<ChatLaunch size={20} />}
+                label="Mensagens"
+                href="/messages"
+                active={isActive("/messages")}
+                isOpen={isOpen}
+              />
+              {/* Só mostra Moderação e Administrador se for admin ou moderador */}
+              {isAdminOrModerator && (
+                <>
+                  <SidebarItem
+                    icon={<Security size={20} />}
+                    label="Moderação"
+                    href="/moderation"
+                    active={isActive("/moderation")}
+                    isOpen={isOpen}
+                  />
+                  <SidebarItem
+                    icon={<User size={20} />}
+                    label="Administrador"
+                    href="/administration"
+                    active={isActive("/administration")}
+                    isOpen={isOpen}
+                  />
+                </>
+              )}
+            </div>
+            <div className="mt-auto">
+              <SidebarItem
+                icon={<Settings size={20} />}
+                label="Configurações"
+                href="/settings"
+                active={isActive("/settings")}
+                isOpen={isOpen}
+              />
+            </div>
+          </nav>
         </div>
 
-        <nav className="space-y-4 flex-1 flex flex-col">
-          <div className="space-y-4">
-            <SidebarItem
-              icon={<Events size={20} />}
-              label="Comunidades"
-              href="/communities"
-              active={isActive("/communities")}
-              isOpen={isOpen}
-            />
-            <SidebarItem
-              icon={<Notification size={20} />}
-              label="Notificações"
-              href="/notifications"
-              active={isActive("/notifications")}
-              isOpen={isOpen}
-            />
-            <SidebarItem
-              icon={<ChatLaunch size={20} />}
-              label="Mensagens"
-              href="/messages"
-              active={isActive("/messages")}
-              isOpen={isOpen}
-            />
-            {/* Só mostra Moderação e Administrador se for admin ou moderador */}
-            {isAdminOrModerator && (
-              <>
-                <SidebarItem
-                  icon={<Security size={20} />}
-                  label="Moderação"
-                  href="/moderation"
-                  active={isActive("/moderation")}
-                  isOpen={isOpen}
-                />
-                <SidebarItem
-                  icon={<User size={20} />}
-                  label="Administrador"
-                  href="/administration"
-                  active={isActive("/administration")}
-                  isOpen={isOpen}
-                />
-              </>
+
+
+        {/* Perfil e logout */}
+        <div className="p-7 py-4 border-gray-200">
+          <div className="flex items-center justify-between overflow-hidden">
+            <Link
+              href={user?.username ? `/profile/${user.username}` : "/profile"}
+              className="flex items-center gap-3 overflow-hidden"
+            >
+              <div
+                className={cn(
+                  "rounded-full bg-zinc-200 overflow-hidden transition-all duration-300",
+                  isOpen ? "w-8 h-8" : "w-10 h-8"
+                )}
+              >
+                {loading ? (
+                  <div className="w-full h-full animate-pulse bg-gray-300" />
+                ) : user?.profile_image_url ? (
+                  <Image
+                    src={user.profile_image_url}
+                    alt="Foto de perfil"
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src="/no-profile-pic.png"
+                    alt="Sem foto de perfil"
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+
+              <div
+                className={cn(
+                  "flex flex-col whitespace-nowrap overflow-hidden transition-all duration-200",
+                  isOpen
+                    ? "opacity-100 visible ml-2"
+                    : "opacity-0 invisible w-0 ml-0"
+                )}
+              >
+                <span className="text-sm font-medium truncate">{user?.name}</span>
+                <span className="text-xs text-gray-500 truncate">
+                  @{user?.username}
+                </span>
+              </div>
+            </Link>
+
+            {isOpen && (
+              <Button
+                variant="ghost"
+                className="p-1 ml-2 text-zinc-600 hover:text-red-500 cursor-pointer"
+                onClick={handleLogout}
+              >
+                <Logout size={18} />
+              </Button>
             )}
           </div>
-          <div className="mt-auto">
-            <SidebarItem
-              icon={<Settings size={20} />}
-              label="Configurações"
-              href="/settings"
-              active={isActive("/settings")}
-              isOpen={isOpen}
-            />
-          </div>
-        </nav>
-      </div>
-
-
-
-      {/* Perfil e logout */}
-      <div className="p-7 py-4 border-gray-200">
-        <div className="flex items-center justify-between overflow-hidden">
-          <Link
-            href={user?.username ? `/profile/${user.username}` : "/profile"}
-            className="flex items-center gap-3 overflow-hidden"
-          >
-            <div
-              className={cn(
-                "rounded-full bg-zinc-200 overflow-hidden transition-all duration-300",
-                isOpen ? "w-8 h-8" : "w-10 h-8"
-              )}
-            >
-              {loading ? (
-                <div className="w-full h-full animate-pulse bg-gray-300" />
-              ) : user?.profile_image_url ? (
-                <Image
-                  src={user.profile_image_url}
-                  alt="Foto de perfil"
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Image
-                  src="/no-profile-pic.png"
-                  alt="Sem foto de perfil"
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </div>
-
-            <div
-              className={cn(
-                "flex flex-col whitespace-nowrap overflow-hidden transition-all duration-200",
-                isOpen
-                  ? "opacity-100 visible ml-2"
-                  : "opacity-0 invisible w-0 ml-0"
-              )}
-            >
-              <span className="text-sm font-medium truncate">{user?.name}</span>
-              <span className="text-xs text-gray-500 truncate">
-                @{user?.username}
-              </span>
-            </div>
-          </Link>
-
-          {isOpen && (
-            <Button
-              variant="ghost"
-              className="p-1 ml-2 text-zinc-600 hover:text-red-500 cursor-pointer"
-              onClick={handleLogout}
-            >
-              <Logout size={18} />
-            </Button>
-          )}
         </div>
-      </div>
       </aside>
       <MobileBottomNav
         pathname={pathname}
         isAdminOrModerator={isAdminOrModerator}
+        unreadCount={unreadLoading ? undefined : unreadCount}
       />
     </>
   );
@@ -218,18 +223,31 @@ type SidebarItemProps = {
   href: string;
   active: boolean;
   isOpen: boolean;
+  badgeCount?: number;
 };
 
-function SidebarItem({ icon, label, href, active, isOpen }: SidebarItemProps) {
+function SidebarItem({ icon, label, href, active, isOpen, badgeCount }: SidebarItemProps) {
   return (
     <Link
       href={href}
       className={cn(
         "flex items-center px-3 py-2 rounded-md transition-colors",
-        active ? "bg-gray-100 text-zinc-900" : "text-zinc-700 hover:bg-gray-100"
+        active ? "bg-gray-100 text-black" : "text-zinc-700 hover:bg-gray-100"
       )}
     >
-      <div className="w-5 h-5 flex items-center justify-center">{icon}</div>
+      <div className="relative">
+        <div className="w-5 h-5 flex items-center justify-center">{icon}</div>
+        {badgeCount !== undefined ? (
+          badgeCount && badgeCount > 0 ? (
+            <span className="absolute -top-2 -right-3 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-black rounded-full">
+              {badgeCount > 99 ? "99+" : badgeCount}
+            </span>
+          ) : null
+        ) : (
+          // placeholder para evitar "layout shift" enquanto carrega
+          <span aria-hidden className="absolute -top-2 -right-3 inline-block w-6 h-4" />
+        )}
+      </div>
       <span
         className={cn(
           "ml-3 text-sm transition-opacity duration-200",
@@ -245,9 +263,10 @@ function SidebarItem({ icon, label, href, active, isOpen }: SidebarItemProps) {
 type MobileBottomNavProps = {
   pathname: string;
   isAdminOrModerator: boolean;
+  unreadCount?: number;
 };
 
-function MobileBottomNav({ pathname, isAdminOrModerator }: MobileBottomNavProps) {
+function MobileBottomNav({ pathname, isAdminOrModerator, unreadCount }: MobileBottomNavProps) {
   const baseLinks = [
     {
       label: "Home",
@@ -269,9 +288,9 @@ function MobileBottomNav({ pathname, isAdminOrModerator }: MobileBottomNavProps)
 
   const adminLinks = isAdminOrModerator
     ? [
-        { label: "Moderação", href: "/moderation", icon: <Security size={18} />, hideOnCompact: true },
-        { label: "Admin", href: "/administration", icon: <User size={18} />, hideOnCompact: true },
-      ]
+      { label: "Moderação", href: "/moderation", icon: <Security size={18} />, hideOnCompact: true },
+      { label: "Admin", href: "/administration", icon: <User size={18} />, hideOnCompact: true },
+    ]
     : [];
 
   const links = [...baseLinks.slice(0, 4), ...adminLinks, baseLinks[4]];
@@ -294,11 +313,22 @@ function MobileBottomNav({ pathname, isAdminOrModerator }: MobileBottomNavProps)
             >
               <span
                 className={cn(
-                  "flex items-center justify-center w-9 h-9 rounded-full transition-colors",
+                  "relative flex items-center justify-center w-9 h-9 rounded-full transition-colors",
                   isActive ? "bg-neutral-100 text-neutral-900" : "text-neutral-500"
                 )}
               >
                 {link.icon}
+                {link.href === "/notifications" && (
+                  unreadCount !== undefined ? (
+                    unreadCount > 0 ? (
+                      <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white bg-red-500 rounded-full">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    ) : null
+                  ) : (
+                    <span aria-hidden className="absolute -top-2 -right-2 inline-block w-6 h-4" />
+                  )
+                )}
               </span>
               <span className="max-[426px]:hidden">{link.label}</span>
             </Link>
