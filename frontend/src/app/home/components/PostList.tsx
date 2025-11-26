@@ -1009,7 +1009,7 @@ export default function PostList() {
 
   return (
     <div className="flex-1 p-4 min-[900px]:p-6 flex justify-center">
-      <main className="overflow-hidden max-w-[680px] w-full space-y-6">
+      <main className="post-content overflow-hidden max-w-[680px] w-full space-y-6">
         {/* Banner de novos posts fixo na tela */}
         {showNewPostsBanner && newPosts.length > 0 && (
           <div
@@ -1045,37 +1045,45 @@ export default function PostList() {
               <div className="w-full max-w-[632px] max-md:max-w-full">
                 <div className="w-full max-md:max-w-full">
                   <header className="flex items-start justify-between gap-4 w-full max-md:max-w-full">
-                    <div className="flex flex-1 min-w-0 items-start">
-                      <div className="w-11 h-11 rounded-[32px] overflow-hidden shrink-0 flex items-center justify-center bg-neutral-200">
+                    <div className="flex flex-1 min-w-0 items-start max-[480px]:items-center">
+                      <div className="w-11 h-11 rounded-[32px] overflow-hidden shrink-0 flex items-center justify-center bg-neutral-200 max-[480px]:w-9 max-[480px]:h-9">
                         <img
                           src={post.avatar || "/placeholder.svg"}
                           alt={`${post.author} avatar`}
                           className="object-cover w-full h-full"
                         />
                       </div>
-                      <div className="ml-3 flex flex-col min-w-0">
-                        <div className="flex gap-2 items-center w-full h-[23px]">
-                          <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
+                      <div className="ml-3 flex flex-col min-w-0 max-[480px]:ml-2">
+                        <div className="flex gap-2 items-center w-full h-[23px] max-[480px]:h-auto max-[480px]:flex-wrap">
+                          <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto max-[480px]:px-1.5 max-[480px]:gap-1.5 max-[480px]:flex-nowrap max-[480px]:min-w-0">
                             <Link
                               href={`/profile/${post.username || post.user.id}`}
-                              className="self-stretch my-auto text-sm text-neutral-800 hover:text-blue-600 whitespace-nowrap transition-colors hover:underline"
+                              className="self-stretch my-auto text-sm text-neutral-800 hover:text-blue-600 whitespace-nowrap transition-colors hover:underline max-[480px]:text-xs max-[480px]:truncate max-[480px]:max-w-[160px]"
                             >
                               {post.author}
                             </Link>
                             <CheckmarkFilled
-                              className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(post.role)}`}
+                              className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(post.role)} max-[480px]:w-[14px]`}
                               aria-label="Verificado"
                             />
-                            <div className="self-stretch my-auto text-[10px] font-semibold">
+                            <div className="self-stretch my-auto text-[10px] font-semibold max-[480px]:hidden">
                               •
                             </div>
-                            <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(post.role)}`}>
+                            <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(post.role)} max-[480px]:hidden`}>
                               <div className="self-stretch my-auto">
                                 {post.role}
                               </div>
                             </div>
                           </div>
-                          <div className="self-stretch my-auto text-xs leading-none text-justify whitespace-nowrap text-neutral-800">
+                          <div className="self-stretch my-auto text-xs leading-none text-justify whitespace-nowrap text-neutral-800 max-[480px]:hidden">
+                            {post.location}
+                          </div>
+                        </div>
+                        <div className="hidden max-[480px]:flex items-center gap-2 px-1.5 text-xs text-neutral-800 mt-1">
+                          <div className={`flex gap-2 justify-center items-center px-2 py-0.5 text-[10px] whitespace-nowrap rounded ${getRoleBadgeClasses(post.role)}`}>
+                            <span>{post.role}</span>
+                          </div>
+                          <div className="text-[11px] text-neutral-600">
                             {post.location}
                           </div>
                         </div>

@@ -7,7 +7,7 @@ export function SettingsWrapper({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-100 flex overflow-hidden">
       <Sidebar variant="static" />{" "}
       <main 
-        className="flex-1 pl-64 transition-all duration-300 ease-in-out h-screen overflow-y-scroll" 
+        className="flex-1 pl-0 min-[900px]:pl-64 transition-all duration-300 ease-in-out h-screen overflow-y-scroll" 
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none'

@@ -57,7 +57,7 @@ export default function LoginPage() {
       const newToken = response.token || response.data?.token || response.access_token;
 
       if (newToken) {
-        Cookies.set('token', newToken, { path: '/', secure: true, sameSite: 'Lax', expires: 7 });
+        Cookies.set('token', newToken, { path: '/', secure: false, sameSite: 'Lax', expires: 7 });
         setToken(newToken);
         toast.success('Login realizado com sucesso!');
         window.location.href = '/home';

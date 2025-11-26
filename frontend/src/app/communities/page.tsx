@@ -193,7 +193,7 @@ export default function ComunidadesPage() {
   return (
     <div className="min-h-screen bg-[#f4f4f4] text-[#161616]">
       <Sidebar variant="static" />
-      <div className="ml-64 flex h-screen">
+      <div className="flex h-screen ml-0 min-[900px]:ml-64">
         {/* Communities List */}
         <div className="w-[500px] border-r border-[#e0e0e0] bg-white overflow-hidden flex flex-col">
           {/* Header */}

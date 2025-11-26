@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ChatLaunch, Events, Notification, Settings, Logout, Security, User } from "@carbon/icons-react";
+import { ChatLaunch, Events, Notification, Settings, Logout, Security, User, Home } from "@carbon/icons-react";
 import { usePathname } from "next/navigation";
 import { useCheckTokenValidity } from "@/app/api/src/controllers/authCheckToken";
 import { Button } from "./button";
@@ -44,15 +44,16 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <aside
-      className={cn(
-        "bg-gray-100 text-gray-900 flex flex-col h-screen border-r fixed border-gray-200 transition-all duration-300 ease-in-out",
-        "hidden min-[900px]:flex", // some quando o card ficaria <500px (sidebar 256px + gap 24px + card 500px + paddings ~120px)
-        isOpen ? "w-64" : "w-26"
-      )}
-      onMouseEnter={() => variant === "hover" && setIsHovered(true)}
-      onMouseLeave={() => variant === "hover" && setIsHovered(false)}
-    >
+    <>
+      <aside
+        className={cn(
+          "bg-gray-100 text-gray-900 flex flex-col h-screen border-r fixed border-gray-200 transition-all duration-300 ease-in-out",
+          "hidden min-[900px]:flex", // some quando o card ficaria <500px (sidebar 256px + gap 24px + card 500px + paddings ~120px)
+          isOpen ? "w-64" : "w-26"
+        )}
+        onMouseEnter={() => variant === "hover" && setIsHovered(true)}
+        onMouseLeave={() => variant === "hover" && setIsHovered(false)}
+      >
       {/* Logo */}
       <div className="p-9 flex items-center gap-3 border-gray-200">
         <Link href="/home" className="flex items-center space-x-2">
@@ -202,7 +203,12 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
           )}
         </div>
       </div>
-    </aside>
+      </aside>
+      <MobileBottomNav
+        pathname={pathname}
+        isAdminOrModerator={isAdminOrModerator}
+      />
+    </>
   );
 }
 
@@ -233,5 +239,72 @@ function SidebarItem({ icon, label, href, active, isOpen }: SidebarItemProps) {
         {label}
       </span>
     </Link>
+  );
+}
+
+type MobileBottomNavProps = {
+  pathname: string;
+  isAdminOrModerator: boolean;
+};
+
+function MobileBottomNav({ pathname, isAdminOrModerator }: MobileBottomNavProps) {
+  const baseLinks = [
+    {
+      label: "Home",
+      href: "/home",
+      icon: (
+        <Image
+          src="/Vector.svg"
+          alt="Space logo"
+          width={18}
+          height={18}
+        />
+      ),
+    },
+    { label: "Comunidades", href: "/communities", icon: <Events size={18} /> },
+    { label: "Notificações", href: "/notifications", icon: <Notification size={18} /> },
+    { label: "Mensagens", href: "/messages", icon: <ChatLaunch size={18} /> },
+    { label: "Configurações", href: "/settings", icon: <Settings size={18} /> },
+  ];
+
+  const adminLinks = isAdminOrModerator
+    ? [
+        { label: "Moderação", href: "/moderation", icon: <Security size={18} />, hideOnCompact: true },
+        { label: "Admin", href: "/administration", icon: <User size={18} />, hideOnCompact: true },
+      ]
+    : [];
+
+  const links = [...baseLinks.slice(0, 4), ...adminLinks, baseLinks[4]];
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-lg min-[900px]:hidden">
+      <div className="flex items-center justify-between px-4 py-2 gap-1 max-[426px]:gap-2">
+        {links.map((link) => {
+          const isActive = pathname === link.href;
+          const hideOnCompact = (link as any).hideOnCompact;
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 text-[11px] text-neutral-500 flex-1 py-1 min-w-[48px]",
+                isActive && "text-neutral-900 font-medium",
+                hideOnCompact && "max-[426px]:hidden"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex items-center justify-center w-9 h-9 rounded-full transition-colors",
+                  isActive ? "bg-neutral-100 text-neutral-900" : "text-neutral-500"
+                )}
+              >
+                {link.icon}
+              </span>
+              <span className="max-[426px]:hidden">{link.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

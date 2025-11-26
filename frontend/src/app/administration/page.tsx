@@ -16,7 +16,7 @@ export default function AdministrationPage() {
     return (
       <div className="min-h-screen bg-white text-[#161616]">
         <Sidebar variant="static" />
-        <div className="ml-64 max-md:ml-0 max-md:pl-4 max-md:pr-4">
+        <div className="ml-0 min-[900px]:ml-64 max-md:pl-4 max-md:pr-4">
           <main className="p-8 max-md:p-4 max-sm:p-3">
             <h1 className="text-2xl font-medium mb-6 max-md:text-xl max-sm:text-lg">Administração</h1>
             <div className="flex items-center justify-center h-64">
@@ -32,7 +32,7 @@ export default function AdministrationPage() {
     return (
       <div className="min-h-screen bg-white text-[#161616]">
         <Sidebar variant="static" />
-        <div className="ml-64 max-md:ml-0 max-md:pl-4 max-md:pr-4">
+        <div className="ml-0 min-[900px]:ml-64 max-md:pl-4 max-md:pr-4">
           <main className="p-8 max-md:p-4 max-sm:p-3">
             <h1 className="text-2xl font-medium mb-6 max-md:text-xl max-sm:text-lg">Administração</h1>
             <div className="flex items-center justify-center h-64">
@@ -50,7 +50,7 @@ export default function AdministrationPage() {
     <>
       <div className="min-h-screen bg-white text-[#161616] font-manrope no-scrollbar">
         <Sidebar variant="static" />
-        <div className="ml-64 max-md:ml-0 no-scrollbar">
+        <div className="ml-0 min-[900px]:ml-64 no-scrollbar">
           <main className="flex flex-col gap-8 items-start pt-10 mx-auto my-0 w-full max-w-[1600px] px-6 max-md:gap-6 max-md:px-5 max-md:pt-8 max-md:max-w-[991px] max-sm:gap-5 max-sm:px-4 max-sm:pt-6 max-sm:max-w-screen-sm no-scrollbar">
             <header className="flex flex-col gap-4 items-start w-full">
               <h1 className="text-xl leading-10 text-zinc-900 max-md:text-lg max-md:leading-9 max-sm:text-base max-sm:leading-8">
