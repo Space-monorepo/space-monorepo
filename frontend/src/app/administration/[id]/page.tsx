@@ -5,7 +5,14 @@ import { ArrowLeft, Filter, Eye } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import Sidebar from "@/components/ui/sidebar";
-import { CheckmarkFilled, Search, ChevronDown, FilterEdit, ChevronSort, Email } from "@carbon/icons-react";
+import {
+  CheckmarkFilled,
+  Search,
+  ChevronDown,
+  FilterEdit,
+  ChevronSort,
+  Email,
+} from "@carbon/icons-react";
 // import removido, já existe acima
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
@@ -26,9 +33,13 @@ import {
   RejeitadaBadge,
   EmProgressoBadge,
   CanceladaBadge,
-  FinalizadaBadge
+  FinalizadaBadge,
 } from "@/components/badges/campaign/CampaignBadges";
-import { LeveBadge, ModeradaBadge, CriticaBadge } from "@/components/badges/complaints/ComplaintsBadges";
+import {
+  LeveBadge,
+  ModeradaBadge,
+  CriticaBadge,
+} from "@/components/badges/complaints/ComplaintsBadges";
 import ModalAnnouncement from "@/components/modals/posts/ModalAnnouncement";
 import RejectComplaintModal from "@/components/modals/community/RejectComplaintModal";
 import ApproveComplaintModal from "@/components/modals/community/ApproveComplaintModal";
@@ -48,7 +59,14 @@ type Campaign = {
   user: UserInfo;
   participants: number;
   date: string;
-  status: "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada";
+  status:
+    | "Em análise"
+    | "Aprovado"
+    | "Rejeitado"
+    | "Pendente"
+    | "Em progresso"
+    | "Cancelada"
+    | "Finalizada";
   description?: string;
   accesses?: number;
   likes?: number;
@@ -147,12 +165,14 @@ export default function CommunityAdminPage({
   // Estados existentes
   const [activeTab, setActiveTab] = useState("Campanhas");
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
-    null
+    null,
   );
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [selectedAnnouncement, setSelectedAnnouncement] =
     useState<Announcement | null>(null);
-  const [selectedAnnouncementIndex, setSelectedAnnouncementIndex] = useState<number | null>(null);
+  const [selectedAnnouncementIndex, setSelectedAnnouncementIndex] = useState<
+    number | null
+  >(null);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
@@ -166,9 +186,9 @@ export default function CommunityAdminPage({
   const loadMembersRef = useRef(loadMembers);
 
   // Estados para a aba Comunidades
-  const [dropdown1Value, setDropdown1Value] = useState('Opção 1');
+  const [dropdown1Value, setDropdown1Value] = useState("Opção 1");
   const [dropdown1Open, setDropdown1Open] = useState(false);
-  const [dropdown2Value, setDropdown2Value] = useState('Opção 2');
+  const [dropdown2Value, setDropdown2Value] = useState("Opção 2");
   const [dropdown2Open, setDropdown2Open] = useState(false);
   const [toggleChecked, setToggleChecked] = useState(false);
 
@@ -187,7 +207,7 @@ export default function CommunityAdminPage({
     loadMembersRef.current = loadMembers;
   }, [loadMembers]);
 
-  // Marcar que membros foram carregados quando a aba usuários for acessada  
+  // Marcar que membros foram carregados quando a aba usuários for acessada
   useEffect(() => {
     if (activeTab === "Usuários") {
       setHasLoadedMembers(true);
@@ -197,35 +217,44 @@ export default function CommunityAdminPage({
   const tabs = ["Campanhas", "Denúncias", "Usuários", "Anúncios", "Comunidade"];
 
   // Função para mapear status da API para status do frontend
-  const mapApiStatusToFrontendStatus = (apiStatus: string): "Em análise" | "Aprovado" | "Rejeitado" | "Pendente" | "Em progresso" | "Cancelada" | "Finalizada" => {
-    if (!apiStatus) return 'Pendente';
+  const mapApiStatusToFrontendStatus = (
+    apiStatus: string,
+  ):
+    | "Em análise"
+    | "Aprovado"
+    | "Rejeitado"
+    | "Pendente"
+    | "Em progresso"
+    | "Cancelada"
+    | "Finalizada" => {
+    if (!apiStatus) return "Pendente";
     switch (apiStatus.toLowerCase()) {
       // Pendência inicial
-      case 'pending':
-        return 'Pendente';
+      case "pending":
+        return "Pendente";
       // Backend usa 'under_analysis' para campanha em análise
-      case 'under_analysis':
+      case "under_analysis":
       // Algumas rotas antigas podem usar 'active' como estado de revisão
-      case 'active':
-        return 'Em análise';
+      case "active":
+        return "Em análise";
       // Aprovação / reprovação explícita
-      case 'approved':
-        return 'Aprovado';
-      case 'rejected':
-        return 'Rejeitado';
+      case "approved":
+        return "Aprovado";
+      case "rejected":
+        return "Rejeitado";
       // Em execução
-      case 'in_progress':
-        return 'Em progresso';
+      case "in_progress":
+        return "Em progresso";
       // Cancelado (aceita ambas grafias vindas de fontes externas)
-      case 'canceled':
-      case 'cancelled':
-        return 'Cancelada';
+      case "canceled":
+      case "cancelled":
+        return "Cancelada";
       // Finalizado
-      case 'finished':
-      case 'completed':
-        return 'Finalizada';
+      case "finished":
+      case "completed":
+        return "Finalizada";
       default:
-        return 'Pendente';
+        return "Pendente";
     }
   };
 
@@ -271,7 +300,9 @@ export default function CommunityAdminPage({
     };
 
     // Mapear status_complaint do backend para o frontend
-    const mapComplaintStatus = (statusComplaint?: string): "Em análise" | "Resolvido" | "Arquivado" => {
+    const mapComplaintStatus = (
+      statusComplaint?: string,
+    ): "Em análise" | "Resolvido" | "Arquivado" => {
       if (!statusComplaint) return "Em análise";
       switch (statusComplaint.toLowerCase()) {
         case "resolved":
@@ -332,9 +363,11 @@ export default function CommunityAdminPage({
   });
   // Converter dados da API para o formato esperado pelos componentes
   const campaigns: Campaign[] = apiCampaigns.map(convertPostToCampaign);
-  const reports: Report[] = apiReports.map((post, index) => convertPostToReport(post, index));
+  const reports: Report[] = apiReports.map((post, index) =>
+    convertPostToReport(post, index),
+  );
   const announcements: Announcement[] = apiAnnouncements.map(
-    convertPostToAnnouncement
+    convertPostToAnnouncement,
   );
 
   // Mostrar toast de erro se houver problema ao carregar posts
@@ -379,16 +412,28 @@ export default function CommunityAdminPage({
   };
 
   // Hook para aprovar/rejeitar campanha
-  const { approveCampaign, rejectCampaign, changeCampaignStatus, loading: adminActionLoading } = useCampaignAdminActions();
+  const {
+    approveCampaign,
+    rejectCampaign,
+    changeCampaignStatus,
+    loading: adminActionLoading,
+  } = useCampaignAdminActions();
 
   // Handler para aprovação real
   const handleApproveCampaign = async (subject: string, message: string) => {
     if (!selectedCampaign) return;
     try {
-      const response = await approveCampaign(id, selectedCampaign.id, subject, message);
+      const response = await approveCampaign(
+        id,
+        selectedCampaign.id,
+        subject,
+        message,
+      );
       // Se a API retornar o objeto da campanha, usar o status retornado
       if (response && response.status_campaign) {
-        const mappedStatus = mapApiStatusToFrontendStatus(response.status_campaign);
+        const mappedStatus = mapApiStatusToFrontendStatus(
+          response.status_campaign,
+        );
         setSelectedCampaign({ ...selectedCampaign, status: mappedStatus });
       } else {
         // fallback otimista
@@ -415,9 +460,16 @@ export default function CommunityAdminPage({
   const handleRejectCampaign = async (subject: string, reason: string) => {
     if (!selectedCampaign) return;
     try {
-      const response = await rejectCampaign(id, selectedCampaign.id, subject, reason);
+      const response = await rejectCampaign(
+        id,
+        selectedCampaign.id,
+        subject,
+        reason,
+      );
       if (response && response.status_campaign) {
-        const mappedStatus = mapApiStatusToFrontendStatus(response.status_campaign);
+        const mappedStatus = mapApiStatusToFrontendStatus(
+          response.status_campaign,
+        );
         setSelectedCampaign({ ...selectedCampaign, status: mappedStatus });
       } else {
         setSelectedCampaign({ ...selectedCampaign, status: "Rejeitado" });
@@ -439,12 +491,20 @@ export default function CommunityAdminPage({
   };
 
   // Handler para mudança de status da campanha
-  const handleChangeStatus = async (newStatus: 'in_progress' | 'canceled' | 'finished') => {
+  const handleChangeStatus = async (
+    newStatus: "in_progress" | "canceled" | "finished",
+  ) => {
     if (!selectedCampaign) return;
     try {
-      const response = await changeCampaignStatus(id, selectedCampaign.id, newStatus);
+      const response = await changeCampaignStatus(
+        id,
+        selectedCampaign.id,
+        newStatus,
+      );
       if (response && response.status_campaign) {
-        const mappedStatus = mapApiStatusToFrontendStatus(response.status_campaign);
+        const mappedStatus = mapApiStatusToFrontendStatus(
+          response.status_campaign,
+        );
         setSelectedCampaign({ ...selectedCampaign, status: mappedStatus });
       }
       toast.success("Status da campanha atualizado com sucesso!");
@@ -469,7 +529,7 @@ export default function CommunityAdminPage({
     setSelectedCampaign(firstCampaign);
     // Buscar detalhes da primeira campanha automaticamente
     if (id) {
-      fetchCampaignDetailsById(id, firstCampaign.id).catch(error => {
+      fetchCampaignDetailsById(id, firstCampaign.id).catch((error) => {
         toast.error("Erro ao carregar detalhes da campanha");
       });
     }
@@ -553,7 +613,7 @@ export default function CommunityAdminPage({
     const memberToRemove = members.find(
       (member) =>
         member.user.email.toLowerCase() ===
-        excludeUserEmail.trim().toLowerCase()
+        excludeUserEmail.trim().toLowerCase(),
     );
 
     if (!memberToRemove) {
@@ -561,7 +621,7 @@ export default function CommunityAdminPage({
       return;
     } // Confirmação antes de excluir
     const confirmRemoval = window.confirm(
-      `Tem certeza que deseja excluir o usuário "${memberToRemove.user.name}" (${memberToRemove.user.email})? Esta ação é permanente e não pode ser desfeita.`
+      `Tem certeza que deseja excluir o usuário "${memberToRemove.user.name}" (${memberToRemove.user.email})? Esta ação é permanente e não pode ser desfeita.`,
     );
     if (confirmRemoval) {
       await removeUserById(id, id, memberToRemove.id);
@@ -623,7 +683,7 @@ export default function CommunityAdminPage({
   const ConfigurationItem = ({
     description,
     value,
-    children
+    children,
   }: {
     description: string;
     value?: string;
@@ -648,16 +708,17 @@ export default function CommunityAdminPage({
     onChange,
     isOpen,
     onToggle,
-    variant = 'primary'
+    variant = "primary",
   }: {
     options: string[];
     value: string;
     onChange: (value: string) => void;
     isOpen: boolean;
     onToggle: () => void;
-    variant?: 'primary' | 'secondary';
+    variant?: "primary" | "secondary";
   }) => {
-    const textColorClass = variant === 'primary' ? 'text-neutral-800' : 'text-neutral-500';
+    const textColorClass =
+      variant === "primary" ? "text-neutral-800" : "text-neutral-500";
 
     return (
       <div className="relative">
@@ -677,8 +738,8 @@ export default function CommunityAdminPage({
         {isOpen && (
           <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-10 min-w-full">
             <ul role="listbox" className="py-1">
-              {options.map((option, index) => (
-                <li key={index}>
+              {options.map((option) => (
+                <li key={option}>
                   <button
                     className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 ${textColorClass}`}
                     onClick={() => {
@@ -701,7 +762,7 @@ export default function CommunityAdminPage({
 
   const ToggleSwitch = ({
     checked,
-    onChange
+    onChange,
   }: {
     checked: boolean;
     onChange: (checked: boolean) => void;
@@ -714,8 +775,9 @@ export default function CommunityAdminPage({
       aria-label="Toggle switch"
     >
       <div
-        className={`flex self-stretch my-auto w-4 h-4 rounded-full min-h-4 transition-all duration-200 ${checked ? 'bg-white ml-auto' : 'bg-gray-200'
-          }`}
+        className={`flex self-stretch my-auto w-4 h-4 rounded-full min-h-4 transition-all duration-200 ${
+          checked ? "bg-white ml-auto" : "bg-gray-200"
+        }`}
       />
     </button>
   );
@@ -755,10 +817,11 @@ export default function CommunityAdminPage({
             {tabs.map((tab) => (
               <button
                 key={tab}
-                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${activeTab === tab
-                  ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
-                  : "text-[#525252]"
-                  }`}
+                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${
+                  activeTab === tab
+                    ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
+                    : "text-[#525252]"
+                }`}
                 onClick={() => handleTabChange(tab)}
               >
                 {tab}
@@ -852,10 +915,11 @@ export default function CommunityAdminPage({
                   campaigns.map((campaign) => (
                     <div
                       key={campaign.id}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedCampaign?.id === campaign.id
-                        ? "bg-[#f4f4f4]"
-                        : ""
-                        }`}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
+                        selectedCampaign?.id === campaign.id
+                          ? "bg-[#f4f4f4]"
+                          : ""
+                      }`}
                       onClick={() => handleCampaignSelection(campaign)}
                     >
                       <div className="mb-2">
@@ -888,8 +952,9 @@ export default function CommunityAdminPage({
                   reports.map((report) => (
                     <div
                       key={report.id}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
-                        }`}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
+                        selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
+                      }`}
                       onClick={() => setSelectedReport(report)}
                     >
                       <div className="mb-2">
@@ -907,7 +972,9 @@ export default function CommunityAdminPage({
                         </p>
                       </div>
                       <div className="flex items-center justify-between">
-                        <div className="mr-2">{getSeverityBadge(report.severity)}</div>
+                        <div className="mr-2">
+                          {getSeverityBadge(report.severity)}
+                        </div>
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-[#525252]">0</span>
                           <Eye className="h-3 w-3 text-[#525252]" />
@@ -922,11 +989,15 @@ export default function CommunityAdminPage({
                   announcements.map((announcement, index) => (
                     <div
                       key={`${announcement.id}-${index}`}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-gray-100 ${selectedAnnouncementIndex === index
-                        ? "bg-[#f8f8f8]"
-                        : ""
-                        }`}
-                      onClick={() => { setSelectedAnnouncement(announcement); setSelectedAnnouncementIndex(index); }}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-gray-100 ${
+                        selectedAnnouncementIndex === index
+                          ? "bg-[#f8f8f8]"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        setSelectedAnnouncement(announcement);
+                        setSelectedAnnouncementIndex(index);
+                      }}
                     >
                       <div className="mb-2">
                         <p className="text-xs text-[#525252] mb-1">
@@ -940,7 +1011,9 @@ export default function CommunityAdminPage({
                         </p>{" "}
                       </div>
                       <div className="flex items-center gap-1">
-                        <span className="text-xs text-[#525252]">{announcement.views || 0}</span>
+                        <span className="text-xs text-[#525252]">
+                          {announcement.views || 0}
+                        </span>
                         <Eye className="h-3 w-3 text-[#525252]" />
                       </div>
                     </div>
@@ -951,48 +1024,54 @@ export default function CommunityAdminPage({
           {/* Right Section - Details */}
           <div className="flex-1 bg-gray-100 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             {/* Loading State for Details */}
-            {postsLoading && activeTab !== "Usuários" && activeTab !== "Comunidade" && (
-              <div className="bg-white p-6 text-center">
-                <div className="flex items-center justify-center mb-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#161616]"></div>
+            {postsLoading &&
+              activeTab !== "Usuários" &&
+              activeTab !== "Comunidade" && (
+                <div className="bg-white p-6 text-center">
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#161616]"></div>
+                  </div>
+                  <p className="text-sm text-[#525252]">
+                    Carregando detalhes...
+                  </p>
                 </div>
-                <p className="text-sm text-[#525252]">Carregando detalhes...</p>
-              </div>
-            )}
+              )}
             {/* No Selection State */}
-            {!postsLoading && activeTab !== "Usuários" && activeTab !== "Comunidade" && (
-              <>
-                {activeTab === "Campanhas" &&
-                  !selectedCampaign &&
-                  campaigns.length > 0 && (
-                    <div className="bg-white p-6 text-center">
-                      <p className="text-sm text-[#525252]">
-                        Selecione uma campanha para ver os detalhes
-                      </p>
-                    </div>
-                  )}
+            {!postsLoading &&
+              activeTab !== "Usuários" &&
+              activeTab !== "Comunidade" && (
+                <>
+                  {activeTab === "Campanhas" &&
+                    !selectedCampaign &&
+                    campaigns.length > 0 && (
+                      <div className="bg-white p-6 text-center">
+                        <p className="text-sm text-[#525252]">
+                          Selecione uma campanha para ver os detalhes
+                        </p>
+                      </div>
+                    )}
 
-                {activeTab === "Denúncias" &&
-                  !selectedReport &&
-                  reports.length > 0 && (
-                    <div className="bg-white p-6 text-center">
-                      <p className="text-sm text-[#525252]">
-                        Selecione uma denúncia para ver os detalhes
-                      </p>
-                    </div>
-                  )}
+                  {activeTab === "Denúncias" &&
+                    !selectedReport &&
+                    reports.length > 0 && (
+                      <div className="bg-white p-6 text-center">
+                        <p className="text-sm text-[#525252]">
+                          Selecione uma denúncia para ver os detalhes
+                        </p>
+                      </div>
+                    )}
 
-                {activeTab === "Anúncios" &&
-                  !selectedAnnouncement &&
-                  announcements.length > 0 && (
-                    <div className="bg-white p-6 text-center">
-                      <p className="text-sm text-[#525252]">
-                        Selecione um anúncio para ver os detalhes
-                      </p>
-                    </div>
-                  )}
-              </>
-            )}{" "}
+                  {activeTab === "Anúncios" &&
+                    !selectedAnnouncement &&
+                    announcements.length > 0 && (
+                      <div className="bg-white p-6 text-center">
+                        <p className="text-sm text-[#525252]">
+                          Selecione um anúncio para ver os detalhes
+                        </p>
+                      </div>
+                    )}
+                </>
+              )}{" "}
             {/* Campaign Details - Updated with Figma Layout */}
             {activeTab === "Campanhas" && selectedCampaign && !postsLoading && (
               <div className="max-w-full">
@@ -1003,7 +1082,10 @@ export default function CommunityAdminPage({
                         <div className="flex justify-between items-start w-full max-md:max-w-full">
                           <div className="flex items-center min-w-60">
                             <img
-                              src={selectedCampaign.user.profile_picture || "/no-profile-pic.png"}
+                              src={
+                                selectedCampaign.user.profile_picture ||
+                                "/no-profile-pic.png"
+                              }
                               alt={`${selectedCampaign.user.name} profile picture`}
                               className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
                             />
@@ -1017,8 +1099,12 @@ export default function CommunityAdminPage({
                                     className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedCampaign.user.role)}`}
                                     aria-label="Verificado"
                                   />
-                                  <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedCampaign.user.role)}`}>
-                                    {translateUserRole(selectedCampaign.user.role || "leader")}
+                                  <span
+                                    className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedCampaign.user.role)}`}
+                                  >
+                                    {translateUserRole(
+                                      selectedCampaign.user.role || "leader",
+                                    )}
                                   </span>
                                 </div>
                               </div>
@@ -1062,7 +1148,10 @@ export default function CommunityAdminPage({
                                 Número de acessos:
                               </span>
                               <span className="self-stretch my-auto text-neutral-500">
-                                {campaignDetails?.views_count || selectedCampaign.accesses || 0} acessos
+                                {campaignDetails?.views_count ||
+                                  selectedCampaign.accesses ||
+                                  0}{" "}
+                                acessos
                               </span>
                             </div>
                             <div className="flex gap-2 items-center mt-4">
@@ -1070,7 +1159,10 @@ export default function CommunityAdminPage({
                                 Participantes:
                               </span>
                               <span className="self-stretch my-auto text-neutral-500">
-                                {campaignDetails?.participants_count || selectedCampaign.participants || 0} pessoas
+                                {campaignDetails?.participants_count ||
+                                  selectedCampaign.participants ||
+                                  0}{" "}
+                                pessoas
                               </span>
                             </div>
                           </div>
@@ -1080,7 +1172,10 @@ export default function CommunityAdminPage({
                                 Curtidas:
                               </span>
                               <span className="self-stretch my-auto text-neutral-500">
-                                {campaignDetails?.likes_count || selectedCampaign.likes || 0} curtidas
+                                {campaignDetails?.likes_count ||
+                                  selectedCampaign.likes ||
+                                  0}{" "}
+                                curtidas
                               </span>
                             </div>
                             <div className="flex gap-2 items-center mt-4 w-full">
@@ -1088,7 +1183,10 @@ export default function CommunityAdminPage({
                                 Comentários:
                               </span>
                               <span className="self-stretch my-auto text-neutral-500">
-                                {campaignDetails?.comments_count || selectedCampaign.comments || 0} comentários
+                                {campaignDetails?.comments_count ||
+                                  selectedCampaign.comments ||
+                                  0}{" "}
+                                comentários
                               </span>
                             </div>
                           </div>
@@ -1101,7 +1199,9 @@ export default function CommunityAdminPage({
                         {campaignDetailsLoading ? (
                           <div className="flex items-center gap-2">
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neutral-800"></div>
-                            <span className="text-sm text-neutral-500">Carregando...</span>
+                            <span className="text-sm text-neutral-500">
+                              Carregando...
+                            </span>
                           </div>
                         ) : (
                           getCampaignStatusBadge(selectedCampaign.status)
@@ -1129,10 +1229,14 @@ export default function CommunityAdminPage({
                         </div>
                       )}
                       {/* Botão Atualizar Status para status Aprovado e Em análise */}
-                      {(selectedCampaign.status === "Aprovado" || selectedCampaign.status === "Em análise" || selectedCampaign?.status === "Em progresso") && (
+                      {(selectedCampaign.status === "Aprovado" ||
+                        selectedCampaign.status === "Em análise" ||
+                        selectedCampaign?.status === "Em progresso") && (
                         <div className="relative mt-10 max-w-[698px]">
                           <button
-                            onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                            onClick={() =>
+                              setIsStatusDropdownOpen(!isStatusDropdownOpen)
+                            }
                             disabled={adminActionLoading}
                             className="flex gap-8 cursor-pointer items-center pt-4 pr-4 pb-6 pl-4 bg-neutral-800 text-zinc-100 w-full max-md:pr-5 hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -1150,7 +1254,9 @@ export default function CommunityAdminPage({
                                 <li>
                                   <button
                                     className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
-                                    onClick={() => handleChangeStatus('in_progress')}
+                                    onClick={() =>
+                                      handleChangeStatus("in_progress")
+                                    }
                                     disabled={adminActionLoading}
                                   >
                                     Em progresso
@@ -1159,7 +1265,9 @@ export default function CommunityAdminPage({
                                 <li>
                                   <button
                                     className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
-                                    onClick={() => handleChangeStatus('canceled')}
+                                    onClick={() =>
+                                      handleChangeStatus("canceled")
+                                    }
                                     disabled={adminActionLoading}
                                   >
                                     Cancelar
@@ -1168,7 +1276,9 @@ export default function CommunityAdminPage({
                                 <li>
                                   <button
                                     className="w-full px-4 py-3 text-left text-sm cursor-pointer hover:bg-gray-100 text-neutral-800"
-                                    onClick={() => handleChangeStatus('finished')}
+                                    onClick={() =>
+                                      handleChangeStatus("finished")
+                                    }
                                     disabled={adminActionLoading}
                                   >
                                     Finalizar
@@ -1195,7 +1305,10 @@ export default function CommunityAdminPage({
                         <div className="flex justify-between items-start w-full max-md:max-w-full">
                           <div className="flex items-center min-w-60">
                             <img
-                              src={selectedReport.user.profile_picture || "/no-profile-pic.png"}
+                              src={
+                                selectedReport.user.profile_picture ||
+                                "/no-profile-pic.png"
+                              }
                               className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square"
                               alt={`${selectedReport.user.name} avatar`}
                             />
@@ -1209,8 +1322,12 @@ export default function CommunityAdminPage({
                                     className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedReport.user.role)}`}
                                     aria-label="Verificado"
                                   />
-                                  <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedReport.user.role)}`}>
-                                    {translateUserRole(selectedReport.user.role || "member")}
+                                  <span
+                                    className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedReport.user.role)}`}
+                                  >
+                                    {translateUserRole(
+                                      selectedReport.user.role || "member",
+                                    )}
                                   </span>
                                 </div>
                               </div>
@@ -1239,7 +1356,8 @@ export default function CommunityAdminPage({
                               Descrição:
                             </h3>
                             <p className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
-                              {selectedReport.description || "Descrição não disponível."}
+                              {selectedReport.description ||
+                                "Descrição não disponível."}
                             </p>
                           </div>
                         </div>
@@ -1387,7 +1505,8 @@ export default function CommunityAdminPage({
                         />
                       </div>
                       <p className="mt-2 text-xs leading-4 text-neutral-500">
-                        Ao clicar em adicionar o usuário terá seu papel da comunidade alterado para moderador.
+                        Ao clicar em adicionar o usuário terá seu papel da
+                        comunidade alterado para moderador.
                       </p>
                     </div>
                     <button
@@ -1402,7 +1521,7 @@ export default function CommunityAdminPage({
                         <div
                           dangerouslySetInnerHTML={{
                             __html:
-                              "<svg width=\"16\" height=\"17\" viewBox=\"0 0 16 17\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" class=\"add-icon\"> <path d=\"M8.5 8V4.5H7.5V8H4V9H7.5V12.5H8.5V9H12V8H8.5Z\" fill=\"#F4F4F4\"></path> </svg>",
+                              '<svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg" class="add-icon"> <path d="M8.5 8V4.5H7.5V8H4V9H7.5V12.5H8.5V9H12V8H8.5Z" fill="#F4F4F4"></path> </svg>',
                           }}
                         />
                       </div>
@@ -1426,7 +1545,8 @@ export default function CommunityAdminPage({
                         />
                       </div>
                       <p className="mt-2 text-xs text-neutral-500">
-                        A exclusão é permanente, então certifique-se de digitar o e-mail corretamente.
+                        A exclusão é permanente, então certifique-se de digitar
+                        o e-mail corretamente.
                       </p>
                     </div>
                     <button
@@ -1441,7 +1561,7 @@ export default function CommunityAdminPage({
                         <div
                           dangerouslySetInnerHTML={{
                             __html:
-                              "<svg width=\"16\" height=\"17\" viewBox=\"0 0 16 17\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" class=\"close-icon\"> <path d=\"M12 4.86675L11.3 4.16675L8 7.46675L4.7 4.16675L4 4.86675L7.3 8.16675L4 11.4667L4.7 12.1667L8 8.86675L11.3 12.1667L12 11.4667L8.7 8.16675L12 4.86675Z\" fill=\"#F4F4F4\"></path> </svg>",
+                              '<svg width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg" class="close-icon"> <path d="M12 4.86675L11.3 4.16675L8 7.46675L4.7 4.16675L4 4.86675L7.3 8.16675L4 11.4667L4.7 12.1667L8 8.86675L11.3 12.1667L12 11.4667L8.7 8.16675L12 4.86675Z" fill="#F4F4F4"></path> </svg>',
                           }}
                         />
                       </div>
@@ -1450,7 +1570,6 @@ export default function CommunityAdminPage({
                 </main>
               </div>
             )}
-
             {/* Communities Settings Tab */}
             {activeTab === "Comunidade" && (
               <div className="bg-white fixed top-0 right-0 bottom-0 left-[512px] overflow-y-auto no-scrollbar">
@@ -1482,7 +1601,7 @@ export default function CommunityAdminPage({
                               </h4>
                             </div>
                             <DropdownSelect
-                              options={['Opção 1', 'Opção 2', 'Opção 3']}
+                              options={["Opção 1", "Opção 2", "Opção 3"]}
                               value={dropdown1Value}
                               onChange={setDropdown1Value}
                               isOpen={dropdown1Open}
@@ -1518,7 +1637,6 @@ export default function CommunityAdminPage({
                         <div className="flex gap-2.5 self-stretch py-2.5 my-auto min-h-9" />
                       </section>
 
-
                       <section className="flex justify-between items-center mt-12 w-full max-md:mt-10 max-md:max-w-full">
                         <div className="flex-1 shrink self-stretch my-auto w-full basis-0 min-w-60 max-md:max-w-full">
                           <h3 className="text-sm leading-none text-neutral-800 max-md:max-w-full">
@@ -1545,7 +1663,7 @@ export default function CommunityAdminPage({
                             </p>
                           </div>
                           <DropdownSelect
-                            options={['Opção 2', 'Opção 1', 'Opção 3']}
+                            options={["Opção 2", "Opção 1", "Opção 3"]}
                             value={dropdown1Value}
                             onChange={setDropdown1Value}
                             isOpen={dropdown1Open}
@@ -1563,7 +1681,7 @@ export default function CommunityAdminPage({
                             </p>
                           </div>
                           <DropdownSelect
-                            options={['Opção 3', 'Opção 1', 'Opção 2']}
+                            options={["Opção 3", "Opção 1", "Opção 2"]}
                             value={dropdown2Value}
                             onChange={setDropdown2Value}
                             isOpen={dropdown2Open}
@@ -1595,121 +1713,135 @@ export default function CommunityAdminPage({
                 </main>
               </div>
             )}
-
             {/* Announcement Details - Updated with Figma Layout */}
-            {activeTab === "Anúncios" && selectedAnnouncement && !postsLoading && (
-              <div className="max-w-full">
-                <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
-                  <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
-                    <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
-                      <div className="w-full max-md:max-w-full">
-                        <div className="flex justify-between items-start w-full max-md:max-w-full">
-                          <div className="flex items-center min-w-60">
-                            <img
-                              src={selectedAnnouncement.user.profile_picture || "/no-profile-pic.png"}
-                              alt={`${selectedAnnouncement.user.name} profile picture`}
-                              className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]"
-                            />
-                            <div className="self-stretch my-auto min-w-60 w-[342px]">
-                              <div className="flex gap-2 items-center w-full h-[23px]">
-                                <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto min-w-60">
-                                  <h2 className="self-stretch my-auto text-sm text-neutral-800">
-                                    {selectedAnnouncement.author}
-                                  </h2>
-                                  <CheckmarkFilled
-                                    className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedAnnouncement.user.role)}`}
-                                    aria-label="Verificado"
-                                  />
-                                  <span className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedAnnouncement.user.role)}`}>
-                                    {translateUserRole(selectedAnnouncement.user.role || "admin")}
-                                  </span>
+            {activeTab === "Anúncios" &&
+              selectedAnnouncement &&
+              !postsLoading && (
+                <div className="max-w-full">
+                  <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
+                    <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
+                      <header className="flex flex-col justify-center p-8 w-full bg-white rounded max-md:px-5 max-md:max-w-full">
+                        <div className="w-full max-md:max-w-full">
+                          <div className="flex justify-between items-start w-full max-md:max-w-full">
+                            <div className="flex items-center min-w-60">
+                              <img
+                                src={
+                                  selectedAnnouncement.user.profile_picture ||
+                                  "/no-profile-pic.png"
+                                }
+                                alt={`${selectedAnnouncement.user.name} profile picture`}
+                                className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]"
+                              />
+                              <div className="self-stretch my-auto min-w-60 w-[342px]">
+                                <div className="flex gap-2 items-center w-full h-[23px]">
+                                  <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto min-w-60">
+                                    <h2 className="self-stretch my-auto text-sm text-neutral-800">
+                                      {selectedAnnouncement.author}
+                                    </h2>
+                                    <CheckmarkFilled
+                                      className={`object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] ${getCheckmarkColorClass(selectedAnnouncement.user.role)}`}
+                                      aria-label="Verificado"
+                                    />
+                                    <span
+                                      className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(selectedAnnouncement.user.role)}`}
+                                    >
+                                      {translateUserRole(
+                                        selectedAnnouncement.user.role ||
+                                          "admin",
+                                      )}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
+                          <section className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
+                            <div className="flex flex-wrap gap-4 items-center w-full max-md:max-w-full">
+                              <h3 className="self-stretch my-auto font-semibold leading-6 text-neutral-800">
+                                Título:{" "}
+                              </h3>
+                              <p className="self-stretch my-auto leading-8 text-neutral-800">
+                                {selectedAnnouncement.title}
+                              </p>
+                            </div>
+                            <div className="mt-2 w-full max-md:max-w-full">
+                              <h3 className="font-semibold leading-6 text-justify text-neutral-800">
+                                Descrição:
+                              </h3>
+                              <div className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
+                                {selectedAnnouncement.description
+                                  ? selectedAnnouncement.description
+                                      .split("\n")
+                                      .map((paragraph, index) => (
+                                        <React.Fragment key={index}>
+                                          {paragraph}
+                                          {index <
+                                            selectedAnnouncement.description!.split(
+                                              "\n",
+                                            ).length -
+                                              1 && <br />}
+                                        </React.Fragment>
+                                      ))
+                                  : "Descrição não disponível."}
+                              </div>
+                            </div>
+                          </section>
+                          {selectedAnnouncement.image && (
+                            <img
+                              src={selectedAnnouncement.image}
+                              alt="Announcement illustration"
+                              className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
+                            />
+                          )}
                         </div>
-                        <section className="mt-6 w-full text-sm text-neutral-800 max-md:max-w-full">
-                          <div className="flex flex-wrap gap-4 items-center w-full max-md:max-w-full">
-                            <h3 className="self-stretch my-auto font-semibold leading-6 text-neutral-800">
-                              Título:{" "}
-                            </h3>
-                            <p className="self-stretch my-auto leading-8 text-neutral-800">
-                              {selectedAnnouncement.title}
-                            </p>
-                          </div>
-                          <div className="mt-2 w-full max-md:max-w-full">
-                            <h3 className="font-semibold leading-6 text-justify text-neutral-800">
-                              Descrição:
-                            </h3>
-                            <div className="mt-2 leading-5 text-neutral-800 max-md:max-w-full">
-                              {selectedAnnouncement.description ? (
-                                selectedAnnouncement.description.split('\n').map((paragraph, index) => (
-                                  <React.Fragment key={index}>
-                                    {paragraph}
-                                    {index < selectedAnnouncement.description!.split('\n').length - 1 && <br />}
-                                  </React.Fragment>
-                                ))
-                              ) : (
-                                "Descrição não disponível."
-                              )}
+                      </header>
+                      <footer className="flex flex-col justify-center py-8 pr-4 pl-8 w-full text-sm leading-none max-md:pl-5 max-md:max-w-full">
+                        <div className="w-full max-w-[698px] max-md:max-w-full">
+                          <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
+                            <div className="flex flex-col">
+                              <div className="flex gap-2 items-center self-start">
+                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                  Data publicada:
+                                </span>
+                                <span className="self-stretch my-auto text-neutral-500">
+                                  {selectedAnnouncement.date}
+                                </span>
+                              </div>
+                              <div className="flex gap-2 items-center mt-4">
+                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                  Número de acessos:
+                                </span>
+                                <span className="self-stretch my-auto text-neutral-500">
+                                  {selectedAnnouncement.views || 0} acessos
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        </section>
-                        {selectedAnnouncement.image && (
-                          <img
-                            src={selectedAnnouncement.image}
-                            alt="Announcement illustration"
-                            className="object-contain mt-6 w-full rounded aspect-[2.43] max-md:max-w-full"
-                          />
-                        )}
-                      </div>
-                    </header>
-                    <footer className="flex flex-col justify-center py-8 pr-4 pl-8 w-full text-sm leading-none max-md:pl-5 max-md:max-w-full">
-                      <div className="w-full max-w-[698px] max-md:max-w-full">
-                        <div className="flex flex-wrap gap-10 items-start w-full max-md:max-w-full">
-                          <div className="flex flex-col">
-                            <div className="flex gap-2 items-center self-start">
-                              <span className="self-stretch my-auto font-medium text-neutral-800">
-                                Data publicada:
-                              </span>
-                              <span className="self-stretch my-auto text-neutral-500">
-                                {selectedAnnouncement.date}
-                              </span>
-                            </div>
-                            <div className="flex gap-2 items-center mt-4">
-                              <span className="self-stretch my-auto font-medium text-neutral-800">
-                                Número de acessos:
-                              </span>
-                              <span className="self-stretch my-auto text-neutral-500">
-                                {selectedAnnouncement.views || 0} acessos
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex flex-col w-[198px]">
-                            <div className="flex gap-2 items-center self-start">
-                              <span className="self-stretch my-auto font-medium text-neutral-800">
-                                Curtidas:
-                              </span>
-                              <span className="self-stretch my-auto text-neutral-500">
-                                {selectedAnnouncement.likes || 0} curtidas
-                              </span>
-                            </div>
-                            <div className="flex gap-2 items-center mt-4 w-full">
-                              <span className="self-stretch my-auto font-medium text-neutral-800">
-                                Comentários:
-                              </span>
-                              <span className="self-stretch my-auto text-neutral-500">
-                                {selectedAnnouncement.comments || 0} comentários
-                              </span>
+                            <div className="flex flex-col w-[198px]">
+                              <div className="flex gap-2 items-center self-start">
+                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                  Curtidas:
+                                </span>
+                                <span className="self-stretch my-auto text-neutral-500">
+                                  {selectedAnnouncement.likes || 0} curtidas
+                                </span>
+                              </div>
+                              <div className="flex gap-2 items-center mt-4 w-full">
+                                <span className="self-stretch my-auto font-medium text-neutral-800">
+                                  Comentários:
+                                </span>
+                                <span className="self-stretch my-auto text-neutral-500">
+                                  {selectedAnnouncement.comments || 0}{" "}
+                                  comentários
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </footer>
-                  </article>
+                      </footer>
+                    </article>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         </div>
       </div>
