@@ -50,6 +50,7 @@
   }
 }
 
+
 @layer base {
   html {
     font-family: 'IBM Plex Sans', sans-serif;
@@ -130,4 +131,24 @@ body {
 
 body::-webkit-scrollbar {
   display: none; /* Chrome, Safari e Edge */
+}
+
+@layer utilities {
+  @media (max-width: 426px) {
+    .post-content .text-xl {
+      font-size: 1.125rem !important; /* Carbon heading compact */
+    }
+    .post-content .text-lg {
+      font-size: 1rem !important;
+    }
+    .post-content .text-base {
+      font-size: 0.875rem !important;
+    }
+    .post-content .text-sm {
+      font-size: 0.8125rem !important;
+    }
+    .post-content .text-xs {
+      font-size: 0.75rem !important;
+    }
+  }
 }
