@@ -38,72 +38,9 @@ export const fetchUserPosts = async (token: string, userData?: { id: string, use
       console.log('User profile loaded for posts:', user);
     }
 
-    // Primeiro, buscar as comunidades do usuário
+    // Buscar do feed geral e filtrar por user_id (mesma rota que funciona na home)
     try {
-      const communitiesResponse = await fetch(`${API_URL}/communities/user/${user.id}/communities`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
-
-      if (communitiesResponse.ok) {
-        const communitiesData = await communitiesResponse.json();
-        const communities = communitiesData.items || [];
-        console.log('User communities loaded:', communities.length);
-
-        // Se temos comunidades, buscar posts de cada uma
-        if (communities.length > 0) {
-          let allPosts: PostResponse[] = [];
-
-          // Buscar posts de cada comunidade
-          for (const community of communities) {
-            const communityId = community.id || community._id;
-            if (!communityId) continue;
-
-            try {
-              const postsResponse = await fetch(
-                `${API_URL}/posts/${communityId}/user/${user.id}/list-posts?limit=100`,
-                {
-                  method: 'GET',
-                  headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                  },
-                }
-              );
-
-              if (postsResponse.ok) {
-                const postsData = await postsResponse.json();
-                const posts = postsData.items || [];
-                console.log(`Fetched ${posts.length} posts from community ${communityId}`);
-                allPosts = [...allPosts, ...posts];
-              }
-            } catch (error) {
-              console.log(`Failed to fetch posts from community ${communityId}:`, error);
-            }
-          }
-
-          if (allPosts.length > 0) {
-            console.log(`Total posts fetched: ${allPosts.length}`);
-            return {
-              current_limit: allPosts.length,
-              current_offset: 0,
-              has_more: false,
-              items: allPosts,
-              total: allPosts.length
-            };
-          }
-        }
-      }
-    } catch (error) {
-      console.log('Failed to fetch communities:', error);
-    }
-
-    // Fallback: Buscar no feed geral filtrando por user_id
-    try {
-      const response = await fetch(`${API_URL}/posts/feed`, { 
+      const response = await fetch(`${API_URL}/posts/feed?limit=9999`, { 
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -125,10 +62,10 @@ export const fetchUserPosts = async (token: string, userData?: { id: string, use
         return userPosts;
       }
     } catch (error) {
-      console.log('Fallback attempt (feed) failed:', error);
+      console.log('Feed fetch failed:', error);
     }
 
-    // Se todas as tentativas falharem, retorna estrutura vazia
+    // Se tudo falhar, retorna estrutura vazia
     console.log('All attempts failed, returning empty structure');
     return {
       current_limit: 10,
