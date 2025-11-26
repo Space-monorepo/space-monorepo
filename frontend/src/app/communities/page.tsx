@@ -29,7 +29,7 @@ export default function ComunidadesPage() {
   const { communities, loading, error, updateCommunity, deleteCommunity } =
     useCommunityActions();
   const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(
-    null
+    null,
   );
   const [activeTab, setActiveTab] = useState("Sobre");
   const [searchTerm, setSearchTerm] = useState("");
@@ -62,7 +62,7 @@ export default function ComunidadesPage() {
   // Funções para manipular os modais
   const handleUpdateCommunity = async (
     communityId: string,
-    updateData: Partial<Community>
+    updateData: Partial<Community>,
   ) => {
     setActionLoading(true);
     try {
@@ -71,7 +71,7 @@ export default function ComunidadesPage() {
       // Atualizar a comunidade selecionada se for a mesma
       if (selectedCommunity?.id === communityId) {
         setSelectedCommunity((prev) =>
-          prev ? { ...prev, ...updateData } : null
+          prev ? { ...prev, ...updateData } : null,
         );
       }
 
@@ -116,7 +116,7 @@ export default function ComunidadesPage() {
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       (community.description &&
-        community.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        community.description.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   // Limpa a seleção se a comunidade selecionada não estiver na lista filtrada
@@ -176,10 +176,10 @@ export default function ComunidadesPage() {
 
     const admins = members.filter((member) => member.role === "admin").length;
     const moderators = members.filter(
-      (member) => member.role === "moderator"
+      (member) => member.role === "moderator",
     ).length;
     const activeMembers = members.filter(
-      (member) => member.status_participation === "active"
+      (member) => member.status_participation === "active",
     ).length;
 
     return {
@@ -242,7 +242,7 @@ export default function ComunidadesPage() {
                         className={`w-10 h-10 flex items-center justify-center text-xl rounded`}
                         style={{
                           backgroundColor: getCommunityColor(
-                            community.type_community
+                            community.type_community,
                           ),
                           color: "#ffffff",
                         }}
@@ -473,8 +473,8 @@ export default function ComunidadesPage() {
                                         member.role === "admin"
                                           ? "bg-orange-100 text-orange-800"
                                           : member.role === "moderator"
-                                          ? "bg-purple-100 text-purple-800"
-                                          : "bg-blue-100 text-blue-800"
+                                            ? "bg-purple-100 text-purple-800"
+                                            : "bg-blue-100 text-blue-800"
                                       }`}
                                     >
                                       {translateUserRole(member.role)}
@@ -484,17 +484,17 @@ export default function ComunidadesPage() {
                                         member.status_participation === "active"
                                           ? "bg-green-100 text-green-800"
                                           : member.status_participation ===
-                                            "suspended"
-                                          ? "bg-yellow-100 text-yellow-800"
-                                          : "bg-red-100 text-red-800"
+                                              "suspended"
+                                            ? "bg-yellow-100 text-yellow-800"
+                                            : "bg-red-100 text-red-800"
                                       }`}
                                     >
                                       {member.status_participation === "active"
                                         ? "Ativo"
                                         : member.status_participation ===
-                                          "suspended"
-                                        ? "Suspenso"
-                                        : "Banido"}
+                                            "suspended"
+                                          ? "Suspenso"
+                                          : "Banido"}
                                     </span>
                                   </div>
                                 </div>
@@ -506,7 +506,7 @@ export default function ComunidadesPage() {
                                 <div className="text-xs text-[#525252]">
                                   Desde:{" "}
                                   {new Date(
-                                    member.entered_in
+                                    member.entered_in,
                                   ).toLocaleDateString("pt-BR")}
                                 </div>
                               </div>
@@ -549,7 +549,7 @@ export default function ComunidadesPage() {
                             .filter(
                               (member) =>
                                 member.role === "admin" ||
-                                member.role === "moderator"
+                                member.role === "moderator",
                             )
                             .map((member) => (
                               <div
@@ -588,17 +588,15 @@ export default function ComunidadesPage() {
                                       >
                                         {translateUserRole(member.role)}
                                       </span>
-                                      <span className="text-[#525252]">
-                                        Reputação: {member.reputation}
-                                      </span>
                                     </div>
                                   </div>
                                 </div>
                                 <div className="text-right text-xs text-[#525252]">
+                                  <div>Reputação: {member.reputation}</div>
                                   <div>
                                     Desde:{" "}
                                     {new Date(
-                                      member.entered_in
+                                      member.entered_in,
                                     ).toLocaleDateString("pt-BR")}
                                   </div>
                                 </div>
@@ -607,7 +605,7 @@ export default function ComunidadesPage() {
                           {members.filter(
                             (member) =>
                               member.role === "admin" ||
-                              member.role === "moderator"
+                              member.role === "moderator",
                           ).length === 0 && (
                             <div className="text-center py-8">
                               <div className="text-[#525252]">
