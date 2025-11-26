@@ -1086,3 +1086,38 @@ def mock_notification_actor() -> User:
 def mock_actor() -> User:
     actor = User(id=uuid.uuid4(), name='Usuário Ator')
     return actor
+
+@pytest.fixture
+def test_notification_official(session_sql: Session, user_on_db: User) -> Notification:
+    """Fixture para notificação de Aviso Oficial (OFFICIAL_NOTICE)"""
+    notification = Notification(
+        user_id=user_on_db.id,
+        type=NotificationTypeEnum.OFFICIAL_NOTICE,
+        read=False,
+        data={
+            'notice_title': 'Manutenção do Sistema',
+            'community_name': 'Space Oficial'
+        },
+    )
+    session_sql.add(notification)
+    session_sql.commit()
+    session_sql.refresh(notification)
+    return notification
+
+@pytest.fixture
+def test_notification_canceled(session_sql: Session, user_on_db: User) -> Notification:
+    """Fixture para notificação de Campanha Cancelada (Já lida, para teste de contagem)"""
+    notification = Notification(
+        user_id=user_on_db.id,
+        type=NotificationTypeEnum.CAMPAIGN,
+        read=True, # Marcada como lida propositalmente
+        data={
+            'community_name': 'Comunidade A', 
+            'campaign_title': 'Campanha Cancelada',
+            'campaign_status_type': 'canceled'
+        },
+    )
+    session_sql.add(notification)
+    session_sql.commit()
+    session_sql.refresh(notification)
+    return notification
