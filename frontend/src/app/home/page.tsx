@@ -15,11 +15,11 @@ export default function Home() {
       <div className="ml-0 min-[900px]:ml-64 min-h-screen">
         <Header />
         <main className="pt-24 pb-10 px-4 min-[900px]:px-6 lg:px-10">
-          <div className="mx-auto flex w-full max-w-6xl gap-6 min-[1360px]:gap-10">
+          <div className="flex w-full gap-6 min-[1360px]:gap-10 mx-auto max-w-6xl min-[1360px]:mx-0 min-[1360px]:max-w-none">
             <section className="flex-1 min-w-0">
               <PostList />
             </section>
-            <aside className="hidden min-[1360px]:flex w-[320px] shrink-0">
+            <aside className="hidden min-[1360px]:flex w-[320px] shrink-0 ml-auto">
               <RightSidebar />
             </aside>
           </div>
