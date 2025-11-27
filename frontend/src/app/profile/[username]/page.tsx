@@ -20,12 +20,7 @@ import { translateUserRole } from "@/lib/roleTranslations";
 import { getRelativeTime } from "@/lib/relativeTime";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
-import {
-  Loader2,
-  Bookmark,
-  Activity,
-  Award,
-} from "lucide-react";
+import { Loader2, Activity, Award } from "lucide-react";
 import { CheckmarkFilled, Forum, OverflowMenuHorizontal, ArrowUp } from "@carbon/icons-react";
 import FilePicker from "@/components/ui/FilePicker";
 import Sidebar from "@/components/ui/sidebar";
@@ -724,8 +719,8 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="ml-5 w-[59%] max-md:ml-0 max-md:w-full">
-              <div className="flex flex-col items-center self-stretch my-auto w-full max-md:mt-10 max-md:max-w-full">
+        <div className="ml-5 flex-1 max-w-3xl w-full max-md:ml-0 max-md:w-full">
+          <div className="flex flex-col items-center self-stretch my-auto w-full max-w-3xl mx-auto pr-6 max-md:mt-10 max-md:max-w-full max-md:pr-0">
                 {postsLoading.posts ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-gray-500 mr-2" />
@@ -745,7 +740,7 @@ export default function ProfilePage() {
                     )}
                   </>
                 ) : (
-                  <div className="w-full space-y-6">
+              <div className="w-full max-w-2xl space-y-6 mx-auto pr-4 max-md:pr-0">
                     {userPosts.map((post) => {
                       const isPostLiked = postsWithLikes.get(post.id) || false;
                       const roleClass = getRoleBadgeClasses(post.user?.role || '');
@@ -823,12 +818,6 @@ export default function ProfilePage() {
                                   </div>
                                 </div>
                                 <div className="flex gap-4 items-center">
-                                  <button
-                                    className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                                    title="Salvar nos favoritos"
-                                  >
-                                    <Bookmark className="h-4 w-4 text-gray-500" />
-                                  </button>
                                   <div className="relative">
                                     <button
                                       className="p-1 hover:bg-gray-100 rounded-full cursor-pointer transition-colors"
