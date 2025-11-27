@@ -17,6 +17,15 @@ interface UseChatConversationsOutput {
   selectConversation: (conversationId: string) => Promise<void>;
   createNewConversation: (participantUserId: string) => Promise<Conversation>;
   refreshConversations: () => Promise<void>;
+  updateConversationPreview: (
+    conversationId: string,
+    update: {
+      lastMessage?: string;
+      lastMessageTimestamp?: string;
+      unreadCount?: number;
+      unreadDelta?: number;
+    }
+  ) => boolean;
 }
 
 const useChatConversations = (): UseChatConversationsOutput => {
@@ -92,6 +101,54 @@ const useChatConversations = (): UseChatConversationsOutput => {
     await loadConversations();
   }, [loadConversations]);
 
+  const updateConversationPreview = useCallback(
+    (
+      conversationId: string,
+      {
+        lastMessage,
+        lastMessageTimestamp,
+        unreadCount,
+        unreadDelta,
+      }: {
+        lastMessage?: string;
+        lastMessageTimestamp?: string;
+        unreadCount?: number;
+        unreadDelta?: number;
+      }
+    ): boolean => {
+      let updated = false;
+
+      setConversations((prev) => {
+        const index = prev.findIndex((conv) => conv.id === conversationId);
+        if (index === -1) {
+          return prev;
+        }
+
+        updated = true;
+        const current = prev[index];
+        const unreadValue =
+          typeof unreadCount === "number"
+            ? Math.max(0, unreadCount)
+            : Math.max(0, (current.unread_count || 0) + (unreadDelta ?? 0));
+
+        const nextConversation: Conversation = {
+          ...current,
+          last_message: lastMessage ?? current.last_message,
+          last_message_timestamp: lastMessageTimestamp ?? current.last_message_timestamp,
+          unread_count: unreadValue,
+        };
+
+        const updatedList = [...prev];
+        updatedList.splice(index, 1);
+        updatedList.unshift(nextConversation);
+        return updatedList;
+      });
+
+      return updated;
+    },
+    []
+  );
+
   // Carregar conversas ao montar o componente
   useEffect(() => {
     loadConversations();
@@ -107,6 +164,7 @@ const useChatConversations = (): UseChatConversationsOutput => {
     selectConversation,
     createNewConversation,
     refreshConversations,
+    updateConversationPreview,
   };
 };
 

@@ -17,6 +17,9 @@ interface UseChatMessagesOutput {
   markAsRead: (conversationId: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
   addMessageOptimistic: (message: Message) => void;
+  replaceMessage: (tempId: string, newMessage: Message) => void;
+  upsertMessage: (message: Message) => void;
+  removeMessageById: (messageId: string) => void;
 }
 
 const useChatMessages = (): UseChatMessagesOutput => {
@@ -107,6 +110,26 @@ const useChatMessages = (): UseChatMessagesOutput => {
     setMessages((prev) => [...prev, message]);
   }, []);
 
+  const replaceMessage = useCallback((tempId: string, newMessage: Message) => {
+    setMessages((prev) =>
+      prev.map((msg) => (msg.id === tempId ? newMessage : msg))
+    );
+  }, []);
+
+  const upsertMessage = useCallback((newMessage: Message) => {
+    setMessages((prev) => {
+      const exists = prev.some((msg) => msg.id === newMessage.id);
+      if (exists) {
+        return prev.map((msg) => (msg.id === newMessage.id ? newMessage : msg));
+      }
+      return [...prev, newMessage];
+    });
+  }, []);
+
+  const removeMessageById = useCallback((messageId: string) => {
+    setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+  }, []);
+
   return {
     messages,
     loading,
@@ -116,6 +139,9 @@ const useChatMessages = (): UseChatMessagesOutput => {
     markAsRead,
     deleteMessage: deleteMessageHandler,
     addMessageOptimistic,
+    replaceMessage,
+    upsertMessage,
+    removeMessageById,
   };
 };
 
