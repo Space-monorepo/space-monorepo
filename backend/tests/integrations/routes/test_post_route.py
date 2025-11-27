@@ -620,3 +620,85 @@ def test_confirm_complaint_route(authenticate_client, complaint_post_on_db, post
         assert response_data['level_complaint'] == ComplaintLevelEnum.MEDIUM
     else:
         assert response_data['level_complaint'] == ComplaintLevelEnum.LOW
+
+
+@pytest.mark.integration
+def test_check_complaint_confirmation_route_not_confirmed(
+    authenticate_client, complaint_post_on_db, post_on_db
+):
+    """
+    Tests the check_complaint_confirmation route when user has not confirmed.
+
+    Scenario:
+    - Given a valid complaint post ID
+    - When the route checks if user has confirmed
+    - Then it should return has_confirmed = False
+    """
+    response = authenticate_client.get(
+        f'/posts/{post_on_db.community_id}/complaint/{complaint_post_on_db.post_id}/check-confirmation'
+    )
+
+    response_data = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert response_data['has_confirmed'] is False
+
+
+@pytest.mark.integration
+def test_check_complaint_confirmation_route_confirmed(
+    authenticate_client, complaint_post_on_db, post_on_db
+):
+    """
+    Tests the check_complaint_confirmation route when user has confirmed.
+
+    Scenario:
+    - Given a valid complaint post ID
+    - When the user confirms the complaint and then checks
+    - Then it should return has_confirmed = True
+    """
+    # Primeiro confirma a denúncia
+    authenticate_client.post(
+        f'/posts/{post_on_db.community_id}/complaint/{complaint_post_on_db.post_id}/confirm'
+    )
+
+    # Depois verifica se foi confirmada
+    response = authenticate_client.get(
+        f'/posts/{post_on_db.community_id}/complaint/{complaint_post_on_db.post_id}/check-confirmation'
+    )
+
+    response_data = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert response_data['has_confirmed'] is True
+
+
+@pytest.mark.integration
+def test_confirm_complaint_route_prevents_duplicate(
+    authenticate_client, complaint_post_on_db, post_on_db
+):
+    """
+    Tests that confirm_complaint route prevents duplicate confirmations.
+
+    Scenario:
+    - Given a valid complaint post ID
+    - When the user confirms the complaint twice
+    - Then the second confirmation should not increment the count
+    """
+    initial_confirmations = complaint_post_on_db.confirmations_count or 0
+
+    # Primeira confirmação
+    response1 = authenticate_client.post(
+        f'/posts/{post_on_db.community_id}/complaint/{complaint_post_on_db.post_id}/confirm'
+    )
+    assert response1.status_code == status.HTTP_200_OK
+    response1_data = response1.json()
+    first_confirmations = response1_data['confirmations_count']
+
+    # Segunda confirmação (deve retornar o mesmo valor, sem incrementar)
+    response2 = authenticate_client.post(
+        f'/posts/{post_on_db.community_id}/complaint/{complaint_post_on_db.post_id}/confirm'
+    )
+    assert response2.status_code == status.HTTP_200_OK
+    response2_data = response2.json()
+
+    # O contador não deve ter incrementado novamente
+    assert response2_data['confirmations_count'] == first_confirmations
+    assert response2_data['confirmations_count'] == initial_confirmations + 1

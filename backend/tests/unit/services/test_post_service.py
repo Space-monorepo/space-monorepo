@@ -27,8 +27,8 @@ from app.api.post.schemas import (
     PostTypeEnum,
     PostUpdate,
 )
-from app.api.reports.schema import ReportReasonEnum
 from app.api.post.service import PostService
+from app.api.reports.schema import ReportReasonEnum
 from app.utils.schema import PaginationSearchParams
 
 
@@ -2334,6 +2334,7 @@ def test_report_post_service_duplicate_report_returns_current_state():
     assert isinstance(result, PostFeedResponse)
     assert result.report_count == fake_existing_post.report_count
 
+
 @pytest.mark.unit
 def test_confirm_complaint_service_success():
     """
@@ -2392,10 +2393,14 @@ def test_confirm_complaint_service_success():
     mock_complaint_repo.get_by_id.return_value = fake_complaint
     mock_complaint_repo.save.return_value = fake_complaint
 
+    mock_complaint_confirmation_repo = Mock()
+    mock_complaint_confirmation_repo.has_confirmed.return_value = False
+
     mock_reputation_service = Mock()
 
     service = PostService(mock_tm)
     service.complaint_repo = mock_complaint_repo
+    service.complaint_confirmation_repo = mock_complaint_confirmation_repo
     service.reputation_service = mock_reputation_service
     service.get_post = Mock(return_value=fake_post_response)
 
@@ -2414,6 +2419,155 @@ def test_confirm_complaint_service_success():
     assert result.confirmations_count == 6
     assert result.level_complaint == ComplaintLevelEnum.LOW
     assert result.status_complaint == ComplaintStatusEnum.PENDING
+
+
+@pytest.mark.unit
+def test_confirm_complaint_service_already_confirmed():
+    """
+    Tests the `confirm_complaint` method when user has already confirmed.
+
+    Scenario:
+    - Given a complaint that the user has already confirmed
+    - When the service tries to confirm again
+    - Then it should return the current state without incrementing
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_member_id = uuid4()
+    fake_community_id = uuid4()
+    fake_user_id = uuid4()
+
+    fake_complaint = Mock(spec=ComplaintPost)
+    fake_complaint.post_id = fake_post_id
+    fake_complaint.confirmations_count = 5
+    fake_complaint.status_complaint = ComplaintStatusEnum.PENDING
+    fake_complaint.level_complaint = ComplaintLevelEnum.LOW
+
+    # Mock do PostResponse
+    fake_community = Mock(spec=CommunityRelated)
+    fake_community.id = fake_community_id
+    fake_community.name = 'Test Community'
+
+    fake_user = Mock(spec=PostAuthor)
+    fake_user.id = fake_user_id
+    fake_user.name = 'Test User'
+    fake_user.profile_picture = 'https://example.com/profile.jpg'
+    fake_user.role = CommunityMemberRoleEnum.MEMBER
+
+    fake_post_response = Mock(spec=PostResponse)
+    fake_post_response.id = fake_post_id
+    fake_post_response.community = fake_community
+    fake_post_response.user = fake_user
+    fake_post_response.type_post = PostTypeEnum.COMPLAINT
+    fake_post_response.title = 'Complaint Title'
+    fake_post_response.content = 'Complaint content'
+    fake_post_response.image_url = None
+    fake_post_response.status = PostStatusEnum.ACTIVE
+    fake_post_response.likes_count = 0
+    fake_post_response.comments_count = 0
+    fake_post_response.report_count = 0
+    fake_post_response.created_at = datetime.now(timezone.utc)
+    fake_post_response.updated_at = datetime.now(timezone.utc)
+
+    mock_tm = Mock()
+    mock_complaint_repo = Mock()
+    mock_complaint_repo.get_by_id.return_value = fake_complaint
+
+    mock_complaint_confirmation_repo = Mock()
+    # Simula que o usuário já confirmou
+    mock_complaint_confirmation_repo.has_confirmed.return_value = True
+
+    mock_reputation_service = Mock()
+
+    service = PostService(mock_tm)
+    service.complaint_repo = mock_complaint_repo
+    service.complaint_confirmation_repo = mock_complaint_confirmation_repo
+    service.reputation_service = mock_reputation_service
+    service.get_post = Mock(return_value=fake_post_response)
+    service.get_complaint = Mock(return_value=fake_complaint)
+
+    # Act
+    result = service.confirm_complaint(fake_post_id, fake_member_id)
+
+    # Assert
+    # Verifica que has_confirmed foi chamado
+    mock_complaint_confirmation_repo.has_confirmed.assert_called_once_with(
+        fake_post_id, fake_member_id
+    )
+    # Verifica que get_complaint foi chamado (para retornar o estado atual)
+    service.get_complaint.assert_called_once_with(fake_post_id)
+    # Verifica que save NÃO foi chamado (não deve incrementar)
+    mock_complaint_repo.save.assert_not_called()
+    # Verifica que reward_complaint_confirmation_to_member NÃO foi chamado
+    mock_reputation_service.reward_complaint_confirmation_to_member.assert_not_called()
+    # Verifica o resultado
+    assert result is not None
+    assert isinstance(result, ComplaintResponse)
+    assert result.confirmations_count == 5  # Mantém o valor original
+    assert result.level_complaint == ComplaintLevelEnum.LOW
+    assert result.status_complaint == ComplaintStatusEnum.PENDING
+
+
+@pytest.mark.unit
+def test_has_user_confirmed_complaint_service_true():
+    """
+    Tests the `has_user_confirmed_complaint` method when user has confirmed.
+
+    Scenario:
+    - Given a complaint post ID and member ID
+    - When the user has confirmed the complaint
+    - Then it should return True
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_member_id = uuid4()
+
+    mock_tm = Mock()
+    mock_complaint_confirmation_repo = Mock()
+    mock_complaint_confirmation_repo.has_confirmed.return_value = True
+
+    service = PostService(mock_tm)
+    service.complaint_confirmation_repo = mock_complaint_confirmation_repo
+
+    # Act
+    result = service.has_user_confirmed_complaint(fake_post_id, fake_member_id)
+
+    # Assert
+    mock_complaint_confirmation_repo.has_confirmed.assert_called_once_with(
+        fake_post_id, fake_member_id
+    )
+    assert result is True
+
+
+@pytest.mark.unit
+def test_has_user_confirmed_complaint_service_false():
+    """
+    Tests the `has_user_confirmed_complaint` method when user has not confirmed.
+
+    Scenario:
+    - Given a complaint post ID and member ID
+    - When the user has not confirmed the complaint
+    - Then it should return False
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_member_id = uuid4()
+
+    mock_tm = Mock()
+    mock_complaint_confirmation_repo = Mock()
+    mock_complaint_confirmation_repo.has_confirmed.return_value = False
+
+    service = PostService(mock_tm)
+    service.complaint_confirmation_repo = mock_complaint_confirmation_repo
+
+    # Act
+    result = service.has_user_confirmed_complaint(fake_post_id, fake_member_id)
+
+    # Assert
+    mock_complaint_confirmation_repo.has_confirmed.assert_called_once_with(
+        fake_post_id, fake_member_id
+    )
+    assert result is False
 
 
 @pytest.mark.unit
@@ -2474,10 +2628,14 @@ def test_confirm_complaint_service_updates_level_low_to_medium():
     mock_complaint_repo.get_by_id.return_value = fake_complaint
     mock_complaint_repo.save.return_value = fake_complaint
 
+    mock_complaint_confirmation_repo = Mock()
+    mock_complaint_confirmation_repo.has_confirmed.return_value = False
+
     mock_reputation_service = Mock()
 
     service = PostService(mock_tm)
     service.complaint_repo = mock_complaint_repo
+    service.complaint_confirmation_repo = mock_complaint_confirmation_repo
     service.reputation_service = mock_reputation_service
     service.get_post = Mock(return_value=fake_post_response)
 
@@ -2558,10 +2716,14 @@ def test_confirm_complaint_service_updates_level_to_high():
     mock_complaint_repo.get_by_id.return_value = fake_complaint
     mock_complaint_repo.save.return_value = fake_complaint
 
+    mock_complaint_confirmation_repo = Mock()
+    mock_complaint_confirmation_repo.has_confirmed.return_value = False
+
     mock_reputation_service = Mock()
 
     service = PostService(mock_tm)
     service.complaint_repo = mock_complaint_repo
+    service.complaint_confirmation_repo = mock_complaint_confirmation_repo
     service.reputation_service = mock_reputation_service
     service.get_post = Mock(return_value=fake_post_response)
 
