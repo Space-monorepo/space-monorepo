@@ -63,8 +63,8 @@ type UserInfo = {
   role?: string;
   // Data de entrada/associação na comunidade
   joined_date?: string;
-  // Reputação pode ser um número (pontos) ou uma string (Nível)
-  reputation?: number | string;
+  // Nível de reputação (under_observation, helper, contributor, leader)
+  reputation_level?: string;
   // Popularidade como número de visualizações ou um valor numérico qualquer
   popularity?: number;
 };
@@ -410,10 +410,20 @@ export default function ModerationPage() {
                           Reputação:
                         </span>
                         <span className="self-stretch my-auto text-neutral-500">
-                          {typeof report.reportedUser.reputation !==
-                            "undefined" &&
-                          report.reportedUser.reputation !== null
-                            ? report.reportedUser.reputation
+                          {report.reportedUser.reputation_level
+                            ? report.reportedUser.reputation_level ===
+                              "under_observation"
+                              ? "Sob Observação"
+                              : report.reportedUser.reputation_level ===
+                                  "helper"
+                                ? "Ajudante"
+                                : report.reportedUser.reputation_level ===
+                                    "contributor"
+                                  ? "Contribuidor"
+                                  : report.reportedUser.reputation_level ===
+                                      "leader"
+                                    ? "Líder"
+                                    : report.reportedUser.reputation_level
                             : report.status === "Resolvido"
                               ? "Suspenso"
                               : "Sob Observação"}
@@ -1107,7 +1117,7 @@ export default function ModerationPage() {
   // Converter dados da API de moderação para os tipos do componente
   const convertApiUserToUserReport = (apiUser: any): UserReport => {
     // A API de membros da comunidade retorna um objeto CommunityMemberResponse
-    // com campos no nível superior (reputation, popularity, entered_in) e um
+    // com campos no nível superior (reputation_level, popularity, entered_in) e um
     // sub-objeto `user` com dados do usuário. Precisamos mesclar essas fontes.
     const member = apiUser || {};
     const userObj = member.user || {};
@@ -1124,11 +1134,9 @@ export default function ModerationPage() {
       userObj.created_at ||
       member.created_at ||
       undefined;
-    // reputação e popularidade podem existir tanto no nível do membro quanto no user
-    const reputationValue =
-      typeof member.reputation !== "undefined"
-        ? member.reputation
-        : (userObj.reputation ?? userObj.reputation_level ?? undefined);
+    // nível de reputação e popularidade podem existir tanto no nível do membro quanto no user
+    const reputationLevelValue =
+      member.reputation_level || userObj.reputation_level || undefined;
     const popularityValue =
       typeof member.popularity !== "undefined"
         ? member.popularity
@@ -1149,7 +1157,7 @@ export default function ModerationPage() {
         profile_picture: profilePicture,
         role: userObj.role || member.role || "member",
         joined_date: joinedDate,
-        reputation: reputationValue,
+        reputation_level: reputationLevelValue,
         popularity: popularityValue,
       },
       reporter: {
@@ -1167,9 +1175,7 @@ export default function ModerationPage() {
         joined_date:
           apiUser.reporter &&
           (apiUser.reporter.joined_date || apiUser.reporter.created_at),
-        reputation:
-          apiUser.reporter &&
-          (apiUser.reporter.reputation ?? apiUser.reporter.reputation_level),
+        reputation_level: apiUser.reporter && apiUser.reporter.reputation_level,
         popularity:
           apiUser.reporter &&
           (apiUser.reporter.popularity ??
@@ -1423,6 +1429,9 @@ export default function ModerationPage() {
           name: apiUser.name || "Usuário desconhecido",
           profile_picture: apiUser.profile_picture,
           role: apiUser.role || "member",
+          joined_date: apiUser.created_at,
+          reputation_level: apiUser.reputation_level,
+          popularity: apiUser.popularity,
         },
         reporter: normalizeReporter(
           (apiUser as any).reporter || (apiUser as any).reported_by || {},
