@@ -212,8 +212,8 @@ function AnnouncementCommentsModal({
     <div
       key={comment.id}
       className={`${isChild
-          ? "flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]"
-          : "flex flex-wrap justify-between w-full max-md:max-w-full"
+        ? "flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]"
+        : "flex flex-wrap justify-between w-full max-md:max-w-full"
         }`}
     >
       <div className="flex flex-col items-center w-11">
@@ -308,8 +308,8 @@ function AnnouncementCommentsModal({
                 />
                 <div
                   className={`self-stretch my-auto ${likedComments[comment.id]
-                      ? "text-neutral-600"
-                      : "text-neutral-500"
+                    ? "text-neutral-600"
+                    : "text-neutral-500"
                     }`}
                 >
                   {comment.likes_count ?? 0}
@@ -752,7 +752,7 @@ export default function NotificacoesPage() {
       }));
 
       setTimeout(() => {
-        window.location.reload();
+        refreshNotifications();
       }, 1500);
     } catch (e) {
       console.error("Erro ao aceitar conexão", e);
@@ -825,7 +825,7 @@ export default function NotificacoesPage() {
       }));
 
       setTimeout(() => {
-        window.location.reload();
+        refreshNotifications();
       }, 1500);
     } catch (e) {
       console.error("Erro ao rejeitar conexão", e);
@@ -971,8 +971,8 @@ export default function NotificacoesPage() {
                   <button
                     key={tab}
                     className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${activeTab === tab
-                        ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
-                        : "text-[#525252]"
+                      ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
+                      : "text-[#525252]"
                       }`}
                     onClick={() => handleTabChange(tab)}
                   >
@@ -1023,8 +1023,8 @@ export default function NotificacoesPage() {
                   <article
                     key={notification.id}
                     className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${selectedNotification?.id === notification.id
-                        ? "bg-gray-100 hover:bg-zinc-100"
-                        : "bg-white"
+                      ? "bg-gray-100 hover:bg-zinc-100"
+                      : "bg-white"
                       }`}
                     onClick={() => setSelectedNotification(notification)}
                   >
@@ -1090,8 +1090,8 @@ export default function NotificacoesPage() {
                   <article
                     key={notification.id}
                     className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${selectedNotification?.id === notification.id
-                        ? "bg-gray-100 hover:bg-zinc-100"
-                        : "bg-white"
+                      ? "bg-gray-100 hover:bg-zinc-100"
+                      : "bg-white"
                       }`}
                     onClick={() => setSelectedNotification(notification)}
                   >
@@ -1434,8 +1434,8 @@ export default function NotificacoesPage() {
                         disabled={postActionLoading || authLoading}
                         aria-disabled={postActionLoading || authLoading}
                         className={`flex items-center gap-2 px-6 py-3 text-gray-600 transition-colors cursor-pointer rounded ${postActionLoading || authLoading
-                            ? "opacity-60 pointer-events-none"
-                            : "hover:bg-gray-200"
+                          ? "opacity-60 pointer-events-none"
+                          : "hover:bg-gray-200"
                           }`}
                       >
                         <ArrowUp className="h-4 w-4" />
@@ -1502,8 +1502,8 @@ export default function NotificacoesPage() {
                     <article
                       key={connection.id}
                       className={`flex flex-col justify-center px-6 py-4 w-full bg-white max-md:px-5 max-md:max-w-full ${connection.connection_status === "pending"
-                          ? "hover:bg-zinc-100 transition-colors"
-                          : ""
+                        ? "hover:bg-zinc-100 transition-colors"
+                        : ""
                         }`}
                     >
                       <div className="w-full max-md:max-w-full">
