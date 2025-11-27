@@ -23,3 +23,7 @@ class NotificationRead(NotificationBase):
 
 class NotificationMarkAllRead(BaseModel):
     message: str
+
+
+class NotificationCount(BaseModel):
+    count: int

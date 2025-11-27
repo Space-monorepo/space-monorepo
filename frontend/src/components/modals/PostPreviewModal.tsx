@@ -1,7 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Bookmark, Activity, EllipsisVerticalIcon as OverflowMenuVertical } from "lucide-react";
+import { Activity, EllipsisVerticalIcon as OverflowMenuVertical } from "lucide-react";
 import { CheckmarkFilled, ArrowUp, Forum } from "@carbon/icons-react";
 import { FaceSatisfied, TextBold, TextItalic, ListNumbered, ListBulleted } from "@carbon/icons-react";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
@@ -491,12 +491,6 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
             onClick={handleBackdropClick}
         >
             <div className="bg-white shadow-lg max-w-[680px] w-full px-6 py-4 relative max-h-[90vh] overflow-y-auto no-scrollbar">
-                <button
-                    className="absolute top-2 right-4 text-gray-500 hover:text-gray-700 text-2xl cursor-pointer"
-                    onClick={onClose}
-                >
-                    &times;
-                </button>
                 <article>
                     <div className="w-full max-w-[632px] max-md:max-w-full">
                         <div className="w-full max-md:max-w-full">
@@ -537,7 +531,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                                 {localPost.location}
                                             </div>
                                         </div>
-                                        <div className="self-start px-3 mt-2 text-xs font-semibold tracking-normal whitespace-nowrap text-neutral-500">
+                                        <div className="self-start px-3 mt-2 text-[10px] font-semibold tracking-normal whitespace-nowrap text-neutral-500">
                                             <div className="flex items-center gap-1">
                                                 <div className="self-stretch my-auto text-neutral-500">
                                                     {localPost.type || "Tipo não informado"}
@@ -552,13 +546,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-4 items-center">
-                                    <button
-                                        className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-                                        title="Salvar nos favoritos"
-                                    >
-                                        <Bookmark className={`h-4 w-4 text-gray-500`} />
-                                    </button>
+                                <div className="flex gap-2 items-center">
                                     <div className="relative">
                                         <button
                                             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -586,6 +574,14 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                             </div>
                                         )}
                                     </div>
+                                    <button
+                                        className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-500 text-xl leading-none"
+                                        onClick={onClose}
+                                        aria-label="Fechar pré-visualização"
+                                        title="Fechar"
+                                    >
+                                        &times;
+                                    </button>
                                 </div>
                             </header>
 

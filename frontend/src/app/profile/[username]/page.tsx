@@ -530,7 +530,7 @@ export default function ProfilePage() {
     <div className="flex bg-zinc-100 min-h-screen">
       <Sidebar variant="static" />
 
-      <main className="flex-1 ml-66 max-md:ml-0 overflow-hidden">
+      <main className="flex-1 ml-0 min-[900px]:ml-64 overflow-hidden">
         <header className="pt-8 w-full bg-white border border-solid border-stone-300 max-md:pt-4">
           <div className="flex p-4 max-md:flex-col">
             <div className="max-md:ml-0 max-md:w-full">

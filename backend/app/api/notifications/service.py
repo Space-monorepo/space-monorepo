@@ -30,15 +30,12 @@ class NotificationService:
         notif_type = notification.type
 
         try:
+            # ... (mantenha as variáveis actor_name, post_title, etc como estão) ...
             actor_name = data.get('actor_name', 'Alguém')
             post_title = data.get('post_title', 'sua publicação')
             comment_content = data.get('comment_content', 'um comentário')
             community_name = data.get('community_name', 'uma comunidade')
-
-            campaign_title = data.get('campaign_title', 'Uma campanha')
-            raw_feedback = data.get('feedback_content')
-            feedback_text = f': "{raw_feedback}"' if raw_feedback else '.'
-
+            campaign_title = data.get('campaign_title', 'Campanha')  # Extrai o título
             truncated_comment = NotificationService._get_truncated_content(
                 comment_content, NOTIFICATION_CONTENT_TRUNCATE_LENGTH
             )
@@ -50,20 +47,23 @@ class NotificationService:
                     'comment_like': f'{actor_name} curtiu seu comentário: "{truncated_comment}"',
                 },
                 NotificationTypeEnum.CONNECTION: {
+                    'new_member': f'{actor_name} entrou na comunidade {community_name}.',
                     'badge': f'Você recebeu um novo emblema: {data.get("badge_name", "Novo Emblema")}',
-                    'request_received': f'{actor_name} enviou um pedido de conexão.',
-                    'request_accepted': f'{actor_name} aceitou seu pedido de conexão.',
+                    'follow_request': f'{actor_name} quer te seguir.',
+                    'follow_accepted': f'{actor_name} aceitou sua solicitação de conexão.',
+                    'request_received': f'{actor_name} quer se conectar com você.',
                 },
+                # ALTERAÇÃO AQUI: Adicionamos as mensagens específicas para cada status
                 NotificationTypeEnum.CAMPAIGN: {
                     'default': f'Nova campanha em {community_name}: {campaign_title}',
-                    'target_reached': f'A campanha "{campaign_title}" atingiu a meta! Agora está em análise.',
-                    'approved': f'Boas notícias! A campanha "{campaign_title}" foi aprovada{feedback_text}',
-                    'rejected': f'A campanha "{campaign_title}" não foi aprovada{feedback_text}',
-                    'in_progress': f'A campanha "{campaign_title}" entrou em progresso.',
-                    'finished': f'A campanha "{campaign_title}" foi finalizada com sucesso!',
+                    'approved': f'Sua campanha "{campaign_title}" foi aprovada!',
+                    'rejected': f'Sua campanha "{campaign_title}" não foi aprovada.',
+                    'finished': f'A campanha "{campaign_title}" foi finalizada.',
+                    'canceled': f'A campanha "{campaign_title}" foi cancelada.',  # <--- ADICIONE AQUI
+                    'target_reached': f'A campanha "{campaign_title}" atingiu a meta!',
                 },
                 NotificationTypeEnum.OFFICIAL_NOTICE: {
-                    'default': f'Aviso: {data.get("notice_title", "Temos novidades")}'
+                    'default': f'Aviso do Space: {data.get("notice_title", "Temos novidades")}'
                 },
             }
 
@@ -73,9 +73,11 @@ class NotificationService:
 
             subtype_key = 'default'
             if notif_type == NotificationTypeEnum.INTERACTION:
-                subtype_key = data.get('interaction_type', 'default')
+                subtype_key = data.get('interaction_type')
             elif notif_type == NotificationTypeEnum.CONNECTION:
-                subtype_key = data.get('connection_type', 'default')
+                subtype_key = data.get('connection_type')
+
+            # ALTERAÇÃO AQUI: Ler a chave que o seu listener envia ('campaign_status_type')
             elif notif_type == NotificationTypeEnum.CAMPAIGN:
                 subtype_key = data.get('campaign_status_type', 'default')
 
@@ -151,6 +153,11 @@ class NotificationService:
             response_notifications.append(response)
 
         return response_notifications
+
+    def get_unread_count(self, *, user: User) -> dict:
+        """Retorna a contagem de notificações não lidas."""
+        count = self.notification_repo.count_unread(user_id=user.id)
+        return {'count': count}
 
     def mark_as_read(
         self, *, notification_id: uuid.UUID, user: User
