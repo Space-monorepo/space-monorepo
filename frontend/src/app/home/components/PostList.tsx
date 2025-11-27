@@ -38,7 +38,7 @@ import { API_URL } from "@/config";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import PostPreviewModal from "@/components/modals/PostPreviewModal";
-import { confirmComplaint } from "@/app/api/src/services/post/postService";
+import { confirmComplaint, checkComplaintConfirmation } from "@/app/api/src/services/post/postService";
 
 // CommentsSection como componente interno
 interface Comment {
@@ -672,6 +672,7 @@ export default function PostList() {
   const allPostsRef = useRef<PostDisplay[]>(allPosts);
   const votingPostsRef = useRef<{ [key: string]: boolean }>(votingPosts);
   const displayedPostsRef = useRef<PostDisplay[]>(displayedPosts);
+  const confirmedProblemsRef = useRef<{ [key: string]: boolean }>(confirmedProblems);
   const pullDistanceRef = useRef(0);
 
   // Sincroniza refs com os estados correspondentes
@@ -686,6 +687,10 @@ export default function PostList() {
   useEffect(() => {
     displayedPostsRef.current = displayedPosts;
   }, [displayedPosts]);
+
+  useEffect(() => {
+    confirmedProblemsRef.current = confirmedProblems;
+  }, [confirmedProblems]);
 
   useEffect(() => {
     pullDistanceRef.current = pullDistance;
@@ -1008,34 +1013,16 @@ export default function PostList() {
   };
 
   // Função para verificar se o problema já foi confirmado pelo usuário
+  // Agora usa o endpoint do backend
   const checkProblemConfirmation = async (
     postId: string,
     communityId: string,
   ) => {
     try {
       const token = getTokenFromCookies();
-      const response = await fetch(
-        `${API_URL}/communities/${communityId}/complaints/${postId}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      if (!response.ok) {
-        return false;
-      }
-      const data = await response.json();
-      // Verifica se o usuário atual está na lista de confirmações
-      const currentUserId = token
-        ? JSON.parse(atob(token.split(".")[1])).sub
-        : null;
-      return (
-        data.confirmations?.some((c: any) => c.user_id === currentUserId) ??
-        false
-      );
+      if (!token) return false;
+      const data = await checkComplaintConfirmation(communityId, postId, token);
+      return data.has_confirmed ?? false;
     } catch (err) {
       console.error("Erro ao verificar confirmação do problema:", err);
       return false;
@@ -1087,25 +1074,54 @@ export default function PostList() {
   // Atualizar o estado inicial ao carregar os posts
   useEffect(() => {
     const fetchConfirmedProblems = async () => {
-      const confirmedMap: { [key: string]: boolean } = {};
-      for (const post of allPosts) {
-        if (
+      // Preserva confirmações existentes que já foram confirmadas pelo usuário
+      const confirmedMap: { [key: string]: boolean } = { ...confirmedProblemsRef.current };
+      
+      // Lista de posts de denúncia para verificar
+      const denunciaPosts = allPosts.filter(
+        (post) =>
           post.community?.id &&
           translatePostType(post.type_post) === "Denúncia"
-        ) {
-          confirmedMap[post.id] = await checkProblemConfirmation(
+      );
+
+      // Verifica todos os posts de denúncia (incluindo os que já estão no mapa)
+      // Isso garante que ao recarregar a página, as confirmações sejam buscadas do backend
+      const confirmationPromises = denunciaPosts.map(async (post) => {
+        if (post.community?.id) {
+          // Se já temos uma confirmação verdadeira no estado, mantém
+          // Caso contrário, verifica no backend
+          if (confirmedMap[post.id] === true) {
+            return { postId: post.id, isConfirmed: true };
+          }
+          const isConfirmed = await checkProblemConfirmation(
             post.id,
             post.community.id,
           );
+          return { postId: post.id, isConfirmed };
         }
-      }
+        return null;
+      });
+
+      const results = await Promise.all(confirmationPromises);
+      
+      // Atualiza o mapa com os resultados
+      results.forEach((result) => {
+        if (result) {
+          confirmedMap[result.postId] = result.isConfirmed;
+        }
+      });
+
+      // Sempre atualiza para garantir que o estado está sincronizado com o backend
       setConfirmedProblems(confirmedMap);
     };
 
+    // Executa sempre que allPosts muda
+    // Isso garante que ao recarregar a página, as confirmações sejam buscadas do backend
     if (allPosts.length > 0) {
       fetchConfirmedProblems();
     }
-  }, [allPosts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allPosts.length]); // Executa quando o número de posts muda
 
   // Função auxiliar para atualizar o estado do post com novas opções de enquete
   const updatePollState = (
@@ -1784,14 +1800,14 @@ export default function PostList() {
                     {/* Botão Confirmar problema para Denúncia */}
                     {post.type === "Denúncia" && (
                       <button
-                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${(post.confirmations_count ?? 0) > 0 ? "bg-neutral-200 text-neutral-700 cursor-not-allowed" : "bg-neutral-900 text-white hover:bg-neutral-800"}`}
+                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${confirmedProblems[post.id] ? "bg-neutral-200 text-neutral-700 cursor-not-allowed" : "bg-neutral-900 text-white hover:bg-neutral-800"}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleConfirmComplaint(post);
                         }}
-                        disabled={(post.confirmations_count ?? 0) > 0}
+                        disabled={confirmedProblems[post.id]}
                       >
-                        {(post.confirmations_count ?? 0) > 0
+                        {confirmedProblems[post.id]
                           ? "Problema confirmado"
                           : "Confirmar problema"}
                       </button>

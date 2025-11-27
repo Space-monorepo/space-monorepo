@@ -240,6 +240,25 @@ export const unvoteOnPoll = async (
   return response.json();
 };
 
+export async function checkComplaintConfirmation(
+  communityId: string,
+  postId: string,
+  token?: string,
+): Promise<{ has_confirmed: boolean }> {
+  const res = await fetch(
+    `${API_URL}/posts/${communityId}/complaint/${postId}/check-confirmation`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    },
+  );
+  if (!res.ok) throw new Error("Erro ao verificar confirmação");
+  return await res.json();
+}
+
 export async function confirmComplaint(
   communityId: string,
   postId: string,

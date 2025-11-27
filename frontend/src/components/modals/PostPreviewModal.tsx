@@ -10,12 +10,13 @@ import { translateUserRole } from "@/lib/roleTranslations";
 import { translatePostType } from "@/lib/postTypeTranslations";
 import { getRelativeTime } from "@/lib/relativeTime";
 import { voteOnPoll } from "@/app/api/src/services/post/postService";
-import { confirmComplaint } from "@/app/api/src/services/post/postService";
+import { confirmComplaint, checkComplaintConfirmation } from "@/app/api/src/services/post/postService";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
 import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import useReportPost from "@/app/api/src/hooks/post/useReportPost";
 import { useCampaignParticipation } from "@/app/api/src/hooks/post/useCampaignParticipation";
 import { toast } from "react-toastify";
+import { API_URL } from "@/config";
 
 interface PollOption {
     id: string;
@@ -61,21 +62,25 @@ interface PostPreviewModalProps {
 }
 
 const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClose }) => {
+    const [openMenu, setOpenMenu] = React.useState(false);
+    const [localPost, setLocalPost] = React.useState(post);
+    // Estado para rastrear se o usuário já confirmou o problema
+    const [hasConfirmedProblem, setHasConfirmedProblem] = React.useState(false);
+    
     // Confirmação de denúncia
     const handleConfirmComplaint = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!localPost) return;
+        if (!localPost || hasConfirmedProblem) return;
         try {
             const token = getTokenFromCookies();
             await confirmComplaint(localPost.community?.id || "default-community-id", localPost.id, token ?? undefined);
             setLocalPost(prev => prev ? { ...prev, confirmations_count: (prev.confirmations_count ?? 0) + 1 } : prev);
+            setHasConfirmedProblem(true);
             toast.success('Confirmação registrada!');
         } catch (err) {
             toast.error('Erro ao confirmar problema');
         }
     };
-    const [openMenu, setOpenMenu] = React.useState(false);
-    const [localPost, setLocalPost] = React.useState(post);
     const { likePost, unlikePost, listComments, addComment, sharePost, replyComment, likeComment, unlikeComment } = usePostActions();
     const { reportPost } = useReportPost();
     const { participate } = useCampaignParticipation();
@@ -90,9 +95,32 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
     const [replyingTo, setReplyingTo] = React.useState<string | null>(null);
     const [replyInput, setReplyInput] = React.useState<{ [key: string]: string }>({});
 
-    // Sincronizar localPost com prop post
+    // Sincronizar localPost com prop post, mas preservar o estado de confirmação
     React.useEffect(() => {
-        setLocalPost(post);
+        if (post) {
+            setLocalPost(post);
+            // Verifica se o usuário já confirmou no backend
+            if (post.type === 'Denúncia' && post.community?.id) {
+                const checkConfirmation = async () => {
+                    try {
+                        const token = getTokenFromCookies();
+                        if (!token || !post.community?.id) return;
+                        const data = await checkComplaintConfirmation(
+                            post.community.id,
+                            post.id,
+                            token
+                        );
+                        setHasConfirmedProblem(data.has_confirmed ?? false);
+                    } catch (err) {
+                        console.error("Erro ao verificar confirmação:", err);
+                        setHasConfirmedProblem(false);
+                    }
+                };
+                checkConfirmation();
+            } else {
+                setHasConfirmedProblem(false);
+            }
+        }
     }, [post]);
 
     React.useEffect(() => {
@@ -637,11 +665,11 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                 {/* Botão Confirmar problema para Denúncia */}
                                 {localPost.type === 'Denúncia' && (
                                     <button
-                                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${localPost.confirmations_count && localPost.confirmations_count > 0 ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${hasConfirmedProblem ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
                                         onClick={handleConfirmComplaint}
-                                        disabled={Boolean(localPost.confirmations_count)}
+                                        disabled={hasConfirmedProblem}
                                     >
-                                        {localPost.confirmations_count && localPost.confirmations_count > 0 ? 'Problema confirmado' : 'Confirmar problema'}
+                                        {hasConfirmedProblem ? 'Problema confirmado' : 'Confirmar problema'}
                                     </button>
                                 )}
 
