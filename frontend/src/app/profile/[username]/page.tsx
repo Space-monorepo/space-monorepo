@@ -29,6 +29,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getConnectionStatus, requestConnection, deleteConnection } from "@/app/api/src/services/connection/connectionService";
 import { API_URL } from "@/config";
+import { fetchUserCampaigns } from "@/app/api/src/services/post/fetchUserCampaigns";
 
 // --- Interfaces ---
 export interface User {
@@ -83,6 +84,8 @@ export default function ProfilePage() {
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
   const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(null);
   const [confirmedProblems, setConfirmedProblems] = useState<{ [key: string]: boolean }>({});
+  // Novo estado local para armazenar participação em campanhas por post
+  const [localCampaignParticipation, setLocalCampaignParticipation] = useState<{ [postId: string]: boolean }>({});
 
   // Estados para Conexão
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
@@ -123,9 +126,6 @@ export default function ProfilePage() {
         } else {
           setCurrentUserId(myId);
         }
-
-        // Usar API_URL configurado
-        console.log(`🔎 Buscando perfil pelo ID: ${urlParamId} na API ${API_URL}`);
 
         // Prepare headers, include Authorization only if token exists
         const headers: any = {
@@ -393,6 +393,11 @@ export default function ProfilePage() {
 
     try {
       await participate(communityId, post.id);
+      // Atualiza o estado local para refletir participação imediata no feed
+      setLocalCampaignParticipation(prev => ({
+        ...prev,
+        [post.id]: true
+      }));
       toast.success('Você agora faz parte da campanha!');
     } catch {
       toast.error('Erro ao participar da campanha');
@@ -404,7 +409,24 @@ export default function ProfilePage() {
 
     const initializePostStates = async () => {
       const confirmedMap: Record<string, boolean> = {};
+      const participationMap: Record<string, boolean> = {};
 
+      // Primeiro, buscar todas as campanhas em que o usuário logado participa
+      try {
+        const myCampaigns = await fetchUserCampaigns();
+        if (Array.isArray(myCampaigns) && myCampaigns.length > 0) {
+          myCampaigns.forEach((campaign: any) => {
+            const postId = campaign.post?.id || campaign.id || campaign.post_id;
+            if (postId) {
+              participationMap[postId] = true;
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao buscar campanhas do usuário:', error);
+      }
+
+      // Depois, verificar cada post individualmente
       for (const post of userPosts) {
         const communityId = post.community?.id;
         if (!communityId) continue;
@@ -416,12 +438,23 @@ export default function ProfilePage() {
         }
 
         if (postType === 'Campanha') {
-          await checkParticipation(communityId, post.id);
+          // Se já marcamos como participando, manter esse valor
+          if (!participationMap[post.id]) {
+            // Caso contrário, verificar através da API
+            try {
+              const participationStatus = await checkParticipation(communityId, post.id);
+              participationMap[post.id] = typeof participationStatus === 'boolean' ? participationStatus : false;
+            } catch (error) {
+              console.error(`Erro ao verificar participação para post ${post.id}:`, error);
+              participationMap[post.id] = false;
+            }
+          }
         }
       }
 
       if (!isCancelled) {
         setConfirmedProblems(confirmedMap);
+        setLocalCampaignParticipation(participationMap);
       }
     };
 
@@ -429,6 +462,7 @@ export default function ProfilePage() {
       initializePostStates();
     } else {
       setConfirmedProblems({});
+      setLocalCampaignParticipation({});
     }
 
     return () => {
@@ -577,6 +611,7 @@ export default function ProfilePage() {
                     </button>
                   ) : (
                     <div className="flex gap-2">
+                      {/* Botões de conexão baseados no status */}
                       {connectionStatus?.status === 'accepted' ? (
                         <>
                           <button
@@ -596,10 +631,11 @@ export default function ProfilePage() {
                         </>
                       ) : connectionStatus?.status === 'pending' ? (
                         <button
-                          disabled={true}
-                          className="px-4 py-2 bg-neutral-200 text-neutral-800 rounded-sm cursor-not-allowed"
+                          disabled
+                          className="px-4 py-2 bg-neutral-300 text-neutral-600 cursor-not-allowed rounded-sm"
+                          title={connectionStatus.requester_id === currentUserId ? "Aguardando resposta" : "Responder solicitação"}
                         >
-                          Pedido enviado
+                          {connectionStatus.requester_id === currentUserId ? 'Pedido enviado' : 'Pedido recebido'}
                         </button>
                       ) : (
                         <button
@@ -719,8 +755,8 @@ export default function ProfilePage() {
               </div>
             </div>
 
-        <div className="ml-5 flex-1 max-w-3xl w-full max-md:ml-0 max-md:w-full">
-          <div className="flex flex-col items-center self-stretch my-auto w-full max-w-3xl mx-auto pr-6 max-md:mt-10 max-md:max-w-full max-md:pr-0">
+            <div className="ml-5 flex-1 max-w-3xl w-full max-md:ml-0 max-md:w-full">
+              <div className="flex flex-col items-center self-stretch my-auto w-full max-w-3xl mx-auto pr-6 max-md:mt-10 max-md:max-w-full max-md:pr-0">
                 {postsLoading.posts ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-gray-500 mr-2" />
@@ -740,25 +776,15 @@ export default function ProfilePage() {
                     )}
                   </>
                 ) : (
-              <div className="w-full max-w-2xl space-y-6 mx-auto pr-4 max-md:pr-0">
+                  <div className="w-full max-w-2xl space-y-6 mx-auto pr-4 max-md:pr-0">
                     {userPosts.map((post) => {
                       const isPostLiked = postsWithLikes.get(post.id) || false;
                       const roleClass = getRoleBadgeClasses(post.user?.role || '');
                       const checkmarkClass = getCheckmarkColorClass(post.user?.role || '');
                       const postType = translatePostType(post.type_post || '');
                       const postTime = getRelativeTime(post.created_at);
-                      const isParticipating = !!campaignParticipation[post.id];
-                      const hasConfirmedProblem = !!confirmedProblems[post.id];
-
-                      // Debug para enquetes
-                      if (postType === 'Enquete') {
-                        console.log(`📊 [PROFILE POLL DEBUG] Post "${post.title}":`, {
-                          type: postType,
-                          poll_question: post.poll_question,
-                          poll_options_count: Array.isArray(post.poll_options) ? post.poll_options.length : 0,
-                          poll_options: post.poll_options
-                        });
-                      }
+                      const isParticipating = !!((post as any).alreadyParticipating || localCampaignParticipation[post.id] || campaignParticipation[post.id]);
+                      const hasConfirmedProblem = !!(confirmedProblems[post.id] || ((post as any).confirmations_count ?? 0) > 0);
 
                       return (
                         <article
