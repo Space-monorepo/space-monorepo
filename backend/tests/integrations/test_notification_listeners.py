@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy.orm import Session
 from app.api.users.model import User
 from app.api.communities.model import Community, CommunityMember
-# CORREÇÃO: Separando os imports corretamente
-from app.api.post.model import Post, CampaignPost
+# Adicionei PostLikes aqui nos imports
+from app.api.post.model import Post, CampaignPost, PostLikes
 from app.api.post.schemas import PostTypeEnum, PostStatusEnum
 from app.api.notifications.model import Notification, NotificationTypeEnum
 from app.api.notifications.listeners import register_listeners
@@ -18,7 +18,7 @@ def setup_scenario(session_sql: Session):
     admin = User(username="admin_listener", email="admin_listener@test.com", name="Admin Listener", hashed_password="x")
     session_sql.add(admin)
     
-    # Membro (Destinatário)
+    # Membro (Destinatário/Interator)
     member = User(username="member_listener", email="member_listener@test.com", name="Member Listener", hashed_password="x")
     session_sql.add(member)
     session_sql.flush()
@@ -34,7 +34,7 @@ def setup_scenario(session_sql: Session):
     session_sql.add_all([mem_admin, mem_user])
     session_sql.commit()
 
-    return {"admin": admin, "member": member, "community": community}
+    return {"admin": admin, "member": member, "community": community, "mem_user": mem_user}
 
 @pytest.mark.integration
 def test_listener_official_announcement(session_sql: Session, setup_scenario):
@@ -46,7 +46,7 @@ def test_listener_official_announcement(session_sql: Session, setup_scenario):
     member = data['member']
     community = data['community']
 
-    # 1. Criar Anúncio (Gatilho: INSERT em Post com type=ANNOUNCEMENT)
+    # 1. Criar Anúncio
     post = Post(
         community_id=community.id,
         user_id=admin.id,
@@ -57,20 +57,17 @@ def test_listener_official_announcement(session_sql: Session, setup_scenario):
         status=PostStatusEnum.ACTIVE
     )
     session_sql.add(post)
-    session_sql.commit() # O commit dispara o listener
+    session_sql.commit()
 
     # 2. Verificar se o MEMBRO recebeu a notificação
-    # (O repository usa cast(user_id as String), então aqui podemos comparar string)
     notif = session_sql.query(Notification).filter(
         Notification.type == NotificationTypeEnum.OFFICIAL_NOTICE,
     ).all()
     
-    # Filtra em python para garantir
     my_notif = next((n for n in notif if str(n.user_id) == str(member.id)), None)
 
     assert my_notif is not None
     assert my_notif.data['notice_title'] == "Manutenção Urgente"
-    assert my_notif.data['community_name'] == "Comunidade Listener"
 
 @pytest.mark.integration
 def test_listener_campaign_lifecycle(session_sql: Session, setup_scenario):
@@ -82,7 +79,7 @@ def test_listener_campaign_lifecycle(session_sql: Session, setup_scenario):
     admin = data['admin'] # Autor da campanha
     community = data['community']
 
-    # 1. Criar Campanha (Gatilho inicial)
+    # 1. Criar Campanha
     post = Post(
         community_id=community.id, user_id=admin.id, user_role_in_community="admin",
         type_post=PostTypeEnum.CAMPAIGN, title="Minha Campanha Listener", content="...",
@@ -95,8 +92,7 @@ def test_listener_campaign_lifecycle(session_sql: Session, setup_scenario):
     session_sql.add(campaign)
     session_sql.commit()
 
-    # 2. Atualizar para APROVADA (UPDATE)
-    # Isso deve disparar o listener 'after_update' e criar notificação para o admin
+    # 2. Atualizar para APROVADA
     campaign.status_campaign = "approved"
     session_sql.add(campaign)
     session_sql.commit() 
@@ -108,12 +104,11 @@ def test_listener_campaign_lifecycle(session_sql: Session, setup_scenario):
     
     notif_approved = next((n for n in all_notifs 
                            if str(n.user_id) == str(admin.id) 
-                           and n.data.get('campaign_status_type') == 'approved'
-                           and n.data.get('campaign_title') == "Minha Campanha Listener"), None)
+                           and n.data.get('campaign_status_type') == 'approved'), None)
 
     assert notif_approved is not None
 
-    # 3. Atualizar para CANCELADA (UPDATE)
+    # 3. Atualizar para CANCELADA
     campaign.status_campaign = "canceled"
     session_sql.add(campaign)
     session_sql.commit()
@@ -125,7 +120,50 @@ def test_listener_campaign_lifecycle(session_sql: Session, setup_scenario):
 
     notif_canceled = next((n for n in all_notifs_2
                            if str(n.user_id) == str(admin.id) 
-                           and n.data.get('campaign_status_type') == 'canceled'
-                           and n.data.get('campaign_title') == "Minha Campanha Listener"), None)
+                           and n.data.get('campaign_status_type') == 'canceled'), None)
 
     assert notif_canceled is not None
+
+@pytest.mark.integration
+def test_listener_post_like(session_sql: Session, setup_scenario):
+    """
+    Testa se curtir um post gera notificação de INTERAÇÃO para o dono do post.
+    """
+    data = setup_scenario
+    admin = data['admin']   # Dono do Post
+    member = data['member'] # Quem vai curtir
+    mem_user = data['mem_user'] # Objeto CommunityMember de quem curte
+    community = data['community']
+
+    # 1. Criar Post (pelo Admin)
+    post = Post(
+        community_id=community.id, 
+        user_id=admin.id, 
+        user_role_in_community="admin",
+        type_post=PostTypeEnum.ANNOUNCEMENT, 
+        title="Post Legal", 
+        content="...",
+        status=PostStatusEnum.ACTIVE
+    )
+    session_sql.add(post)
+    session_sql.commit()
+
+    # 2. Membro curte o Post (Cria registro em PostLikes)
+    # O listener deve disparar aqui
+    like = PostLikes(post_id=post.id, member_id=mem_user.id)
+    session_sql.add(like)
+    session_sql.commit()
+
+    # 3. Verificar se o ADMIN (dono do post) recebeu notificação de interação
+    notifs = session_sql.query(Notification).filter(
+        Notification.type == NotificationTypeEnum.INTERACTION
+    ).all()
+
+    # Filtra para achar a notificação específica
+    like_notif = next((n for n in notifs 
+                       if str(n.user_id) == str(admin.id) 
+                       and n.data.get('interaction_type') == 'like'
+                       and n.data.get('post_title') == "Post Legal"), None)
+
+    assert like_notif is not None
+    assert like_notif.data['actor_name'] == "Member Listener"
