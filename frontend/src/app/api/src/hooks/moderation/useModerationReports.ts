@@ -285,7 +285,8 @@ const useModerationReports = () => {
               status: "reported",
               report_count: brief.report_count,
               likes_count: brief.likes_count,
-              created_at: brief.commented_at,
+              created_at:
+                brief.published_at || brief.commented_at || new Date().toISOString(),
               parent_id: brief.parent_id,
               user: {
                 id: brief.member.id,
@@ -309,7 +310,8 @@ const useModerationReports = () => {
               status: "reported",
               report_count: brief.report_count,
               likes_count: brief.likes_count,
-              created_at: brief.commented_at,
+              created_at:
+                brief.published_at || brief.commented_at || new Date().toISOString(),
               parent_id: brief.parent_id,
               user: {
                 id: brief.member.id,

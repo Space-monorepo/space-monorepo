@@ -79,6 +79,7 @@ function CommentsSection({
     likeComment,
     unlikeComment,
     reportMember,
+    reportComment,
   } = usePostActions();
   const [likedComments, setLikedComments] = React.useState<{
     [key: string]: boolean;
@@ -215,23 +216,46 @@ function CommentsSection({
   };
 
   const handleReportMember = async (comment: Comment) => {
-    const reportedMemberId =
-      ((comment.member as any)?.id) ?? ((comment.user as any)?.id) ?? null;
-    if (!reportedMemberId) {
-      toast.error("Não foi possível identificar o membro deste comentário.");
-      return;
+    const reportedMemberId = (comment.member as any)?.id
+    const reportedUserId =
+      (comment.member as any)?.user_id ||
+      (comment.user as any)?.id ||
+      (comment.user as any)?.user_id ||
+      null
+
+    if (!reportedMemberId && !reportedUserId) {
+      toast.error("Não foi possível identificar o membro deste comentário.")
+      return
     }
     try {
-      await reportMember(
+      await reportMember({
         communityId,
-        reportedMemberId,
-        "other",
-        `Comentário reportado: ${comment.content}`.slice(0, 140),
-      );
+        reportedMemberId: reportedMemberId || undefined,
+        reportedUserId: reportedUserId || undefined,
+        reason: "other",
+        description: `Comentário reportado: ${comment.content}`.slice(0, 140),
+      })
       toast.success("Denúncia enviada.");
     } catch (err) {
       console.error(err);
       toast.error("Erro ao reportar o membro.");
+    } finally {
+      setCommentMenuOpen(null);
+    }
+  };
+
+  const handleReportComment = async (comment: Comment) => {
+    try {
+      await reportComment(
+        communityId,
+        comment.id,
+        "other",
+        `Comentário reportado: ${comment.content}`.slice(0, 140),
+      );
+      toast.success("Comentário reportado.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao reportar o comentário.");
     } finally {
       setCommentMenuOpen(null);
     }
@@ -328,7 +352,7 @@ function CommentsSection({
                 <OverflowMenuHorizontal className="h-4 w-4 text-gray-500" />
               </button>
               {commentMenuOpen === comment.id && (
-                <div className="absolute right-0 top-6 z-20 mt-1 w-44 bg-white border border-gray-200 rounded shadow-lg">
+                <div className="absolute right-0 top-6 z-20 mt-1 w-48 bg-white border border-gray-200 rounded shadow-lg overflow-hidden">
                   <button
                     className="w-full text-left px-4 py-2 text-sm cursor-pointer text-red-600 hover:bg-gray-100"
                     onClick={(e) => {
@@ -337,6 +361,15 @@ function CommentsSection({
                     }}
                   >
                     Reportar membro
+                  </button>
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm cursor-pointer text-red-600 hover:bg-gray-100 border-t border-gray-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReportComment(comment);
+                    }}
+                  >
+                    Reportar comentário
                   </button>
                 </div>
               )}
@@ -644,7 +677,7 @@ export default function PostList() {
   const loadingRef = useRef<HTMLDivElement>(null);
   const pullStartYRef = useRef<number | null>(null);
 
-  const { likePost, unlikePost, addComment, sharePost } = usePostActions();
+  const { likePost, unlikePost, addComment, sharePost, reportMember } = usePostActions();
 
   const {
     participating,
@@ -882,6 +915,34 @@ export default function PostList() {
   }, [loadInitialPosts]);
 
   const loadMorePosts = useCallback(async () => {
+  const handleReportPostMember = useCallback(
+    async (post: PostDisplay) => {
+      try {
+        const communityId = post.community?.id;
+        const postUserId = post.user?.id;
+
+        if (!communityId || !postUserId) {
+          toast.error("Não foi possível identificar o autor do post.");
+          return;
+        }
+
+        await reportMember({
+          communityId,
+          reportedUserId: postUserId,
+          reason: "other",
+          description: `Post reportado: ${post.title}`.slice(0, 140),
+        });
+        toast.success("Denúncia enviada.");
+      } catch (error) {
+        console.error(error);
+        toast.error("Erro ao reportar o membro.");
+      } finally {
+        setOpenMenuPostId(null);
+      }
+    },
+    [reportMember],
+  );
+
     if (loadingMore || !hasMorePosts) return;
     setLoadingMore(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -1556,12 +1617,12 @@ export default function PostList() {
                         </button>
                         {openMenuPostId === post.id && (
                           <div
-                            className="absolute right-0 z-20 mt-2 w-40 bg-white border border-gray-200 rounded shadow-lg animate-fade-in"
+                            className="absolute right-0 z-20 mt-2 w-44 bg-white border border-gray-200 rounded shadow-lg animate-fade-in overflow-hidden"
                             tabIndex={-1}
                             onBlur={() => setOpenMenuPostId(null)}
                           >
                             <button
-                              className="w-full text-left px-4 py-2 text-sm cursor-pointer text-red-600 hover:bg-gray-100 rounded"
+                              className="w-full text-left px-4 py-2 text-sm cursor-pointer text-red-600 hover:bg-gray-100"
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 setOpenMenuPostId(null);
@@ -1578,6 +1639,15 @@ export default function PostList() {
                               }}
                             >
                               Reportar post
+                            </button>
+                            <button
+                              className="w-full text-left px-4 py-2 text-sm cursor-pointer text-red-600 hover:bg-gray-100 border-t border-gray-200"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReportPostMember(post);
+                              }}
+                            >
+                              Reportar membro
                             </button>
                           </div>
                         )}

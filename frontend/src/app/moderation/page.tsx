@@ -198,6 +198,25 @@ type Poll = {
   comments?: number;
 };
 
+const formatDisplayDate = (value?: string) => {
+  if (!value) {
+    return "Data indisponível";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Data indisponível";
+  }
+
+  return parsed.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export default function ModerationPage() {
   // --- Estados para exibir lista de reportes ---
   // Modal states
@@ -788,7 +807,7 @@ export default function ModerationPage() {
                           Data publicada:
                         </span>
                         <time className="self-stretch my-auto text-neutral-500">
-                          {report.reportedComment.date}
+                          {formatDisplayDate(report.reportedComment.date)}
                         </time>
                       </div>
                     </div>
@@ -1505,7 +1524,7 @@ export default function ModerationPage() {
             profile_picture: apiComment.user?.profile_picture,
             role: apiComment.user?.role || "member",
           },
-          date: new Date(apiComment.created_at).toLocaleDateString("pt-BR"),
+          date: apiComment.created_at,
           postTitle: apiComment.post?.title || "Post não encontrado",
           likes: apiComment.likes_count || 0,
         },

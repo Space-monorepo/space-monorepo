@@ -92,6 +92,24 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
     };
   };
 
+  const fetchMemberIdByUser = async (
+    communityId: string,
+    token: string,
+    targetUserId: string
+  ): Promise<string> => {
+    const response = await axios.get(
+      `${API_URL}/communities/${communityId}/member-association/${targetUserId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    )
+    const member = response.data
+    if (!member?.id) {
+      throw new Error("Usuário não é membro desta comunidade")
+    }
+    return member.id
+  }
+
   const createAnnouncement = async (data: AnnouncementData) => {
     // ... (sua lógica para createAnnouncement, precisa verificar se usa FormData ou JSON)
     // Se create-post no backend espera FormData com 'files', então está ok.
@@ -582,42 +600,49 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
     },
     likeComment,
     unlikeComment,
-    reportMember: async (
-      communityId: string,
-      reportedMemberId: string,
-      reason: string = "other",
-      description: string = "Denúncia enviada pelos comentários.",
-    ) => {
+    reportMember: async ({
+      communityId,
+      reportedMemberId,
+      reportedUserId,
+      reason = "other",
+      description = "Denúncia enviada pelos comentários.",
+    }: {
+      communityId: string
+      reportedMemberId?: string
+      reportedUserId?: string
+      reason?: string
+      description?: string
+    }) => {
       setIsLoading(true);
       try {
         const { token, userId } = await getBasePostData();
-        const membersResponse = await axios.get(
-          `${API_URL}/communities/${communityId}/members`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            params: { user_id: userId },
-          }
+        const reporterMemberId = await fetchMemberIdByUser(
+          communityId,
+          token,
+          userId,
         );
-        const memberItems = membersResponse.data?.items || [];
-        if (!memberItems.length) {
-          throw new Error("Usuário não é membro desta comunidade");
+
+        let targetMemberId = reportedMemberId;
+        if (!targetMemberId) {
+          if (!reportedUserId) {
+            throw new Error("ID do membro reportado não informado.");
+          }
+          targetMemberId = await fetchMemberIdByUser(
+            communityId,
+            token,
+            reportedUserId,
+          );
         }
 
-        const reporterMember =
-          memberItems.find(
-            (member: any) =>
-              member?.user_id === userId || member?.user?.id === userId
-          ) || memberItems[0];
-
         const payload = {
-          reporter_id: reporterMember.id,
+          reporter_id: reporterMemberId,
           type: "member_report",
           reason,
           description,
         };
 
         await axios.post(
-          `${API_URL}/reports/${communityId}/create-report-member/${reportedMemberId}`,
+          `${API_URL}/reports/${communityId}/create-report-member/${targetMemberId}`,
           payload,
           {
             headers: {
@@ -629,8 +654,59 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
 
         toast.success("Membro reportado com sucesso.");
       } catch (error) {
-        console.error("Erro ao reportar membro:", error);
-        toast.error("Erro ao reportar membro.");
+        const errorMessage =
+          axios.isAxiosError(error)
+            ? error.response?.data?.detail || "Erro ao reportar membro."
+            : "Erro ao reportar membro."
+        console.error("Erro ao reportar membro:", error)
+        toast.error(errorMessage)
+        onError?.(error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    reportComment: async (
+      communityId: string,
+      commentId: string,
+      reason: string = "other",
+      description: string = "Comentário reportado.",
+    ) => {
+      setIsLoading(true);
+      try {
+        const { token, userId } = await getBasePostData();
+        const reporterMemberId = await fetchMemberIdByUser(
+          communityId,
+          token,
+          userId,
+        );
+
+        const payload = {
+          reporter_id: reporterMemberId,
+          type: "comment_report",
+          reason,
+          description,
+        };
+
+        await axios.post(
+          `${API_URL}/reports/${communityId}/create-report-comment/${commentId}`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        toast.success("Comentário reportado com sucesso.");
+      } catch (error) {
+        const errorMessage =
+          axios.isAxiosError(error)
+            ? error.response?.data?.detail || "Erro ao reportar comentário."
+            : "Erro ao reportar comentário."
+        console.error("Erro ao reportar comentário:", error)
+        toast.error(errorMessage)
         onError?.(error);
         throw error;
       } finally {

@@ -110,3 +110,20 @@ def list_community_moderators(
 ) -> PaginationResponse[CommunityMemberResponse]:
     with TransactionManager(session) as tm:
         return CommunityService(tm).list_moderators(community_id, params)
+
+
+@router.get(
+    '/{community_id}/member-association/{user_id}',
+    response_model=CommunityMemberResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_member_association_route(
+    community_id: str,
+    user_id: str,
+    session: Session = Depends(get_db),
+    _: UserResponse = Depends(get_current_user),
+) -> CommunityMemberResponse:
+    with TransactionManager(session) as tm:
+        service = CommunityService(tm)
+        member = service.get_member_association(UUID(user_id), UUID(community_id))
+        return service._map_member_to_response(member)
