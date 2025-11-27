@@ -372,8 +372,6 @@ export default function ComunidadesPage() {
                     "Sobre",
                     "Membros",
                     "Moderadores",
-                    "Discussão",
-                    "Avaliações",
                   ].map((tab) => (
                     <button
                       key={tab}
@@ -646,24 +644,6 @@ export default function ComunidadesPage() {
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
-
-                {activeTab === "Discussão" && (
-                  <div
-                    className="border border-[#e0e0e0] bg-white p-4 flex items-center justify-center text-center text-[#525252]"
-                    style={{ maxHeight: contentMaxHeight }}
-                  >
-                    Discussões da comunidade aparecerão aqui.
-                  </div>
-                )}
-
-                {activeTab === "Avaliações" && (
-                  <div
-                    className="border border-[#e0e0e0] bg-white p-4 flex items-center justify-center text-center text-[#525252]"
-                    style={{ maxHeight: contentMaxHeight }}
-                  >
-                    Avaliações da comunidade aparecerão aqui.
                   </div>
                 )}
               </div>
