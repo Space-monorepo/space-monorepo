@@ -2,6 +2,27 @@ import { API_URL } from '@/config'
 import { PostsListFeed, PostResponse } from '@/app/api/src/types/posts/Post'
 import { NotificationsResponse, CampaignNotification, AnnouncementNotification, ConnectionNotification, InteractionNotification } from '@/app/api/src/types/notifications/Notification'
 
+// Helper function to fetch post details
+const fetchPostDetails = async (token: string, communityId: string, postId: string): Promise<any | null> => {
+    try {
+        const response = await fetch(`${API_URL}/posts/${communityId}/post/${postId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+        })
+
+        if (!response.ok) {
+            return null
+        }
+
+        return await response.json()
+    } catch (error) {
+        return null
+    }
+}
+
 // Buscar campanhas usando a rota de notificações
 export const fetchCampaigns = async (token: string, communityId: string): Promise<CampaignNotification[]> => {
     try {
@@ -19,12 +40,15 @@ export const fetchCampaigns = async (token: string, communityId: string): Promis
 
         const notifications = await response.json()
 
-        return notifications.map((n: any) => {
+        // Fetch post details for each campaign notification to get real-time stats
+        const campaignNotifications = await Promise.all(notifications.map(async (n: any) => {
             const d = n.data || {}
 
             const campaignTitle = d.campaign_title || 'Campanha'
             const communityName = d.community_name || 'Comunidade'
             const campaignStatusType = d.campaign_status_type || 'default'
+            const postId = d.post_id
+            const notificationCommunityId = d.community_id
 
             let status = 'pending'
             if (campaignStatusType === 'approved') status = 'approved'
@@ -33,39 +57,76 @@ export const fetchCampaigns = async (token: string, communityId: string): Promis
             else if (campaignStatusType === 'finished') status = 'finished'
             else if (campaignStatusType === 'target_reached') status = 'under_review'
 
+            // Default stats from notification data
+            let stats = {
+                published: new Date(n.created_at).toLocaleDateString('pt-BR'),
+                accesses: 0,
+                participants: d.current_participants || 0,
+                likes: 0,
+                comments: 0
+            }
+
+            let postDetails = null
+            let imageUrl = d.image_url || undefined
+            let description = n.message || d.feedback_content || ''
+            let authorData = {
+                id: d.actor_id || '',
+                name: d.actor_name || 'Usuário',
+                username: d.actor_username || 'user',
+                profile_picture: d.actor_picture || null,
+                role: d.actor_role || 'member'
+            }
+
+            // If we have post_id and community_id, fetch actual post details
+            if (postId && notificationCommunityId) {
+                postDetails = await fetchPostDetails(token, notificationCommunityId, postId)
+                if (postDetails) {
+                    stats = {
+                        published: new Date(postDetails.created_at).toLocaleDateString('pt-BR'),
+                        accesses: postDetails.views_count || 0,
+                        participants: d.current_participants || 0,
+                        likes: postDetails.likes_count || 0,
+                        comments: postDetails.comments_count || 0
+                    }
+                    imageUrl = postDetails.image_url || imageUrl
+                    description = postDetails.content || description
+
+                    if (postDetails.user) {
+                        authorData = {
+                            id: postDetails.user.id || authorData.id,
+                            name: postDetails.user.name || authorData.name,
+                            username: postDetails.user.username || authorData.username,
+                            profile_picture: postDetails.user.profile_picture || authorData.profile_picture,
+                            role: postDetails.user.role || authorData.role
+                        }
+                    }
+                }
+            }
+
             return {
                 id: n.id,
                 type: 'Campanha',
                 title: campaignTitle,
-                author: {
-                    id: d.actor_id || '',
-                    name: d.actor_name || 'Usuário',
-                    username: d.actor_username || 'user',
-                    profile_picture: d.actor_picture || null,
-                    role: d.actor_role || 'member'
-                },
+                author: authorData,
                 community: {
-                    id: d.community_id || '',
+                    id: notificationCommunityId || '',
                     name: communityName
                 },
                 date: new Date(n.created_at).toLocaleDateString('pt-BR'),
                 created_at: n.created_at,
                 updated_at: n.created_at,
                 time: '0',
-                description: n.message || d.feedback_content || '',
+                description: description,
                 status: status,
-                stats: {
-                    published: new Date(n.created_at).toLocaleDateString('pt-BR'),
-                    accesses: 0,
-                    participants: d.current_participants || 0,
-                    likes: 0,
-                    comments: 0
-                },
-                image_url: d.image_url || undefined,
+                stats: stats,
+                image_url: imageUrl,
                 target_participants: d.target_participants || 0,
-                current_participants: d.current_participants || 0
+                current_participants: d.current_participants || 0,
+                post_id: postId
             } as CampaignNotification
-        })
+        }))
+
+        return campaignNotifications
     } catch (error) {
         return []
     }
@@ -88,43 +149,82 @@ export const fetchAnnouncements = async (token: string, communityId?: string): P
 
         const notifications = await response.json()
 
-        return notifications.map((n: any) => {
+        // Fetch post details for each announcement notification to get real-time stats
+        const announcementNotifications = await Promise.all(notifications.map(async (n: any) => {
             const d = n.data || {}
 
             const noticeTitle = d.notice_title || 'Aviso'
             const noticeContent = d.notice_content || n.message || ''
+            const postId = d.post_id
+            const notificationCommunityId = d.community_id || communityId
+
+            // Default stats
+            let stats = {
+                published: new Date(n.created_at).toLocaleDateString('pt-BR'),
+                accesses: 0,
+                participants: 0,
+                likes: 0,
+                comments: 0
+            }
+
+            let imageUrl = d.image_url || undefined
+            let description = noticeContent
+            let authorData = {
+                id: d.actor_id || '',
+                name: d.actor_name || 'Administração',
+                username: d.actor_username || 'admin',
+                profile_picture: d.actor_picture || null,
+                role: d.actor_role || 'admin'
+            }
+
+            // If we have post_id and community_id, fetch actual post details
+            if (postId && notificationCommunityId) {
+                const postDetails = await fetchPostDetails(token, notificationCommunityId, postId)
+                if (postDetails) {
+                    stats = {
+                        published: new Date(postDetails.created_at).toLocaleDateString('pt-BR'),
+                        accesses: postDetails.views_count || 0,
+                        participants: 0,
+                        likes: postDetails.likes_count || 0,
+                        comments: postDetails.comments_count || 0
+                    }
+                    imageUrl = postDetails.image_url || imageUrl
+                    description = postDetails.content || description
+
+                    if (postDetails.user) {
+                        authorData = {
+                            id: postDetails.user.id || authorData.id,
+                            name: postDetails.user.name || authorData.name,
+                            username: postDetails.user.username || authorData.username,
+                            profile_picture: postDetails.user.profile_picture || authorData.profile_picture,
+                            role: postDetails.user.role || authorData.role
+                        }
+                    }
+                }
+            }
 
             return {
                 id: n.id,
                 type: 'Anúncio',
                 title: noticeTitle,
-                author: {
-                    id: d.actor_id || '',
-                    name: d.actor_name || 'Administração',
-                    username: d.actor_username || 'admin',
-                    profile_picture: d.actor_picture || null,
-                    role: d.actor_role || 'admin'
-                },
+                author: authorData,
                 community: {
-                    id: d.community_id || communityId || '',
+                    id: notificationCommunityId || '',
                     name: d.community_name || ''
                 },
                 date: new Date(n.created_at).toLocaleDateString('pt-BR'),
                 created_at: n.created_at,
                 updated_at: n.created_at,
                 time: '0',
-                description: noticeContent,
-                image_url: d.image_url || undefined,
-                stats: {
-                    published: new Date(n.created_at).toLocaleDateString('pt-BR'),
-                    accesses: 0,
-                    participants: 0,
-                    likes: 0,
-                    comments: 0
-                },
-                actions: ['Promover', 'Comentar']
+                description: description,
+                image_url: imageUrl,
+                stats: stats,
+                actions: ['Promover', 'Comentar'],
+                post_id: postId
             } as AnnouncementNotification
-        })
+        }))
+
+        return announcementNotifications
     } catch (error) {
         return []
     }
@@ -305,10 +405,9 @@ export const fetchInteractions = async (token: string): Promise<InteractionNotif
 // Buscar todas as notificações
 export const fetchNotifications = async (token: string, communityId?: string): Promise<NotificationsResponse> => {
     try {
-        const campaignsPromise = communityId ? fetchCampaigns(token, communityId) : Promise.resolve([]);
-
+        // Always fetch campaigns - the post_id and community_id are in the notification data
         const [campaigns, announcements, connections, interactions] = await Promise.all([
-            campaignsPromise,
+            fetchCampaigns(token, communityId || ''),
             fetchAnnouncements(token, communityId),
             fetchConnections(token),
             fetchInteractions(token)
