@@ -2,9 +2,14 @@ import { API_URL } from '@/config'
 import { PostsListFeed, PostResponse } from '@/app/api/src/types/posts/Post'
 import { NotificationsResponse, CampaignNotification, AnnouncementNotification, ConnectionNotification, InteractionNotification } from '@/app/api/src/types/notifications/Notification'
 
-// Helper function to fetch post details
-const fetchPostDetails = async (token: string, communityId: string, postId: string): Promise<any | null> => {
+// Helper function to fetch post details with proper typing
+const fetchPostDetails = async (token: string, communityId: string, postId: string): Promise<PostResponse | null> => {
     try {
+        // Skip fetch if communityId or postId is empty
+        if (!communityId || !postId) {
+            return null
+        }
+
         const response = await fetch(`${API_URL}/posts/${communityId}/post/${postId}`, {
             method: 'GET',
             headers: {
@@ -14,17 +19,19 @@ const fetchPostDetails = async (token: string, communityId: string, postId: stri
         })
 
         if (!response.ok) {
+            console.warn(`Failed to fetch post details for post ${postId}: ${response.status}`)
             return null
         }
 
-        return await response.json()
+        return await response.json() as PostResponse
     } catch (error) {
+        console.warn(`Error fetching post details for post ${postId}:`, error)
         return null
     }
 }
 
 // Buscar campanhas usando a rota de notificações
-export const fetchCampaigns = async (token: string, communityId: string): Promise<CampaignNotification[]> => {
+export const fetchCampaigns = async (token: string): Promise<CampaignNotification[]> => {
     try {
         const response = await fetch(`${API_URL}/notifications?type=CAMPAIGN`, {
             method: 'GET',
@@ -83,8 +90,8 @@ export const fetchCampaigns = async (token: string, communityId: string): Promis
                 if (postDetails) {
                     stats = {
                         published: new Date(postDetails.created_at).toLocaleDateString('pt-BR'),
-                        accesses: postDetails.views_count || 0,
-                        participants: d.current_participants || 0,
+                        accesses: 0, // Views/accesses not currently tracked in backend
+                        participants: postDetails.current_participants || d.current_participants || 0,
                         likes: postDetails.likes_count || 0,
                         comments: postDetails.comments_count || 0
                     }
@@ -121,7 +128,7 @@ export const fetchCampaigns = async (token: string, communityId: string): Promis
                 stats: stats,
                 image_url: imageUrl,
                 target_participants: d.target_participants || 0,
-                current_participants: d.current_participants || 0,
+                current_participants: postDetails?.current_participants || d.current_participants || 0,
                 post_id: postId
             } as CampaignNotification
         }))
@@ -183,7 +190,7 @@ export const fetchAnnouncements = async (token: string, communityId?: string): P
                 if (postDetails) {
                     stats = {
                         published: new Date(postDetails.created_at).toLocaleDateString('pt-BR'),
-                        accesses: postDetails.views_count || 0,
+                        accesses: 0, // Views/accesses not currently tracked in backend
                         participants: 0,
                         likes: postDetails.likes_count || 0,
                         comments: postDetails.comments_count || 0
@@ -405,9 +412,9 @@ export const fetchInteractions = async (token: string): Promise<InteractionNotif
 // Buscar todas as notificações
 export const fetchNotifications = async (token: string, communityId?: string): Promise<NotificationsResponse> => {
     try {
-        // Always fetch campaigns - the post_id and community_id are in the notification data
+        // Fetch all notification types - campaign and announcement data includes post_id and community_id
         const [campaigns, announcements, connections, interactions] = await Promise.all([
-            fetchCampaigns(token, communityId || ''),
+            fetchCampaigns(token),
             fetchAnnouncements(token, communityId),
             fetchConnections(token),
             fetchInteractions(token)
