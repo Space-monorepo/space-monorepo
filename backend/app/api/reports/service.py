@@ -143,7 +143,8 @@ class ReportService:
                     reason=reason,
                     reports_count=reports_count,
                     member_reputation=member.reputation,
-                    member_popularity=0.0,  # TODO: Add popularity after
+                    member_reputation_level=member.reputation_level,
+                    member_popularity=member.popularity,
                     member_entry_date=member.entered_in,
                 )
             )

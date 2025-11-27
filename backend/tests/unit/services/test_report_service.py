@@ -782,7 +782,9 @@ def test_list_member_brief_reports_service_success():
     fake_member_1.name = 'Member 1'
     fake_member_1.role = CommunityMemberRoleEnum.MEMBER
     fake_member_1.reputation = 50
+    fake_member_1.reputation_level = 'helper'
     fake_member_1.entered_in = datetime.now(timezone.utc)
+    fake_member_1.popularity = 100.0
 
     fake_member_2 = Mock(spec=CommunityMember)
     fake_member_2.id = fake_member_id_2
@@ -790,7 +792,9 @@ def test_list_member_brief_reports_service_success():
     fake_member_2.name = 'Member 2'
     fake_member_2.role = CommunityMemberRoleEnum.MEMBER
     fake_member_2.reputation = 30
+    fake_member_2.reputation_level = 'under_observation'
     fake_member_2.entered_in = datetime.now(timezone.utc)
+    fake_member_2.popularity = 50.0
 
     # Mock dos users
     fake_user_1 = Mock(spec=User)

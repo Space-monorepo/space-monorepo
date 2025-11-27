@@ -99,6 +99,7 @@ def test_report_member_schema():
     )
     reports_count = 10
     member_reputation = 100
+    member_reputation_level = 'helper'
     member_popularity = 0.5
 
     member_brief_report = MemberBriefReport(
@@ -106,6 +107,7 @@ def test_report_member_schema():
         reason=reason,
         reports_count=reports_count,
         member_reputation=member_reputation,
+        member_reputation_level=member_reputation_level,
         member_popularity=member_popularity,
         member_entry_date=created_at,
     )
@@ -115,6 +117,7 @@ def test_report_member_schema():
         'reason': reason,
         'reports_count': reports_count,
         'member_reputation': member_reputation,
+        'member_reputation_level': member_reputation_level,
         'member_popularity': member_popularity,
         'member_entry_date': created_at,
     }

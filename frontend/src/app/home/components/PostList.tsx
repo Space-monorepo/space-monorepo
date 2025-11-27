@@ -687,7 +687,7 @@ export default function PostList() {
             userVotedOptionId,
             confirmations_count:
               translatePostType(item.type_post) === "Denúncia" &&
-              typeof (item as any).confirmations_count === "number"
+                typeof (item as any).confirmations_count === "number"
                 ? (item as any).confirmations_count
                 : 0,
           };
@@ -750,13 +750,15 @@ export default function PostList() {
                     optionsMap[o.id] = o;
                   });
                   // Mantém a ordem das opções existentes, atualizando apenas os dados
-                  mergedPollOptions = existing.poll_options.map(
-                    (o: any) => optionsMap[o.id] ?? o,
-                  );
+                  mergedPollOptions = existing.poll_options.map((o: any) => optionsMap[o.id] ?? o) as any[];
+                  // Garantir que mergedPollOptions é um array para evitar erros de tipagem
+                  if (!Array.isArray(mergedPollOptions)) {
+                    mergedPollOptions = [] as any[];
+                  }
                   // Adiciona quaisquer novas opções que não existiam antes
                   fetchedPollOptions.forEach((o: any) => {
-                    if (!mergedPollOptions.some((m: any) => m.id === o.id)) {
-                      mergedPollOptions.push(o);
+                    if (!mergedPollOptions!.some((m: any) => m.id === o.id)) {
+                      mergedPollOptions!.push(o);
                     }
                   });
                 } else {
@@ -1077,11 +1079,11 @@ export default function PostList() {
     // Atualização otimista imediata
     const optimisticOptions = Array.isArray(post.poll_options)
       ? post.poll_options.map((o: any) => {
-          if (o.id === post.userVotedOptionId) {
-            return { ...o, votes_count: Math.max(0, (o.votes_count || 0) - 1) };
-          }
-          return { ...o };
-        })
+        if (o.id === post.userVotedOptionId) {
+          return { ...o, votes_count: Math.max(0, (o.votes_count || 0) - 1) };
+        }
+        return { ...o };
+      })
       : [];
 
     updatePollState(post.id, optimisticOptions, undefined);
@@ -1151,20 +1153,20 @@ export default function PostList() {
     // Atualização otimista imediata - decrementa voto anterior e incrementa novo
     const optimisticOptions = Array.isArray(post.poll_options)
       ? post.poll_options.map((o: any) => {
-          let newVotesCount = o.votes_count || 0;
+        let newVotesCount = o.votes_count || 0;
 
-          // Decrementa o voto anterior (se existir)
-          if (previousVotedId && o.id === previousVotedId) {
-            newVotesCount = Math.max(0, newVotesCount - 1);
-          }
+        // Decrementa o voto anterior (se existir)
+        if (previousVotedId && o.id === previousVotedId) {
+          newVotesCount = Math.max(0, newVotesCount - 1);
+        }
 
-          // Incrementa o novo voto
-          if (o.id === optionId) {
-            newVotesCount = newVotesCount + 1;
-          }
+        // Incrementa o novo voto
+        if (o.id === optionId) {
+          newVotesCount = newVotesCount + 1;
+        }
 
-          return { ...o, votes_count: newVotesCount };
-        })
+        return { ...o, votes_count: newVotesCount };
+      })
       : [];
 
     // Aplica atualização otimista imediatamente
@@ -1370,7 +1372,7 @@ export default function PostList() {
                                     return;
                                   }
                                   await reportPost(communityId, post.id);
-                                } catch {}
+                                } catch { }
                               }}
                             >
                               Reportar post
@@ -1508,16 +1510,16 @@ export default function PostList() {
                           {(() => {
                             const totalVotes = Array.isArray(post.poll_options)
                               ? post.poll_options.reduce(
-                                  (sum, opt) => sum + opt.votes_count,
-                                  0,
-                                )
+                                (sum, opt) => sum + opt.votes_count,
+                                0,
+                              )
                               : 0;
                             return (post.poll_options ?? []).map((option) => {
                               const percent =
                                 totalVotes > 0
                                   ? Math.round(
-                                      (option.votes_count / totalVotes) * 100,
-                                    )
+                                    (option.votes_count / totalVotes) * 100,
+                                  )
                                   : 0;
                               const isUserVote =
                                 post.userVotedOptionId === option.id;

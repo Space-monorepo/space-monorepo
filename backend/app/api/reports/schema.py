@@ -162,6 +162,9 @@ class MemberBriefReport(BaseModel):
     reason: ReportReasonEnum = Field(..., description='The reason of the report')
     reports_count: int = Field(..., description='The quantity of the reports')
     member_reputation: int = Field(..., description='The reputation of the member')
+    member_reputation_level: str = Field(
+        ..., description='The reputation level of the member'
+    )
     member_popularity: float = Field(
         ..., ge=0.0, description='The popularity of the member'
     )
@@ -183,6 +186,7 @@ class MemberBriefReport(BaseModel):
                     'reason': ReportReasonEnum.DISCRIMINATION,
                     'reports_count': 10,
                     'member_reputation': 100,
+                    'member_reputation_level': 'helper',
                     'member_popularity': 0.5,
                     'member_entry_date': '2021-01-01T00:00:00Z',
                 }
