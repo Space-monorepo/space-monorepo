@@ -211,24 +211,22 @@ function AnnouncementCommentsModal({
   const renderComment = (comment: Comment, isChild = false) => (
     <div
       key={comment.id}
-      className={`${
-        isChild
+      className={`${isChild
           ? "flex flex-wrap items-start self-end mt-6 max-w-full w-[592px]"
           : "flex flex-wrap justify-between w-full max-md:max-w-full"
-      }`}
+        }`}
     >
       <div className="flex flex-col items-center w-11">
         <img
           src={
             comment.user &&
-            (comment.user.profile_image_url || comment.user.profile_picture)
+              (comment.user.profile_image_url || comment.user.profile_picture)
               ? comment.user.profile_image_url || comment.user.profile_picture
               : "/no-profile-pic.png"
           }
           alt={`${comment.user.name} avatar`}
-          className={`object-contain w-11 aspect-square ${
-            isChild ? "rounded-[32px]" : ""
-          }`}
+          className={`object-contain w-11 aspect-square ${isChild ? "rounded-[32px]" : ""
+            }`}
         />
         {!isChild &&
           ((Array.isArray(comment.children) && comment.children.length > 0) ||
@@ -239,14 +237,12 @@ function AnnouncementCommentsModal({
       <div className="flex-1 shrink basis-0 min-w-60 max-md:max-w-full">
         <div className="flex flex-wrap gap-3 items-center py-3 w-full max-md:max-w-full">
           <div
-            className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${
-              isChild ? "w-[360px]" : "w-[380px]"
-            }`}
+            className={`flex items-center self-stretch my-auto min-w-60 text-neutral-800 ${isChild ? "w-[360px]" : "w-[380px]"
+              }`}
           >
             <div
-              className={`self-stretch my-auto min-w-60 ${
-                isChild ? "w-[360px]" : "w-[380px]"
-              }`}
+              className={`self-stretch my-auto min-w-60 ${isChild ? "w-[360px]" : "w-[380px]"
+                }`}
             >
               <div className="flex gap-2 items-center w-full h-[23px]">
                 <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
@@ -289,24 +285,21 @@ function AnnouncementCommentsModal({
         </div>
         <div className="px-3 mt-2 w-full max-md:max-w-full">
           <div
-            className={`flex ${
-              isChild ? "overflow-hidden " : ""
-            }gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-md:max-w-full`}
+            className={`flex ${isChild ? "overflow-hidden " : ""
+              }gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-md:max-w-full`}
           >
             <div className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-md:max-w-full">
               {comment.content}
             </div>
           </div>
           <div
-            className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${
-              isChild ? "whitespace-nowrap " : ""
-            }text-neutral-500 max-md:max-w-full`}
+            className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? "whitespace-nowrap " : ""
+              }text-neutral-500 max-md:max-w-full`}
           >
             <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5">
               <div
-                className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${
-                  isChild ? "" : "whitespace-nowrap"
-                }`}
+                className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? "" : "whitespace-nowrap"
+                  }`}
               >
                 <ArrowUp
                   className="object-contain shrink-0 self-stretch my-auto w-3 aspect-square cursor-pointer hover:opacity-70 transition-opacity text-neutral-500"
@@ -314,11 +307,10 @@ function AnnouncementCommentsModal({
                   aria-label="Curtir"
                 />
                 <div
-                  className={`self-stretch my-auto ${
-                    likedComments[comment.id]
+                  className={`self-stretch my-auto ${likedComments[comment.id]
                       ? "text-neutral-600"
                       : "text-neutral-500"
-                  }`}
+                    }`}
                 >
                   {comment.likes_count ?? 0}
                 </div>
@@ -340,17 +332,15 @@ function AnnouncementCommentsModal({
                 >
                   {isChild
                     ? "Responder"
-                    : `Responder${
-                        (Array.isArray(comment.children) &&
-                          comment.children.length > 0) ||
-                        (Array.isArray(comment.replies) &&
-                          comment.replies.length > 0)
-                          ? ` (${
-                              (comment.children?.length || 0) +
-                              (comment.replies?.length || 0)
-                            })`
-                          : ""
-                      }`}
+                    : `Responder${(Array.isArray(comment.children) &&
+                      comment.children.length > 0) ||
+                      (Array.isArray(comment.replies) &&
+                        comment.replies.length > 0)
+                      ? ` (${(comment.children?.length || 0) +
+                      (comment.replies?.length || 0)
+                      })`
+                      : ""
+                    }`}
                 </div>
               </div>
             </div>
@@ -733,8 +723,7 @@ export default function NotificacoesPage() {
 
       if (connectionData.status !== "pending") {
         toast.info(
-          `Esta conexão já foi ${
-            connectionData.status === "accepted" ? "aceita" : "rejeitada"
+          `Esta conexão já foi ${connectionData.status === "accepted" ? "aceita" : "rejeitada"
           }.`
         );
         return;
@@ -807,8 +796,7 @@ export default function NotificacoesPage() {
 
       if (connectionData.status !== "pending") {
         toast.info(
-          `Esta conexão já foi ${
-            connectionData.status === "accepted" ? "aceita" : "rejeitada"
+          `Esta conexão já foi ${connectionData.status === "accepted" ? "aceita" : "rejeitada"
           }.`
         );
         return;
@@ -982,11 +970,10 @@ export default function NotificacoesPage() {
                 return (
                   <button
                     key={tab}
-                    className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${
-                      activeTab === tab
+                    className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${activeTab === tab
                         ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
                         : "text-[#525252]"
-                    }`}
+                      }`}
                     onClick={() => handleTabChange(tab)}
                   >
                     <div className="flex items-center justify-between w-full">
@@ -1035,11 +1022,10 @@ export default function NotificacoesPage() {
                 {currentNotifications.map((notification, index) => (
                   <article
                     key={notification.id}
-                    className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${
-                      selectedNotification?.id === notification.id
+                    className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${selectedNotification?.id === notification.id
                         ? "bg-gray-100 hover:bg-zinc-100"
                         : "bg-white"
-                    }`}
+                      }`}
                     onClick={() => setSelectedNotification(notification)}
                   >
                     <div className="w-full">
@@ -1103,11 +1089,10 @@ export default function NotificacoesPage() {
                 {currentNotifications.map((notification, index) => (
                   <article
                     key={notification.id}
-                    className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${
-                      selectedNotification?.id === notification.id
+                    className={`flex flex-col justify-center px-6 py-4 w-full cursor-pointer hover:opacity-80 transition-opacity ${selectedNotification?.id === notification.id
                         ? "bg-gray-100 hover:bg-zinc-100"
                         : "bg-white"
-                    }`}
+                      }`}
                     onClick={() => setSelectedNotification(notification)}
                   >
                     <div className="w-full">
@@ -1350,7 +1335,7 @@ export default function NotificacoesPage() {
                                   <span className="self-stretch my-auto">
                                     {translateUserRole(
                                       selectedNotification.author.role ||
-                                        "member"
+                                      "member"
                                     )}
                                   </span>
                                 </div>
@@ -1448,11 +1433,10 @@ export default function NotificacoesPage() {
                         }}
                         disabled={postActionLoading || authLoading}
                         aria-disabled={postActionLoading || authLoading}
-                        className={`flex items-center gap-2 px-6 py-3 text-gray-600 transition-colors cursor-pointer rounded ${
-                          postActionLoading || authLoading
+                        className={`flex items-center gap-2 px-6 py-3 text-gray-600 transition-colors cursor-pointer rounded ${postActionLoading || authLoading
                             ? "opacity-60 pointer-events-none"
                             : "hover:bg-gray-200"
-                        }`}
+                          }`}
                       >
                         <ArrowUp className="h-4 w-4" />
                         <span>Promover</span>
@@ -1517,18 +1501,17 @@ export default function NotificacoesPage() {
                   connections.map((connection) => (
                     <article
                       key={connection.id}
-                      className={`flex flex-col justify-center px-6 py-4 w-full bg-white max-md:px-5 max-md:max-w-full ${
-                        connection.connection_status === "pending"
+                      className={`flex flex-col justify-center px-6 py-4 w-full bg-white max-md:px-5 max-md:max-w-full ${connection.connection_status === "pending"
                           ? "hover:bg-zinc-100 transition-colors"
                           : ""
-                      }`}
+                        }`}
                     >
                       <div className="w-full max-md:max-w-full">
                         <time className="text-xs leading-loose text-neutral-600 max-md:max-w-full">
                           {connection.created_at
                             ? new Date(connection.created_at).toLocaleString(
-                                "pt-BR"
-                              )
+                              "pt-BR"
+                            )
                             : ""}
                         </time>
                         <div className="mt-2 w-full max-md:max-w-full">
@@ -1539,7 +1522,7 @@ export default function NotificacoesPage() {
 
                             <div className="flex items-center gap-2">
                               {processedConnections[connection.id] ===
-                              "accepted" ? (
+                                "accepted" ? (
                                 <div className="flex gap-2 items-center px-4 py-2 text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100">
                                   <CheckmarkFilled className="w-4 h-4" />
                                   <span className="self-stretch my-auto text-zinc-100">
@@ -1618,6 +1601,12 @@ export default function NotificacoesPage() {
                   <h1 className="self-stretch my-auto text-sm leading-none text-neutral-600">
                     Interações
                   </h1>
+                  <div className="self-stretch my-auto text-[10px] text-black font-semibold">
+                    •
+                  </div>
+                  <span className="self-stretch my-auto text-sm leading-none text-neutral-600">
+                    Pendentes
+                  </span>
                   <div className="flex gap-2.5 justify-center items-center self-stretch px-2 my-auto w-6 h-6 text-xs font-semibold leading-none text-gray-200 rounded-2xl bg-zinc-900">
                     <span className="self-stretch my-auto">
                       {interactionsCount}
@@ -1674,8 +1663,8 @@ export default function NotificacoesPage() {
                         <time className="mt-2 leading-loose text-neutral-600 max-md:max-w-full">
                           {interaction.created_at
                             ? new Date(interaction.created_at).toLocaleString(
-                                "pt-BR"
-                              )
+                              "pt-BR"
+                            )
                             : interaction.date}
                         </time>
                       </div>
