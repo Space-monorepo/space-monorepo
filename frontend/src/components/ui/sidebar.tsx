@@ -24,7 +24,7 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
 
   const sidebarPermissions = getSidebarPermissions(user);
 
-  // Verifica se o usuário é admin ou moderador em alguma comunidade
+  // Verifica se o usuário é admin ou moderador em alguma comunidade (para compatibilidade)
   const isAdminOrModerator = user?.hasAdminOrModeratorRole === true;
 
   const isOpen = variant === "static" || isHovered;
@@ -113,24 +113,25 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
                 active={isActive("/messages")}
                 isOpen={isOpen}
               />
-              {/* Só mostra Moderação e Administrador se for admin ou moderador */}
-              {isAdminOrModerator && (
-                <>
-                  <SidebarItem
-                    icon={<Security size={20} />}
-                    label="Moderação"
-                    href="/moderation"
-                    active={isActive("/moderation")}
-                    isOpen={isOpen}
-                  />
-                  <SidebarItem
-                    icon={<User size={20} />}
-                    label="Administrador"
-                    href="/administration"
-                    active={isActive("/administration")}
-                    isOpen={isOpen}
-                  />
-                </>
+              {/* Mostra Moderação apenas se tiver permissão */}
+              {sidebarPermissions.canViewModerationTab && (
+                <SidebarItem
+                  icon={<Security size={20} />}
+                  label="Moderação"
+                  href="/moderation"
+                  active={isActive("/moderation")}
+                  isOpen={isOpen}
+                />
+              )}
+              {/* Mostra Administrador apenas se tiver permissão (só admin) */}
+              {sidebarPermissions.canViewAdministrationTab && (
+                <SidebarItem
+                  icon={<User size={20} />}
+                  label="Administrador"
+                  href="/administration"
+                  active={isActive("/administration")}
+                  isOpen={isOpen}
+                />
               )}
             </div>
             <div className="mt-auto">
@@ -210,7 +211,7 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
       </aside>
       <MobileBottomNav
         pathname={pathname}
-        isAdminOrModerator={isAdminOrModerator}
+        sidebarPermissions={sidebarPermissions}
         unreadCount={unreadLoading ? undefined : unreadCount}
       />
     </>
@@ -262,11 +263,11 @@ function SidebarItem({ icon, label, href, active, isOpen, badgeCount }: SidebarI
 
 type MobileBottomNavProps = {
   pathname: string;
-  isAdminOrModerator: boolean;
+  sidebarPermissions: ReturnType<typeof getSidebarPermissions>;
   unreadCount?: number;
 };
 
-function MobileBottomNav({ pathname, isAdminOrModerator, unreadCount }: MobileBottomNavProps) {
+function MobileBottomNav({ pathname, sidebarPermissions, unreadCount }: MobileBottomNavProps) {
   const baseLinks = [
     {
       label: "Home",
@@ -286,12 +287,13 @@ function MobileBottomNav({ pathname, isAdminOrModerator, unreadCount }: MobileBo
     { label: "Configurações", href: "/settings", icon: <Settings size={18} /> },
   ];
 
-  const adminLinks = isAdminOrModerator
-    ? [
-      { label: "Moderação", href: "/moderation", icon: <Security size={18} />, hideOnCompact: true },
-      { label: "Admin", href: "/administration", icon: <User size={18} />, hideOnCompact: true },
-    ]
-    : [];
+  const adminLinks = [];
+  if (sidebarPermissions.canViewModerationTab) {
+    adminLinks.push({ label: "Moderação", href: "/moderation", icon: <Security size={18} />, hideOnCompact: true });
+  }
+  if (sidebarPermissions.canViewAdministrationTab) {
+    adminLinks.push({ label: "Admin", href: "/administration", icon: <User size={18} />, hideOnCompact: true });
+  }
 
   const links = [...baseLinks.slice(0, 4), ...adminLinks, baseLinks[4]];
 
