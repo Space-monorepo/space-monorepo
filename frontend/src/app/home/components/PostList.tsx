@@ -720,85 +720,40 @@ export default function PostList() {
         const fetched = await fetchPosts();
         if (!fetched || fetched.length === 0) return;
 
-        // Mesclar fetched com snapshot atual de allPosts (via ref)
         const prevAllSnapshot = allPostsRef.current;
-        const prevMap = new Map(prevAllSnapshot.map((p) => [p.id, p]));
-        const merged: PostDisplay[] = [];
+        const fetchedMap = new Map(fetched.map((post) => [post.id, post]));
 
-        fetched.forEach((fp) => {
-          const existing = prevMap.get(fp.id);
-          if (!existing) {
-            merged.push(fp);
-          } else {
-            if (votingPostsRef.current[fp.id]) {
-              merged.push(existing);
-            } else {
-              // Preserva a ordem das opções da enquete ao mesclar com dados do backend
-              let mergedPollOptions = existing.poll_options;
-              const fetchedPollOptions = (fp as any).poll_options;
-              if (
-                Array.isArray(fetchedPollOptions) &&
-                fetchedPollOptions.length > 0
-              ) {
-                if (
-                  Array.isArray(existing.poll_options) &&
-                  existing.poll_options.length > 0
-                ) {
-                  // Cria um mapa das opções atualizadas do backend
-                  const optionsMap: { [key: string]: any } = {};
-                  fetchedPollOptions.forEach((o: any) => {
-                    optionsMap[o.id] = o;
-                  });
-                  // Mantém a ordem das opções existentes, atualizando apenas os dados
-                  mergedPollOptions = existing.poll_options.map((o: any) => optionsMap[o.id] ?? o) as any[];
-                  // Garantir que mergedPollOptions é um array para evitar erros de tipagem
-                  if (!Array.isArray(mergedPollOptions)) {
-                    mergedPollOptions = [] as any[];
-                  }
-                  // Adiciona quaisquer novas opções que não existiam antes
-                  fetchedPollOptions.forEach((o: any) => {
-                    if (!mergedPollOptions!.some((m: any) => m.id === o.id)) {
-                      mergedPollOptions!.push(o);
-                    }
-                  });
-                } else {
-                  mergedPollOptions = fetchedPollOptions;
-                }
-              }
-
-              const updated: PostDisplay = {
-                ...existing,
-                ...fp,
-                likes: (fp as any).likes_count ?? existing.likes,
-                comments: (fp as any).comments_count ?? existing.comments,
-                shares: (fp as any).report_count ?? existing.shares,
-                poll_options: mergedPollOptions,
-                poll_question:
-                  (fp as any).poll_question ?? existing.poll_question,
-                userVotedOptionId:
-                  fp.userVotedOptionId ?? existing.userVotedOptionId,
-                confirmations_count:
-                  (fp as any).confirmations_count ??
-                  existing.confirmations_count,
-              } as PostDisplay;
-              merged.push(updated);
-
-              if (
-                (fp as any).comments_count !== undefined &&
-                (fp as any).comments_count !== existing.comments
-              ) {
-                setCommentsRefreshSignal((prev) => ({
-                  ...prev,
-                  [fp.id]: (prev[fp.id] || 0) + 1,
-                }));
-              }
-            }
+        const updatedExisting = prevAllSnapshot.map((existingPost) => {
+          const backendPost = fetchedMap.get(existingPost.id);
+          if (!backendPost) {
+            return existingPost;
           }
-          prevMap.delete(fp.id);
-        });
-        prevMap.forEach((p) => merged.push(p));
 
-        // Atualiza estados a partir do merged
+          if (
+            (backendPost as any).comments_count !== undefined &&
+            (backendPost as any).comments_count !== existingPost.comments
+          ) {
+            setCommentsRefreshSignal((prev) => ({
+              ...prev,
+              [existingPost.id]: (prev[existingPost.id] || 0) + 1,
+            }));
+          }
+
+          fetchedMap.delete(existingPost.id);
+
+          if (votingPostsRef.current[existingPost.id]) {
+            return existingPost;
+          }
+
+          return mergePostFromBackend(existingPost, backendPost);
+        });
+
+        const newPostsFromBackend = Array.from(fetchedMap.values());
+        const merged =
+          newPostsFromBackend.length > 0
+            ? [...newPostsFromBackend, ...updatedExisting]
+            : updatedExisting;
+
         setAllPosts(merged);
 
         const shownCount = Math.max(
@@ -1033,6 +988,53 @@ export default function PostList() {
         ...(pollQuestion && { poll_question: pollQuestion }),
       }));
     }
+  };
+
+  // Mescla os dados do backend mantendo a ordem local e os campos derivados
+  const mergePostFromBackend = (
+    localPost: PostDisplay,
+    backendPost: PostDisplay,
+  ): PostDisplay => {
+    let mergedPollOptions = localPost.poll_options;
+    const backendPollOptions = (backendPost as any).poll_options;
+
+    if (Array.isArray(backendPollOptions) && backendPollOptions.length > 0) {
+      if (
+        Array.isArray(localPost.poll_options) &&
+        localPost.poll_options.length > 0
+      ) {
+        const optionsMap: { [key: string]: any } = {};
+        backendPollOptions.forEach((option: any) => {
+          optionsMap[option.id] = option;
+        });
+
+        mergedPollOptions = localPost.poll_options.map(
+          (option: any) => optionsMap[option.id] ?? option,
+        );
+
+        backendPollOptions.forEach((option: any) => {
+          if (!mergedPollOptions!.some((existing: any) => existing.id === option.id)) {
+            mergedPollOptions!.push(option);
+          }
+        });
+      } else {
+        mergedPollOptions = backendPollOptions;
+      }
+    }
+
+    return {
+      ...localPost,
+      ...backendPost,
+      likes: (backendPost as any).likes_count ?? localPost.likes,
+      comments: (backendPost as any).comments_count ?? localPost.comments,
+      shares: (backendPost as any).report_count ?? localPost.shares,
+      poll_options: mergedPollOptions,
+      poll_question: backendPost.poll_question ?? localPost.poll_question,
+      userVotedOptionId:
+        backendPost.userVotedOptionId ?? localPost.userVotedOptionId,
+      confirmations_count:
+        (backendPost as any).confirmations_count ?? localPost.confirmations_count,
+    };
   };
 
   // Função auxiliar para mesclar opções do backend preservando a ordem local

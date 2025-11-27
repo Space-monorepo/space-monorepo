@@ -462,8 +462,15 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
           }
         );
         const memberItems = membersResponse.data?.items || [];
-        if (!memberItems.length) throw new Error('Usuário não é membro desta comunidade');
-        const communityMemberId = memberItems[0].id;
+        if (!memberItems.length) throw new Error("Usuário não é membro desta comunidade");
+
+        const memberForUser =
+          memberItems.find(
+            (member: any) =>
+              member?.user_id === user.id || member?.user?.id === user.id,
+          ) || memberItems[0];
+
+        const communityMemberId = memberForUser.id;
 
         const payload = {
           post_id: postId,
@@ -536,8 +543,15 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
           }
         );
         const memberItems = membersResponse.data?.items || [];
-        if (!memberItems.length) throw new Error('Usuário não é membro desta comunidade');
-        const communityMemberId = memberItems[0].id;
+        if (!memberItems.length) throw new Error("Usuário não é membro desta comunidade");
+
+        const memberForUser =
+          memberItems.find(
+            (member: any) =>
+              member?.user_id === user.id || member?.user?.id === user.id,
+          ) || memberItems[0];
+
+        const communityMemberId = memberForUser.id;
 
         const payload = {
           post_id: postId,
