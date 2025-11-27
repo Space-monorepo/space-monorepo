@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware import cors
+from fastapi.staticfiles import StaticFiles
 
 from app.api.administration.routes import router as admin_router
 from app.api.badges.routes import (
@@ -62,3 +65,7 @@ for route in routes:
 
 
 add_exception_handlers(app)
+
+static_dir = Path(__file__).resolve().parent / 'static'
+if static_dir.exists():
+    app.mount('/static', StaticFiles(directory=static_dir), name='static')
