@@ -916,8 +916,8 @@ export default function NotificacoesPage() {
   return (
     <div className="min-h-screen bg-white text-[#161616]">
       <Sidebar variant="static" />
-      <div className="flex">
-        <div className="fixed left-64 top-0 w-64 bg-white border-r border-[#e0e0e0] h-screen z-20 overflow-y-auto">
+      <div className="flex flex-col gap-6 px-4 py-6 min-[900px]:px-0 min-[900px]:py-0 min-[900px]:gap-0 min-[900px]:flex-row min-[900px]:ml-64">
+        <div className="w-full bg-white border border-[#e0e0e0] rounded min-[900px]:rounded-none min-[900px]:border-l-0 min-[900px]:border-t-0 min-[900px]:border-b-0 min-[900px]:border-r min-[900px]:fixed min-[900px]:left-64 min-[900px]:top-0 min-[900px]:w-64 min-[900px]:h-screen z-20 overflow-y-auto mb-6 min-[900px]:mb-0">
           <div className="sticky top-0 p-6 border-[#e0e0e0] bg-white flex items-center gap-3">
             <ArrowLeft className="h-5 w-5 text-[#525252]" />
             <h1 className="text-lg font-regular">Notificações</h1>
@@ -958,7 +958,7 @@ export default function NotificacoesPage() {
         </div>
 
         {activeTab === "Campanhas" && (
-          <div className="w-80 fixed my-4 top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
+          <div className="w-full border border-[#e0e0e0] rounded bg-white overflow-y-auto max-h-[60vh] min-[900px]:rounded-none min-[900px]:border-l-0 min-[900px]:border-t-0 min-[900px]:border-b-0 min-[900px]:border-r min-[900px]:w-80 min-[900px]:fixed min-[900px]:top-0 min-[900px]:bottom-0 min-[900px]:left-[512px] my-4 min-[900px]:my-0 z-10 no-scrollbar">
             <section className="flex flex-col max-w-[352px]">
               <header className="flex gap-2 items-center py-2.5 pr-2 pl-4 text-sm leading-none text-neutral-600">
                 <h2 className="self-stretch text-neutral-600 w-[272px]">
@@ -1026,7 +1026,7 @@ export default function NotificacoesPage() {
         )}
 
         {activeTab === "Avisos oficiais" && (
-          <div className="w-80 fixed my-4 top-0 bottom-0 left-[512px] bg-white border-r border-[#e0e0e0] overflow-y-auto z-10 no-scrollbar">
+          <div className="w-full border border-[#e0e0e0] rounded bg-white overflow-y-auto max-h-[60vh] min-[900px]:rounded-none min-[900px]:border-l-0 min-[900px]:border-t-0 min-[900px]:border-b-0 min-[900px]:border-r min-[900px]:w-80 min-[900px]:fixed min-[900px]:top-0 min-[900px]:bottom-0 min-[900px]:left-[512px] my-4 min-[900px]:my-0 z-10 no-scrollbar">
             <section className="flex flex-col max-w-[352px]">
               <header className="flex gap-2 items-center py-2.5 pr-2 pl-4 text-sm leading-none text-neutral-600">
                 <h2 className="self-stretch text-neutral-600 w-[272px]">
@@ -1089,7 +1089,7 @@ export default function NotificacoesPage() {
         )}
 
         {selectedNotification && activeTab === "Campanhas" && (
-          <div className="flex-1 bg-gray-100 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
+          <div className="flex-1 bg-gray-100 rounded w-full mt-4 min-[900px]:mt-0 min-[900px]:rounded-none min-[900px]:fixed min-[900px]:top-0 min-[900px]:right-0 min-[900px]:bottom-0 min-[900px]:left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             <div className="max-w-full">
               <div className="px-4 pt-4 pb-80 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
                 <article className="mb-0 bg-white max-md:mb-2.5 max-md:max-w-full">
@@ -1237,7 +1237,7 @@ export default function NotificacoesPage() {
         )}
 
         {selectedNotification && activeTab === "Avisos oficiais" && (
-          <div className="flex-1 bg-gray-100 fixed top-0 right-0 bottom-0 left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
+          <div className="flex-1 bg-gray-100 rounded w-full mt-4 min-[900px]:mt-0 min-[900px]:rounded-none min-[900px]:fixed min-[900px]:top-0 min-[900px]:right-0 min-[900px]:bottom-0 min-[900px]:left-[calc(512px+320px)] overflow-y-auto no-scrollbar">
             <div className="max-w-full">
               <div className="px-4 pt-4 pb-48 w-full bg-zinc-100 max-md:pb-24 max-md:max-w-full">
                 <main className="bg-white max-w-full">
@@ -1365,7 +1365,7 @@ export default function NotificacoesPage() {
         )}
 
         {activeTab === "Conexões" && (
-          <div className="flex-1 bg-white px-6 py-8 fixed top-6 right-0 bottom-0 left-[calc(300px+320px)] overflow-y-auto no-scrollbar">
+          <div className="flex-1 bg-white px-6 py-8 border border-[#e0e0e0] rounded overflow-y-auto no-scrollbar mt-6 min-[900px]:mt-0 min-[900px]:border-none min-[900px]:rounded-none min-[900px]:fixed min-[900px]:top-6 min-[900px]:right-0 min-[900px]:bottom-0 min-[900px]:left-[calc(300px+320px)]">
             <div className="max-w-[680px]">
               <header className="flex flex-wrap gap-10 justify-between items-center py-2.5 pr-6 pl-4 w-full max-md:pr-5 max-md:max-w-full">
                 <nav className="flex gap-4 items-center self-stretch my-auto whitespace-nowrap min-w-60 w-[385px]">
@@ -1501,7 +1501,7 @@ export default function NotificacoesPage() {
         )}
 
         {activeTab === "Interações" && (
-          <div className="flex-1 bg-white px-6 py-8 fixed top-6 right-0 bottom-0 left-[calc(300px+320px)] overflow-y-auto no-scrollbar">
+          <div className="flex-1 bg-white px-6 py-8 border border-[#e0e0e0] rounded overflow-y-auto no-scrollbar mt-6 min-[900px]:mt-0 min-[900px]:border-none min-[900px]:rounded-none min-[900px]:fixed min-[900px]:top-6 min-[900px]:right-0 min-[900px]:bottom-0 min-[900px]:left-[calc(300px+320px)]">
             <section className="max-w-[680px]">
               <header className="flex flex-wrap gap-10 justify-between items-center py-2.5 pr-6 pl-4 w-full max-md:pr-5 max-md:max-w-full">
                 <div className="flex gap-4 items-center self-stretch my-auto whitespace-nowrap">

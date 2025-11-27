@@ -25,15 +25,32 @@ const useConnectionsList = (): UseConnectionsListOutput => {
 
     setLoading(true);
     setError(null);
+    let timeoutTriggered = false;
+    const timeoutId = window.setTimeout(() => {
+      timeoutTriggered = true;
+      setLoading(false);
+      setError(
+        new Error(
+          "Não foi possível carregar suas conexões agora. Atualize a página ou tente novamente."
+        )
+      );
+    }, 8000);
 
     try {
       const data = await fetchConnections(token);
+      if (timeoutTriggered) return;
+      clearTimeout(timeoutId);
       setConnections(data);
     } catch (err) {
-      setError(err as Error);
-      console.error("Erro ao carregar conexões:", err);
+      if (!timeoutTriggered) {
+        clearTimeout(timeoutId);
+        setError(err as Error);
+        console.error("Erro ao carregar conexões:", err);
+      }
     } finally {
-      setLoading(false);
+      if (!timeoutTriggered) {
+        setLoading(false);
+      }
     }
   }, [token]);
 

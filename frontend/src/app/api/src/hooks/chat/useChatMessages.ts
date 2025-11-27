@@ -13,7 +13,7 @@ interface UseChatMessagesOutput {
   loading: boolean;
   error: Error | null;
   loadMessages: (conversationId: string, offset?: number, limit?: number) => Promise<void>;
-  sendMessage: (conversationId: string, content: string) => Promise<void>;
+  sendMessage: (conversationId: string, content: string) => Promise<Message>;
   markAsRead: (conversationId: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
   addMessageOptimistic: (message: Message) => void;
@@ -62,6 +62,7 @@ const useChatMessages = (): UseChatMessagesOutput => {
       try {
         const message = await sendMessage(token, conversationId, content);
         setMessages((prev) => [...prev, message]);
+        return message;
       } catch (err) {
         setError(err as Error);
         console.error("Erro ao enviar mensagem:", err);
