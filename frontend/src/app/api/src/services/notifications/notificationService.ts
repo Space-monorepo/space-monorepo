@@ -1,5 +1,5 @@
 import { API_URL } from '@/config'
-import { PostsListFeed, PostResponse } from '@/app/api/src/types/posts/Post'
+import { PostResponse } from '@/app/api/src/types/posts/Post'
 import { NotificationsResponse, CampaignNotification, AnnouncementNotification, ConnectionNotification, InteractionNotification } from '@/app/api/src/types/notifications/Notification'
 
 // Helper function to fetch post details with proper typing
@@ -65,7 +65,7 @@ export const fetchCampaigns = async (token: string): Promise<CampaignNotificatio
             else if (campaignStatusType === 'finished') status = 'finished'
             else if (campaignStatusType === 'target_reached') status = 'under_review'
 
-            // Default stats from notification data (fallback)
+            // Default stats from notification data
             let stats = {
                 published: new Date(n.created_at).toLocaleDateString('pt-BR'),
                 accesses: 0,
@@ -89,13 +89,12 @@ export const fetchCampaigns = async (token: string): Promise<CampaignNotificatio
             if (postId && notificationCommunityId) {
                 postDetails = await fetchPostDetails(token, notificationCommunityId, postId)
                 if (postDetails) {
-                    // Tenta obter views_count ou accesses, se não existir no tipo, usa any para evitar erro de TS imediato
+                    // Tenta obter views_count ou accesses
                     const views = (postDetails as any).views_count || (postDetails as any).accesses || 0;
 
                     stats = {
                         published: new Date(postDetails.created_at).toLocaleDateString('pt-BR'),
-                        accesses: views, 
-                        // Usa nullish coalescing (??) para garantir que 0 seja um valor válido
+                        accesses: views,
                         participants: postDetails.current_participants ?? d.current_participants ?? 0,
                         likes: postDetails.likes_count || 0,
                         comments: postDetails.comments_count || 0
@@ -133,7 +132,6 @@ export const fetchCampaigns = async (token: string): Promise<CampaignNotificatio
                 stats: stats,
                 image_url: imageUrl,
                 target_participants: d.target_participants || 0,
-                // Prioriza o dado atualizado do post, senão usa o da notificação
                 current_participants: postDetails?.current_participants ?? d.current_participants ?? 0,
                 post_id: postId
             } as CampaignNotification
@@ -162,7 +160,6 @@ export const fetchAnnouncements = async (token: string, communityId?: string): P
 
         const notifications = await response.json()
 
-        // Fetch post details for each announcement notification to get real-time stats
         const announcementNotifications = await Promise.all(notifications.map(async (n: any) => {
             const d = n.data || {}
 
@@ -171,7 +168,6 @@ export const fetchAnnouncements = async (token: string, communityId?: string): P
             const postId = d.post_id
             const notificationCommunityId = d.community_id || communityId
 
-            // Default stats
             let stats = {
                 published: new Date(n.created_at).toLocaleDateString('pt-BR'),
                 accesses: 0,
@@ -195,7 +191,6 @@ export const fetchAnnouncements = async (token: string, communityId?: string): P
                 const postDetails = await fetchPostDetails(token, notificationCommunityId, postId)
                 if (postDetails) {
                     const views = (postDetails as any).views_count || (postDetails as any).accesses || 0;
-                    
                     stats = {
                         published: new Date(postDetails.created_at).toLocaleDateString('pt-BR'),
                         accesses: views,
@@ -379,7 +374,10 @@ export const fetchInteractions = async (token: string): Promise<InteractionNotif
             } else if (interactionType === 'like') {
                 title = `Nova curtida em ${postTitle}`
             } else if (interactionType === 'comment_like') {
-                title = `Curtiu seu comentário${commentContent ? `: "${commentContent.substring(0, 30)}..."` : ''}`
+                title = `Curtiu seu comentário`
+                if (commentContent) {
+                    title = `Curtiu seu comentário: "${commentContent.substring(0, 30)}..."`
+                }
             }
 
             return {
@@ -436,5 +434,23 @@ export const fetchNotifications = async (token: string, communityId?: string): P
         }
     } catch (error) {
         throw error
+    }
+}
+
+// --- NOVA FUNÇÃO CORRIGIDA: Aceita communityId e monta URL certa ---
+export const likeCommentFromNotification = async (token: string, communityId: string, commentId: string): Promise<boolean> => {
+    try {
+        // URL corrigida conforme backend: /comments/{community_id}/comment/{comment_id}/like
+        const response = await fetch(`${API_URL}/comments/${communityId}/comment/${commentId}/like`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.ok;
+    } catch (error) {
+        console.error('Erro ao curtir comentário:', error);
+        return false;
     }
 }

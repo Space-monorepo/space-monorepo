@@ -7,7 +7,10 @@ from uuid import UUID
 from sqlalchemy import desc, event, insert, select
 from sqlalchemy.orm.attributes import get_history
 
-# Importamos CommunityMember para buscar os destinatários dos avisos
+# IMPORTANTE: Importando os models corretos de Comentário
+from app.api.comment.model import Comment, CommentLikes
+
+# Models necessários
 from app.api.communities.model import Community, CommunityMember
 from app.api.notifications.model import Notification, NotificationTypeEnum
 from app.api.post.model import (
@@ -15,27 +18,48 @@ from app.api.post.model import (
     CampaignPost,
     Post,
     PostFeedback,
-    PostLikes,  # <--- Importe PostLikes
+    PostLikes,
 )
-from app.api.users.model import User  # <--- Necessário para pegar o nome de quem curtiu
+from app.api.users.model import User
 
 logger = logging.getLogger(__name__)
+
+
+# --- FUNÇÕES AUXILIARES ---
+
+
+def _create_single_notification(connection, user_id, data, notification_type):
+    """
+    Cria uma única notificação diretamente no banco.
+    """
+    if not user_id:
+        return
+
+    try:
+        stmt = insert(Notification).values(
+            id=uuid.uuid4(),
+            user_id=str(user_id),
+            type=notification_type.value,
+            read=False,
+            data=data,
+            created_at=datetime.datetime.now(),
+        )
+        connection.execute(stmt)
+    except Exception as e:
+        logger.error(f'Erro ao criar notificação via listener: {e}')
 
 
 def _create_notifications_batch(
     connection, participant_ids, data, notification_type=NotificationTypeEnum.CAMPAIGN
 ):
     """
-    Cria notificações em lote.
-    Aceita um tipo opcional (padrão CAMPAIGN, mas pode ser OFFICIAL_NOTICE ou INTERACTION).
+    Cria notificações em lote (Campanhas/Avisos).
     """
     if not participant_ids:
         return
 
     notif_values = []
     now = datetime.datetime.now()
-
-    # set() evita duplicatas caso o ID venha repetido
     valid_ids = {str(pid) for pid in participant_ids if pid}
 
     for pid in valid_ids:
@@ -50,12 +74,8 @@ def _create_notifications_batch(
 
     try:
         connection.execute(insert(Notification), notif_values)
-        print(
-            f'!!! LISTENERS: {len(notif_values)} notificações do tipo {notification_type.value} criadas com SUCESSO.'
-        )
     except Exception as e:
-        logger.error(f'Erro ao inserir notificações: {e}')
-        print(f'!!! LISTENERS: Erro crítico no insert: {e}')
+        logger.error(f'Erro ao inserir notificações em lote: {e}')
 
 
 def _determine_event_type(target: CampaignPost) -> Optional[str]:
@@ -100,156 +120,288 @@ def _get_feedback_content(connection, post_id: UUID) -> Optional[str]:
     return result[0] if result else None
 
 
+# --- LISTENERS DE CAMPANHA E AVISOS ---
+
+
 def campaign_post_after_update(mapper, connection, target: CampaignPost):
     """Listener para atualizações de Campanhas"""
-    event_type = _determine_event_type(target)
+    try:
+        event_type = _determine_event_type(target)
+        if not event_type:
+            return
 
-    if not event_type:
-        return
+        info_stmt = (
+            select(Post.title, Community.name, Post.user_id, Post.community_id)
+            .join(Community, Post.community_id == Community.id)
+            .where(Post.id == target.post_id)
+        )
+        result = connection.execute(info_stmt).first()
 
-    info_stmt = (
-        select(Post.title, Community.name, Post.user_id, Post.community_id)
-        .join(Community, Post.community_id == Community.id)
-        .where(Post.id == target.post_id)
-    )
-    result = connection.execute(info_stmt).first()
+        if not result:
+            return
 
-    if not result:
-        return
+        campaign_title, community_name, author_id, community_id = result
 
-    campaign_title, community_name, author_id, community_id = result
+        feedback_content = None
+        if event_type in {'approved', 'rejected'}:
+            feedback_content = _get_feedback_content(connection, target.post_id)
 
-    feedback_content = None
-    if event_type in {'approved', 'rejected'}:
-        feedback_content = _get_feedback_content(connection, target.post_id)
+        parts_stmt = select(CampaignParticipants.user_id).where(
+            CampaignParticipants.campaign_id == target.post_id
+        )
+        participant_ids = [row[0] for row in connection.execute(parts_stmt).fetchall()]
 
-    parts_stmt = select(CampaignParticipants.user_id).where(
-        CampaignParticipants.campaign_id == target.post_id
-    )
-    participant_ids = [row[0] for row in connection.execute(parts_stmt).fetchall()]
+        if author_id and event_type in {'approved', 'rejected', 'finished', 'canceled'}:
+            participant_ids.append(author_id)
 
-    if author_id and event_type in {'approved', 'rejected', 'finished', 'canceled'}:
-        participant_ids.append(author_id)
+        data = {
+            'campaign_title': campaign_title,
+            'community_name': community_name,
+            'campaign_status_type': event_type,
+            'post_id': str(target.post_id),
+            'community_id': str(community_id),
+            'current_participants': target.current_participants,
+            'target_participants': target.target_participants,
+        }
 
-    data = {
-        'campaign_title': campaign_title,
-        'community_name': community_name,
-        'campaign_status_type': event_type,
-        'post_id': str(target.post_id),
-        'community_id': str(community_id),
-        'current_participants': target.current_participants,
-        'target_participants': target.target_participants,
-    }
+        if feedback_content:
+            data['feedback_content'] = feedback_content
 
-    if feedback_content:
-        data['feedback_content'] = feedback_content
-
-    _create_notifications_batch(
-        connection,
-        participant_ids,
-        data,
-        notification_type=NotificationTypeEnum.CAMPAIGN,
-    )
+        _create_notifications_batch(
+            connection,
+            participant_ids,
+            data,
+            notification_type=NotificationTypeEnum.CAMPAIGN,
+        )
+    except Exception as e:
+        logger.error(f'Erro no listener de campanha: {e}')
 
 
 def post_after_insert(mapper, connection, target: Post):
     """Listener para novos Anúncios (Official Notice)"""
-    # Limpeza robusta do tipo do post
-    raw_type = str(target.type_post).lower()
-    if '.' in raw_type:
-        clean_type = raw_type.split('.')[-1]
-    else:
-        clean_type = raw_type
+    try:
+        raw_type = str(target.type_post).lower()
+        if '.' in raw_type:
+            clean_type = raw_type.split('.')[-1]
+        else:
+            clean_type = raw_type
 
-    if clean_type != 'announcement':
-        return
+        if clean_type != 'announcement':
+            return
 
-    print(f'!!! LISTENERS: Processando Anúncio: {target.title}')
+        community_name_stmt = select(Community.name).where(
+            Community.id == target.community_id
+        )
+        community_name_result = connection.execute(community_name_stmt).first()
+        community_name = (
+            community_name_result[0] if community_name_result else 'Comunidade'
+        )
 
-    community_name_stmt = select(Community.name).where(
-        Community.id == target.community_id
-    )
-    community_name_result = connection.execute(community_name_stmt).first()
-    community_name = community_name_result[0] if community_name_result else 'Comunidade'
+        members_stmt = select(CommunityMember.user_id).where(
+            CommunityMember.community_id == target.community_id,
+        )
+        member_ids = [row[0] for row in connection.execute(members_stmt).fetchall()]
 
-    members_stmt = select(CommunityMember.user_id).where(
-        CommunityMember.community_id == target.community_id,
-        # CommunityMember.user_id != target.user_id  <-- Descomente em produção
-    )
-    member_ids = [row[0] for row in connection.execute(members_stmt).fetchall()]
+        data = {
+            'notice_title': target.title,
+            'community_name': community_name,
+            'post_id': str(target.id),
+            'community_id': str(target.community_id),
+        }
 
-    data = {
-        'notice_title': target.title,
-        'community_name': community_name,
-        'post_id': str(target.id),
-        'community_id': str(target.community_id),
-    }
-
-    _create_notifications_batch(
-        connection,
-        member_ids,
-        data,
-        notification_type=NotificationTypeEnum.OFFICIAL_NOTICE,
-    )
+        _create_notifications_batch(
+            connection,
+            member_ids,
+            data,
+            notification_type=NotificationTypeEnum.OFFICIAL_NOTICE,
+        )
+    except Exception as e:
+        logger.error(f'Erro no listener de anúncio: {e}')
 
 
-# --- NOVO LISTENER PARA LIKES ---
+# --- NOVOS LISTENERS PARA INTERAÇÕES (CORRIGIDOS) ---
 
 
 def post_like_after_insert(mapper, connection, target: PostLikes):
-    """
-    Listener disparado quando um 'Like' é inserido.
-    Cria notificação de INTERACTION para o dono do post.
-    """
-    print(f'!!! LISTENERS: Novo Like detectado no post {target.post_id}')
+    """Disparado quando ocorre um LIKE em POST."""
+    try:
+        post_q = (
+            select(Post.title, Post.user_id, Post.community_id, Community.name)
+            .join(Community, Post.community_id == Community.id)
+            .where(Post.id == target.post_id)
+        )
+        post_res = connection.execute(post_q).first()
 
-    # 1. Buscar dados do Post (Título e Dono)
-    post_stmt = select(Post.title, Post.user_id).where(Post.id == target.post_id)
-    post_result = connection.execute(post_stmt).first()
+        if not post_res:
+            return
+        post_title, post_author_id, community_id, community_name = post_res
 
-    if not post_result:
-        return
+        actor_q = (
+            select(User.name, User.id, User.username, User.profile_image_url)
+            .join(CommunityMember, CommunityMember.user_id == User.id)
+            .where(CommunityMember.id == target.member_id)
+        )
+        actor_res = connection.execute(actor_q).first()
 
-    post_title, post_author_id = post_result
+        if not actor_res:
+            return
+        actor_name, actor_user_id, actor_username, actor_picture = actor_res
 
-    # 2. Buscar dados de quem curtiu (Actor)
-    # target.member_id é o CommunityMember que curtiu
-    actor_stmt = (
-        select(User.name, User.id)
-        .join(CommunityMember, CommunityMember.user_id == User.id)
-        .where(CommunityMember.id == target.member_id)
-    )
-    actor_result = connection.execute(actor_stmt).first()
+        if str(post_author_id) == str(actor_user_id):
+            return
 
-    if not actor_result:
-        return
+        data = {
+            'interaction_type': 'like',
+            'actor_name': actor_name,
+            'actor_username': actor_username,
+            'actor_picture': actor_picture,
+            'post_title': post_title,
+            'actor_id': str(actor_user_id),
+            'post_id': str(target.post_id),
+            'community_id': str(community_id),
+            'community_name': community_name,
+        }
 
-    actor_name, actor_user_id = actor_result
+        _create_single_notification(
+            connection, post_author_id, data, NotificationTypeEnum.INTERACTION
+        )
 
-    # 3. Evitar notificar se quem curtiu é o dono do post
-    if str(post_author_id) == str(actor_user_id):
-        print('!!! LISTENERS: Like ignorado (autor curtiu o próprio post).')
-        return
+    except Exception as e:
+        logger.error(f'Erro no listener de Like: {e}')
 
-    # 4. Criar Notificação
-    data = {
-        'interaction_type': 'like',
-        'actor_name': actor_name,
-        'post_title': post_title,
-        'actor_id': str(actor_user_id),
-    }
 
-    _create_notifications_batch(
-        connection,
-        [post_author_id],  # Destinatário: Dono do Post
-        data,
-        notification_type=NotificationTypeEnum.INTERACTION,
-    )
+def comment_after_insert(mapper, connection, target: Comment):
+    """Disparado quando ocorre um COMENTÁRIO REAL."""
+    try:
+        # 1. Buscar Post e Comunidade
+        post_q = (
+            select(Post.title, Post.user_id, Post.community_id, Community.name)
+            .join(Community, Post.community_id == Community.id)
+            .where(Post.id == target.post_id)
+        )
+        post_res = connection.execute(post_q).first()
+
+        if not post_res:
+            return
+        post_title, post_author_id, community_id, community_name = post_res
+
+        # 2. Buscar quem comentou (via CommunityMember)
+        actor_q = (
+            select(User.name, User.id, User.username, User.profile_image_url)
+            .join(CommunityMember, CommunityMember.user_id == User.id)
+            .where(CommunityMember.id == target.member_id)
+        )
+        actor_res = connection.execute(actor_q).first()
+
+        if not actor_res:
+            return
+        actor_name, actor_user_id, actor_username, actor_picture = actor_res
+
+        # 3. Não notificar se for o próprio dono do post
+        if str(post_author_id) == str(actor_user_id):
+            return
+
+        data = {
+            'interaction_type': 'comment',
+            'actor_name': actor_name,
+            'actor_username': actor_username,
+            'actor_picture': actor_picture,
+            'post_title': post_title,
+            'comment_content': target.content,  # Comment usa 'content', não 'message'
+            'actor_id': str(actor_user_id),
+            'post_id': str(target.post_id),
+            'comment_id': str(target.id),
+            'community_id': str(community_id),
+            'community_name': community_name,
+        }
+
+        _create_single_notification(
+            connection, post_author_id, data, NotificationTypeEnum.INTERACTION
+        )
+
+    except Exception as e:
+        logger.error(f'Erro no listener de Comentário: {e}')
+
+
+def comment_like_after_insert(mapper, connection, target: CommentLikes):  # noqa: PLR0914
+    """Disparado quando ocorre um LIKE em COMENTÁRIO."""
+    try:
+        # 1. Buscar Comentário, Post e Comunidade
+        # Precisamos fazer join: CommentLikes -> Comment -> Post -> Community
+
+        # Primeiro pegamos o comentário para saber o dono dele (quem recebe a notificação)
+        comment_q = select(Comment.member_id, Comment.post_id, Comment.content).where(
+            Comment.id == target.comment_id
+        )
+        comment_res = connection.execute(comment_q).first()
+        if not comment_res:
+            return
+        comment_owner_member_id, post_id, comment_content = comment_res
+
+        # Buscar ID do usuário dono do comentário
+        owner_q = (
+            select(User.id)
+            .join(CommunityMember, CommunityMember.user_id == User.id)
+            .where(CommunityMember.id == comment_owner_member_id)
+        )
+        owner_res = connection.execute(owner_q).first()
+        if not owner_res:
+            return
+        recipient_user_id = owner_res[0]
+
+        # Buscar dados do Post e Comunidade
+        post_q = (
+            select(Post.title, Post.community_id, Community.name)
+            .join(Community, Post.community_id == Community.id)
+            .where(Post.id == post_id)
+        )
+        post_res = connection.execute(post_q).first()
+        if not post_res:
+            return
+        post_title, community_id, community_name = post_res
+
+        # Buscar quem curtiu (Actor)
+        actor_q = (
+            select(User.name, User.id, User.username, User.profile_image_url)
+            .join(CommunityMember, CommunityMember.user_id == User.id)
+            .where(CommunityMember.id == target.member_id)
+        )
+        actor_res = connection.execute(actor_q).first()
+        if not actor_res:
+            return
+        actor_name, actor_user_id, actor_username, actor_picture = actor_res
+
+        # Não notificar se curtiu o próprio comentário
+        if str(recipient_user_id) == str(actor_user_id):
+            return
+
+        data = {
+            'interaction_type': 'comment_like',
+            'actor_name': actor_name,
+            'actor_username': actor_username,
+            'actor_picture': actor_picture,
+            'post_title': post_title,
+            'comment_content': comment_content,
+            'actor_id': str(actor_user_id),
+            'post_id': str(post_id),
+            'comment_id': str(target.comment_id),
+            'community_id': str(community_id),
+            'community_name': community_name,
+        }
+
+        _create_single_notification(
+            connection, recipient_user_id, data, NotificationTypeEnum.INTERACTION
+        )
+
+    except Exception as e:
+        logger.error(f'Erro no listener de Like em Comentário: {e}')
 
 
 def register_listeners():
     event.listen(CampaignPost, 'after_update', campaign_post_after_update)
     event.listen(Post, 'after_insert', post_after_insert)
-
-    # Novo Registro
     event.listen(PostLikes, 'after_insert', post_like_after_insert)
+
+    # NOVOS REGISTROS PARA COMENTÁRIOS REAIS
+    event.listen(Comment, 'after_insert', comment_after_insert)
+    event.listen(CommentLikes, 'after_insert', comment_like_after_insert)
