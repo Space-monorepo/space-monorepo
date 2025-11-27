@@ -40,12 +40,34 @@ const useCommunityPosts = (): UseCommunityPostsOutput => {
       // Buscar posts por tipo específico
       console.log('Fetching community posts for:', communityId);
 
-      const [campaignsData, reportsData, announcementsData, pollsData] = await Promise.all([
+      // Usar Promise.allSettled para não falhar todas as requisições se uma falhar
+      // Isso permite que moderadores vejam denúncias mesmo se não tiverem acesso a campanhas
+      const [campaignsResult, reportsResult, announcementsResult, pollsResult] = await Promise.allSettled([
         fetchCommunityCampaigns(token, communityId),
         fetchCommunityReports(token, communityId),
         fetchCommunityAnnouncements(token, communityId),
         fetchCommunityPolls(token, communityId)
       ]);
+
+      // Processar resultados, tratando erros individualmente
+      const campaignsData = campaignsResult.status === 'fulfilled' ? campaignsResult.value : { items: [] };
+      const reportsData = reportsResult.status === 'fulfilled' ? reportsResult.value : { items: [] };
+      const announcementsData = announcementsResult.status === 'fulfilled' ? announcementsResult.value : { items: [] };
+      const pollsData = pollsResult.status === 'fulfilled' ? pollsResult.value : { items: [] };
+
+      // Log de erros individuais (sem quebrar o fluxo)
+      if (campaignsResult.status === 'rejected') {
+        console.warn('Erro ao buscar campanhas (pode ser falta de permissão):', campaignsResult.reason);
+      }
+      if (reportsResult.status === 'rejected') {
+        console.error('Erro ao buscar denúncias:', reportsResult.reason);
+      }
+      if (announcementsResult.status === 'rejected') {
+        console.warn('Erro ao buscar anúncios:', announcementsResult.reason);
+      }
+      if (pollsResult.status === 'rejected') {
+        console.warn('Erro ao buscar enquetes:', pollsResult.reason);
+      }
 
       console.log('Campaigns received:', campaignsData.items?.length || 0);
       console.log('Reports received:', reportsData.items?.length || 0);
