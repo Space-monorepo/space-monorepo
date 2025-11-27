@@ -129,8 +129,47 @@ class PostService:
         except Exception as e:
             raise UnexpectedPostError('Unexpected error creating post') from e
 
-    def get_post(self, post_id: UUID) -> PostResponse:
+    def get_post(self, post_id: UUID | str) -> PostFeedResponse:
+        # Converter para UUID se for string
+        if isinstance(post_id, str):
+            post_id = UUID(post_id)
+
         post = self._get_post(post_id)
+
+        print(f'[DEBUG] get_post - tipo do post: {post.type_post}')
+
+        # Se for uma enquete, buscar as opções
+        if post.type_post == PostTypeEnum.POLL:
+            print('[DEBUG] Post é uma enquete, buscando opções...')
+            poll_post = self.poll_posts_repo.get_by_id(post_id)
+            if poll_post:
+                print(f'[DEBUG] Poll post encontrado: {poll_post.question}')
+                poll_options = self.poll_options_repo.list_by_post(post_id)
+                print(
+                    f'[DEBUG] Opções encontradas: {len(poll_options) if poll_options else 0}'
+                )
+                option_responses = []
+                if poll_options:
+                    option_responses = [
+                        PollOptionResponse(
+                            id=option.id,
+                            answer=option.answer,
+                            votes_count=option.votes_count,
+                        )
+                        for option in poll_options
+                    ]
+                    print(
+                        f'[DEBUG] Opções mapeadas: {[opt.answer for opt in option_responses]}'
+                    )
+                result = self.__map_post_to_feed_response(
+                    post, poll_question=poll_post.question, poll_options=option_responses
+                )
+                print(
+                    f'[DEBUG] Resultado com enquete - question: {result.poll_question}, options: {len(result.poll_options) if result.poll_options else 0}'
+                )
+                return result
+
+        print('[DEBUG] Retornando post sem dados de enquete')
         return self.__map_post_to_feed_response(post)
 
     def list_posts_by_community(

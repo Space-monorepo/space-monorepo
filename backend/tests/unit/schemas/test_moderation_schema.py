@@ -87,15 +87,15 @@ def test_poll_brief_response_schema():
         ],
         total_votes=18,
     )
-    assert poll_brief_response.model_dump() == {
+    assert poll_brief_response.model_dump(mode='json') == {
         'post': {
-            'id': post_id,
+            'id': str(post_id),
             'community': {
-                'id': community_id,
+                'id': str(community_id),
                 'name': 'Community 1',
             },
             'user': {
-                'id': user_id,
+                'id': str(user_id),
                 'name': 'User 1',
                 'profile_picture': 'https://example.com/image.jpg',
                 'role': 'admin',
@@ -108,13 +108,21 @@ def test_poll_brief_response_schema():
             'likes_count': 10,
             'comments_count': 5,
             'report_count': 0,
-            'created_at': created_at,
-            'updated_at': updated_at,
+            'created_at': created_at.isoformat(),
+            'updated_at': updated_at.isoformat(),
+            'poll_question': 'What is your favorite color?',
+            'poll_options': [
+                {
+                    'id': str(poll_option_id),
+                    'answer': 'Red',
+                    'votes_count': 10,
+                }
+            ],
         },
         'question': 'What is your favorite color?',
         'options': [
             {
-                'id': poll_option_id,
+                'id': str(poll_option_id),
                 'answer': 'Red',
                 'votes_count': 10,
             }

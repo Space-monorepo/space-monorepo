@@ -146,6 +146,12 @@ class PostResponse(BaseModel):
     report_count: int
     created_at: datetime
     updated_at: datetime
+    poll_question: str | None = Field(
+        None, description='Question of the poll (only for poll posts)'
+    )
+    poll_options: list['PollOptionResponse'] | None = Field(
+        None, description='Options of the poll (only for poll posts)'
+    )
 
     model_config = ConfigDict(
         from_attributes=True,

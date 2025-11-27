@@ -62,6 +62,61 @@ def test_get_post_route(authenticate_client, post_on_db):
 
 
 @pytest.mark.integration
+def test_get_poll_post_route(authenticate_client, post_to_poll_on_db, poll_post_on_db, poll_option_on_db):
+    """
+    Tests the get_post route for poll posts.
+
+    Scenario:
+    - Given a poll post with options in the database
+    - When requesting the post details
+    - Then it should return 200 OK with poll_question and poll_options
+    """
+    response = authenticate_client.get(
+        f'/posts/{post_to_poll_on_db.community_id}/post/{post_to_poll_on_db.id}'
+    )
+    response_data = response.json()
+    
+    assert response.status_code == status.HTTP_200_OK
+    assert response_data['id'] == str(post_to_poll_on_db.id)
+    assert response_data['title'] == post_to_poll_on_db.title
+    assert response_data['content'] == post_to_poll_on_db.content
+    assert response_data['type_post'] == PostTypeEnum.POLL
+    
+    # Verifica se os dados da enquete estão presentes
+    assert response_data['poll_question'] is not None
+    assert response_data['poll_question'] == poll_post_on_db.question
+    assert response_data['poll_options'] is not None
+    assert len(response_data['poll_options']) == 3
+    
+    # Verifica cada opção
+    for i, option in enumerate(response_data['poll_options']):
+        assert option['id'] == str(poll_option_on_db[i].id)
+        assert option['answer'] == poll_option_on_db[i].answer
+        assert option['votes_count'] == poll_option_on_db[i].votes_count
+
+
+@pytest.mark.integration
+def test_get_non_poll_post_has_null_poll_fields(authenticate_client, post_on_db):
+    """
+    Tests that non-poll posts have null poll fields.
+
+    Scenario:
+    - Given a non-poll post (e.g., announcement, campaign)
+    - When requesting the post details
+    - Then poll_question and poll_options should be null
+    """
+    response = authenticate_client.get(
+        f'/posts/{post_on_db.community_id}/post/{post_on_db.id}'
+    )
+    response_data = response.json()
+    
+    assert response.status_code == status.HTTP_200_OK
+    assert response_data['type_post'] != PostTypeEnum.POLL
+    assert response_data['poll_question'] is None
+    assert response_data['poll_options'] is None
+
+
+@pytest.mark.integration
 def test_list_posts_by_user_route(authenticate_client, posts_on_db):
     response = authenticate_client.get(
         f'/posts/{posts_on_db[0].community_id}/user/{posts_on_db[0].user_id}/list-posts'

@@ -205,6 +205,178 @@ def test_get_post_by_id_service_success():
 
 
 @pytest.mark.unit
+def test_get_poll_post_by_id_service_success():
+    """
+    Tests the `get_post` method of PostService for poll posts.
+
+    Scenario:
+    - Given a valid poll post ID
+    - When the service retrieves the poll post from repository
+    - Then it should return the post with poll_question and poll_options populated
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
+    fake_title = 'Test Poll Title'
+    fake_content = 'Test poll content'
+    fake_type_post = PostTypeEnum.POLL
+    fake_role = CommunityMemberRoleEnum.MEMBER
+    fake_poll_question = 'What is your favorite color?'
+
+    fake_post = Mock(spec=Post)
+    fake_post.id = fake_post_id
+    fake_post.user_id = fake_user_id
+    fake_post.community_id = fake_community_id
+    fake_post.title = fake_title
+    fake_post.content = fake_content
+    fake_post.type_post = fake_type_post
+    fake_post.image_url = None
+    fake_post.status = PostStatusEnum.ACTIVE
+    fake_post.user_role_in_community = fake_role
+    fake_post.likes_count = 10
+    fake_post.comments_count = 5
+    fake_post.report_count = 0
+    fake_post.created_at = '2024-01-01T00:00:00Z'
+    fake_post.updated_at = '2024-01-01T00:00:00Z'
+
+    # Mock relacionamentos
+    fake_community = Mock()
+    fake_community.name = 'Test Community'
+    fake_post.community = fake_community
+
+    fake_user = Mock()
+    fake_user.name = 'Test User'
+    fake_user.profile_image_url = 'https://example.com/profile.jpg'
+    fake_post.user = fake_user
+
+    # Mock PollPosts
+    fake_poll_post = Mock(spec=PollPosts)
+    fake_poll_post.post_id = fake_post_id
+    fake_poll_post.question = fake_poll_question
+
+    # Mock PollOptions
+    fake_option_1 = Mock(spec=PollOptions)
+    fake_option_1.id = uuid4()
+    fake_option_1.answer = 'Red'
+    fake_option_1.votes_count = 5
+
+    fake_option_2 = Mock(spec=PollOptions)
+    fake_option_2.id = uuid4()
+    fake_option_2.answer = 'Blue'
+    fake_option_2.votes_count = 3
+
+    fake_option_3 = Mock(spec=PollOptions)
+    fake_option_3.id = uuid4()
+    fake_option_3.answer = 'Green'
+    fake_option_3.votes_count = 2
+
+    fake_poll_options = [fake_option_1, fake_option_2, fake_option_3]
+
+    # Mock repositories
+    mock_tm = Mock()
+    mock_post_repo = Mock()
+    mock_post_repo.get_by_id.return_value = fake_post
+
+    mock_poll_posts_repo = Mock()
+    mock_poll_posts_repo.get_by_id.return_value = fake_poll_post
+
+    mock_poll_options_repo = Mock()
+    mock_poll_options_repo.list_by_post.return_value = fake_poll_options
+
+    service = PostService(mock_tm)
+    service.post_repo = mock_post_repo
+    service.poll_posts_repo = mock_poll_posts_repo
+    service.poll_options_repo = mock_poll_options_repo
+
+    # Act
+    result = service.get_post(fake_post_id)
+
+    # Assert
+    mock_post_repo.get_by_id.assert_called_once_with(str(fake_post_id))
+    mock_poll_posts_repo.get_by_id.assert_called_once_with(fake_post_id)
+    mock_poll_options_repo.list_by_post.assert_called_once_with(fake_post_id)
+    
+    assert result is not None
+    assert isinstance(result, PostFeedResponse)
+    assert str(result.id) == str(fake_post_id)
+    assert result.title == fake_title
+    assert result.content == fake_content
+    assert result.type_post == PostTypeEnum.POLL
+    
+    # Verifica os dados da enquete
+    assert result.poll_question is not None
+    assert result.poll_question == fake_poll_question
+    assert result.poll_options is not None
+    assert len(result.poll_options) == 3
+    assert result.poll_options[0].answer == 'Red'
+    assert result.poll_options[0].votes_count == 5
+    assert result.poll_options[1].answer == 'Blue'
+    assert result.poll_options[1].votes_count == 3
+    assert result.poll_options[2].answer == 'Green'
+    assert result.poll_options[2].votes_count == 2
+
+
+@pytest.mark.unit
+def test_get_non_poll_post_has_null_poll_fields_service():
+    """
+    Tests that non-poll posts have null poll fields in service.
+
+    Scenario:
+    - Given a non-poll post (e.g., announcement)
+    - When the service retrieves the post
+    - Then poll_question and poll_options should be None
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
+    fake_type_post = PostTypeEnum.ANNOUNCEMENT
+    fake_role = CommunityMemberRoleEnum.MEMBER
+
+    fake_post = Mock(spec=Post)
+    fake_post.id = fake_post_id
+    fake_post.user_id = fake_user_id
+    fake_post.community_id = fake_community_id
+    fake_post.title = 'Test Announcement'
+    fake_post.content = 'Test content'
+    fake_post.type_post = fake_type_post
+    fake_post.image_url = None
+    fake_post.status = PostStatusEnum.ACTIVE
+    fake_post.user_role_in_community = fake_role
+    fake_post.likes_count = 0
+    fake_post.comments_count = 0
+    fake_post.report_count = 0
+    fake_post.created_at = '2024-01-01T00:00:00Z'
+    fake_post.updated_at = '2024-01-01T00:00:00Z'
+
+    fake_community = Mock()
+    fake_community.name = 'Test Community'
+    fake_post.community = fake_community
+
+    fake_user = Mock()
+    fake_user.name = 'Test User'
+    fake_user.profile_image_url = 'https://example.com/profile.jpg'
+    fake_post.user = fake_user
+
+    mock_tm = Mock()
+    mock_post_repo = Mock()
+    mock_post_repo.get_by_id.return_value = fake_post
+
+    service = PostService(mock_tm)
+    service.post_repo = mock_post_repo
+
+    # Act
+    result = service.get_post(fake_post_id)
+
+    # Assert
+    assert result is not None
+    assert result.type_post == PostTypeEnum.ANNOUNCEMENT
+    assert result.poll_question is None
+    assert result.poll_options is None
+
+
+@pytest.mark.unit
 def test_list_posts_by_user_service_success():
     """
     Tests the `list_posts_by_user` method of PostService.

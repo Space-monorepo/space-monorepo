@@ -23,6 +23,7 @@ from app.api.post.schemas import (
     PostCreate,
     PostFeedbackCreate,
     PostFeedbackResponse,
+    PostFeedResponse,
     PostResponse,
     PostStatusEnum,
     PostTypeEnum,
@@ -123,7 +124,87 @@ def test_post_response_schema():
         'report_count': 0,
         'created_at': created_at,
         'updated_at': updated_at,
+        'poll_question': None,
+        'poll_options': None,
     }
+
+
+@pytest.mark.unit
+def test_post_response_with_poll_schema():
+    """
+    Tests PostResponse schema with poll fields populated.
+    
+    Scenario:
+    - Given a poll post with question and options
+    - When creating a PostResponse instance
+    - Then it should include poll_question and poll_options
+    """
+    post_id = uuid.uuid4()
+    community_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    option_id_1 = uuid.uuid4()
+    option_id_2 = uuid.uuid4()
+    option_id_3 = uuid.uuid4()
+    created_at = datetime.now()
+    updated_at = datetime.now()
+
+    poll_options = [
+        PollOptionResponse(
+            id=option_id_1,
+            answer='Red',
+            votes_count=5,
+        ),
+        PollOptionResponse(
+            id=option_id_2,
+            answer='Blue',
+            votes_count=3,
+        ),
+        PollOptionResponse(
+            id=option_id_3,
+            answer='Green',
+            votes_count=2,
+        ),
+    ]
+
+    post = PostResponse(
+        id=post_id,
+        community=CommunityRelated(
+            id=community_id,
+            name='Test Community',
+        ),
+        user=PostAuthor(
+            id=user_id,
+            name='Test User',
+            role='member',
+            profile_picture='https://example.com/profile.jpg',
+        ),
+        type_post=PostTypeEnum.POLL,
+        title='Test Poll',
+        content='Test Poll Content',
+        image_url=None,
+        status=PostStatusEnum.ACTIVE,
+        likes_count=10,
+        comments_count=5,
+        report_count=0,
+        created_at=created_at,
+        updated_at=updated_at,
+        poll_question='What is your favorite color?',
+        poll_options=poll_options,
+    )
+
+    post_dict = post.model_dump()
+    
+    assert post_dict['id'] == post_id
+    assert post_dict['type_post'] == 'poll'
+    assert post_dict['poll_question'] == 'What is your favorite color?'
+    assert post_dict['poll_options'] is not None
+    assert len(post_dict['poll_options']) == 3
+    assert post_dict['poll_options'][0]['answer'] == 'Red'
+    assert post_dict['poll_options'][0]['votes_count'] == 5
+    assert post_dict['poll_options'][1]['answer'] == 'Blue'
+    assert post_dict['poll_options'][1]['votes_count'] == 3
+    assert post_dict['poll_options'][2]['answer'] == 'Green'
+    assert post_dict['poll_options'][2]['votes_count'] == 2
 
 
 @pytest.mark.unit
@@ -259,6 +340,8 @@ def test_campaign_response_schema():
             'report_count': 0,
             'created_at': created_at,
             'updated_at': updated_at,
+            'poll_question': None,
+            'poll_options': None,
         },
         'target_participants': 200,
         'current_participants': 150,
@@ -406,6 +489,8 @@ def test_complaint_response_schema():
             'report_count': 0,
             'created_at': created_at,
             'updated_at': created_at,
+            'poll_question': None,
+            'poll_options': None,
         },
         'confirmations_count': 1,
         'status_complaint': ComplaintStatusEnum.PENDING,
@@ -526,6 +611,8 @@ def test_poll_response_schema():
             'report_count': 0,
             'created_at': created_at,
             'updated_at': created_at,
+            'poll_question': None,
+            'poll_options': None,
         },
         'question': 'Example question',
         'options': [

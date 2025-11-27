@@ -28,14 +28,14 @@ router = APIRouter(prefix='/posts', tags=['posts'])
 
 @router.get(
     '/{community_id}/post/{post_id}',
-    response_model=PostResponse,
+    response_model=PostFeedResponse,
     status_code=status.HTTP_200_OK,
 )
 def get_post(
     post_id: str,
     session: Session = Depends(get_db),
     _: CommunityMember = Depends(require_roles(['member'])),
-) -> PostResponse:
+) -> PostFeedResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).get_post(post_id)
 
