@@ -77,7 +77,8 @@ export default function RightSidebar() {
                       user: {
                         id: campaign.user.id,
                         profile_picture: campaign.user.profile_picture
-                      }
+                      },
+                      alreadyParticipating: true,
                     });
                     setIsPostPreviewOpen(true);
                   }}
