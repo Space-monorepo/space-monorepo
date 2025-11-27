@@ -214,7 +214,7 @@ function CommentsSection({
 
   const handleReportMember = async (comment: Comment) => {
     const reportedMemberId =
-      comment.member?.id || (comment.user as any)?.member_id || null;
+      ((comment.member as any)?.id) ?? ((comment.user as any)?.id) ?? null;
     if (!reportedMemberId) {
       toast.error("Não foi possível identificar o membro deste comentário.");
       return;
