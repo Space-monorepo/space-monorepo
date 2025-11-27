@@ -121,11 +121,6 @@ export const fetchCommunityCampaigns = async (
     const errorData = await response
       .json()
       .catch(() => ({ message: "Erro ao carregar campanhas da comunidade" }));
-    if (response.status === 403 || response.status === 401) {
-      throw new Error(
-        "Você não tem permissão para visualizar as campanhas desta comunidade.",
-      );
-    }
     throw new Error(
       errorData.message || "Erro ao carregar campanhas da comunidade",
     );

@@ -18,13 +18,9 @@ export default function AdministrationPage() {
         <Sidebar variant="static" />
         <div className="ml-0 min-[900px]:ml-64 max-md:pl-4 max-md:pr-4">
           <main className="p-8 max-md:p-4 max-sm:p-3">
-            <h1 className="text-2xl font-medium mb-6 max-md:text-xl max-sm:text-lg">
-              Administração
-            </h1>
+            <h1 className="text-2xl font-medium mb-6 max-md:text-xl max-sm:text-lg">Administração</h1>
             <div className="flex items-center justify-center h-64">
-              <div className="text-[#525252] text-center">
-                Carregando comunidades...
-              </div>
+              <div className="text-[#525252] text-center">Carregando comunidades...</div>
             </div>
           </main>
         </div>
@@ -38,9 +34,7 @@ export default function AdministrationPage() {
         <Sidebar variant="static" />
         <div className="ml-0 min-[900px]:ml-64 max-md:pl-4 max-md:pr-4">
           <main className="p-8 max-md:p-4 max-sm:p-3">
-            <h1 className="text-2xl font-medium mb-6 max-md:text-xl max-sm:text-lg">
-              Administração
-            </h1>
+            <h1 className="text-2xl font-medium mb-6 max-md:text-xl max-sm:text-lg">Administração</h1>
             <div className="flex items-center justify-center h-64">
               <div className="text-red-500 text-center max-w-md">
                 Erro ao carregar comunidades: {error.message}
@@ -74,7 +68,7 @@ export default function AdministrationPage() {
                     .includes(searchQuery.toLowerCase()) ||
                   (community.description || "")
                     .toLowerCase()
-                    .includes(searchQuery.toLowerCase()),
+                    .includes(searchQuery.toLowerCase())
               ).length === 0 ? (
                 <div className="text-center py-8 text-neutral-500 w-full">
                   Nenhuma comunidade encontrada
@@ -88,34 +82,27 @@ export default function AdministrationPage() {
                         .includes(searchQuery.toLowerCase()) ||
                       (community.description || "")
                         .toLowerCase()
-                        .includes(searchQuery.toLowerCase()),
+                        .includes(searchQuery.toLowerCase())
                   )
                   .map((community) => (
                     <article
                       key={community.id}
                       role="button"
                       tabIndex={0}
-                      onClick={() =>
-                        (window.location.href = `/administration/${community.id}`)
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          window.location.href = `/administration/${community.id}`;
-                        }
-                      }}
+                      onClick={() => window.location.href = `/administration/${community.id}`}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { window.location.href = `/administration/${community.id}`; } }}
                       className="flex flex-col gap-4 items-start px-6 py-4 w-full bg-white max-md:gap-3.5 max-md:px-5 max-md:py-3.5 max-sm:gap-3 max-sm:px-4 max-sm:py-3 text-left cursor-pointer outline-none"
                     >
                       <div className="flex justify-between items-start w-full max-sm:items-center">
                         <div className="w-12 h-12 flex items-center justify-center max-sm:w-10 max-sm:h-10">
                           <Image
-                            src={`/icons/community/${
-                              [
-                                "Coffee.png",
-                                "Lantern.png",
-                                "Myrobot.png",
-                                "Reindeer.png",
-                              ][Math.floor(Math.random() * 4)]
-                            }`}
+                            src={`/icons/community/${[
+                              "Coffee.png",
+                              "Lantern.png",
+                              "Myrobot.png",
+                              "Reindeer.png",
+                            ][Math.floor(Math.random() * 4)]
+                              }`}
                             alt="Community icon"
                             width={52}
                             height={52}
@@ -126,9 +113,7 @@ export default function AdministrationPage() {
                           type="button"
                           aria-label="Menu options"
                           className="p-1 cursor-pointer hover:bg-gray-200 rounded-full transition max-sm:hidden"
-                          onClick={(e) => {
-                            e.stopPropagation(); /* menu logic aqui */
-                          }}
+                          onClick={e => { e.stopPropagation(); /* menu logic aqui */ }}
                         >
                           <OverflowMenuHorizontal size={20} />
                         </button>
