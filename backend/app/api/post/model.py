@@ -89,6 +89,23 @@ class ComplaintPost(Base):
     level_complaint = Column(String, nullable=False, default='low')
 
 
+class ComplaintConfirmation(Base):
+    __tablename__ = 'complaint_confirmations'
+    __table_args__ = (PrimaryKeyConstraint('post_id', 'member_id'),)
+
+    post_id = Column(UUIDColumn, ForeignKey('complaint_posts.post_id'), nullable=False)
+    member_id = Column(
+        UUIDColumn,
+        ForeignKey('community_members.id'),
+        nullable=False,
+    )
+    created_at = Column(DateTime, nullable=False, default=func.now())
+
+    @property
+    def id(self):
+        return (self.post_id, self.member_id)
+
+
 class PollPosts(Base):
     __tablename__ = 'poll_posts'
 

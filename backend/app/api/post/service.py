@@ -17,6 +17,7 @@ from app.api.post.exceptions import (
 from app.api.post.model import (
     CampaignParticipants,
     CampaignPost,
+    ComplaintConfirmation,
     ComplaintPost,
     PollOptions,
     PollPosts,
@@ -64,6 +65,7 @@ class PostService:
         self.tm = tm
         self.post_repo = tm.get_post_repository()
         self.complaint_repo = tm.get_complaint_post_repository()
+        self.complaint_confirmation_repo = tm.get_complaint_confirmation_repository()
         self.campaign_repo = tm.get_campaign_post_repository()
         self.campaign_participants_repo = tm.get_campaign_participants_repository()
         self.poll_posts_repo = tm.get_poll_posts_repository()
@@ -466,6 +468,24 @@ class PostService:
             raise UnexpectedPostError('Unexpected error creating complaint') from e
 
     def confirm_complaint(self, post_id: UUID, member_id: UUID) -> ComplaintResponse:
+        # Verifica se o usuário já confirmou
+        if self.complaint_confirmation_repo.has_confirmed(post_id, member_id):
+            # Retorna a resposta atual sem criar duplicata
+            complaint = self.get_complaint(post_id)
+            return ComplaintResponse(
+                post=self.get_post(post_id),
+                confirmations_count=complaint.confirmations_count,
+                status_complaint=complaint.status_complaint,
+                level_complaint=complaint.level_complaint,
+            )
+        try:
+            confirmation = ComplaintConfirmation(
+                post_id=post_id,
+                member_id=member_id,
+            )
+            self.complaint_confirmation_repo.save(confirmation)
+        except Exception as e:
+            raise UnexpectedPostError('Unexpected error confirming complaint') from e
         complaint = self.get_complaint(post_id)
         complaint.confirmations_count += 1
         if complaint.confirmations_count >= self.COMPLAINT_HIGH_THRESHOLD:
@@ -482,6 +502,10 @@ class PostService:
             status_complaint=complaint_saved.status_complaint,
             level_complaint=complaint_saved.level_complaint,
         )
+
+    def has_user_confirmed_complaint(self, post_id: UUID, member_id: UUID) -> bool:
+        """Verifica se o usuário já confirmou a denúncia"""
+        return self.complaint_confirmation_repo.has_confirmed(post_id, member_id)
 
     def get_poll(self, post_id: UUID) -> PollPosts:
         try:

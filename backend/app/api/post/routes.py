@@ -254,6 +254,21 @@ def create_complaint(
         return PostService(tm).create_complaint(post)
 
 
+@router.get(
+    '/{community_id}/complaint/{post_id}/check-confirmation',
+    status_code=status.HTTP_200_OK,
+)
+def check_complaint_confirmation(
+    post_id: str,
+    session: Session = Depends(get_db),
+    member: CommunityMember = Depends(require_roles(['member'])),
+) -> dict:
+    """Verifica se o usuário atual já confirmou a denúncia"""
+    with TransactionManager(session) as tm:
+        has_confirmed = PostService(tm).has_user_confirmed_complaint(post_id, member.id)
+        return {'has_confirmed': has_confirmed}
+
+
 @router.post(
     '/{community_id}/complaint/{post_id}/confirm',
     response_model=ComplaintResponse,

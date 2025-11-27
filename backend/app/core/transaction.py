@@ -13,6 +13,7 @@ from app.api.communities.repository import CommunityMemberRepository, CommunityR
 from app.api.post.repository import (
     CampaignParticipantsRepository,
     CampaignPostRepository,
+    ComplaintConfirmationRepository,
     ComplaintPostRepository,
     PollOptionsRepository,
     PollPostsRepository,
@@ -73,6 +74,9 @@ class TransactionManager:
 
     def get_complaint_post_repository(self):
         return ComplaintPostRepository(self._session)
+
+    def get_complaint_confirmation_repository(self):
+        return ComplaintConfirmationRepository(self._session)
 
     def get_campaign_post_repository(self):
         return CampaignPostRepository(self._session)

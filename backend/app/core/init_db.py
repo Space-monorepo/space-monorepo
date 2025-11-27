@@ -5,6 +5,7 @@ from app.api.post.model import (
     Post,
     CampaignPost,
     ComplaintPost,
+    ComplaintConfirmation,
     PollPosts,
     PollOptions,
     PostFeedback,

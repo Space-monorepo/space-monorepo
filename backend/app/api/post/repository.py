@@ -8,6 +8,7 @@ from app.api.communities.model import CommunityMember
 from app.api.post.model import (
     CampaignParticipants,
     CampaignPost,
+    ComplaintConfirmation,
     ComplaintPost,
     PollOptions,
     PollPosts,
@@ -164,6 +165,28 @@ class ComplaintPostRepository(BaseRepository[ComplaintPost]):
         total = query.count()
         complaints = query.offset(params.offset).limit(params.limit).all()
         return complaints, total
+
+
+class ComplaintConfirmationRepository(BaseRepository[ComplaintConfirmation]):
+    def __init__(self, session: Session):
+        super().__init__(ComplaintConfirmation, session)
+        self.session = session
+
+    def get_by_post_and_member(
+        self, post_id: UUID, member_id: UUID
+    ) -> ComplaintConfirmation | None:
+        return (
+            self.session.query(ComplaintConfirmation)
+            .filter(
+                ComplaintConfirmation.post_id == post_id,
+                ComplaintConfirmation.member_id == member_id,
+            )
+            .first()
+        )
+
+    def has_confirmed(self, post_id: UUID, member_id: UUID) -> bool:
+        confirmation = self.get_by_post_and_member(post_id, member_id)
+        return confirmation is not None
 
 
 class CampaignPostRepository(BaseRepository[CampaignPost]):
