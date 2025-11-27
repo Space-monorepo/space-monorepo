@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Search,
   Lock,
@@ -36,6 +37,9 @@ export default function ComunidadesPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  const contentMaxHeight = "calc(100vh - 320px)";
+  const listScrollMaxHeight = "calc(100vh - 420px)";
 
   // Hook para gerenciar membros da comunidade selecionada
   const {
@@ -297,7 +301,7 @@ export default function ComunidadesPage() {
         {/* Community Details */}
         {selectedCommunity && (
           <div className="flex-1 overflow-auto">
-            <div className="p-6">
+            <div className="p-6 flex flex-col h-full pb-8">
               <div className="mb-4">
                 <h1 className="text-2xl font-medium mb-2">
                   {selectedCommunity.name}
@@ -389,8 +393,11 @@ export default function ComunidadesPage() {
               {/* Tab Content */}
               <div className="mb-6">
                 {activeTab === "Sobre" && (
-                  <div>
-                    <div className="border border-[#e0e0e0] bg-white mb-4">
+                  <div
+                    className="flex flex-col gap-4"
+                    style={{ maxHeight: contentMaxHeight }}
+                  >
+                    <div className="border border-[#e0e0e0] bg-white">
                       <div className="p-4 border-b border-[#e0e0e0]">
                         <h3 className="font-medium">Sobre</h3>
                       </div>
@@ -420,14 +427,20 @@ export default function ComunidadesPage() {
                 )}
 
                 {activeTab === "Membros" && (
-                  <div className="border border-[#e0e0e0] bg-white">
+                  <div
+                    className="border border-[#e0e0e0] bg-white flex flex-col"
+                    style={{ maxHeight: contentMaxHeight }}
+                  >
                     <div className="p-4 border-b border-[#e0e0e0]">
                       <h3 className="font-medium">Membros da Comunidade</h3>
                       <p className="text-sm text-[#525252] mt-1">
                         {pagination?.total || members.length} membros no total
                       </p>
                     </div>
-                    <div className="p-4">
+                    <div
+                      className="p-4 flex-1 overflow-auto"
+                      style={{ maxHeight: listScrollMaxHeight }}
+                    >
                       {membersLoading ? (
                         <div className="text-center py-8">
                           <div className="text-[#525252]">
@@ -441,7 +454,7 @@ export default function ComunidadesPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                        <div className="space-y-3">
                           {members.slice(0, 20).map((member) => (
                             <div
                               key={member.user_id}
@@ -465,7 +478,12 @@ export default function ComunidadesPage() {
                                 </div>
                                 <div>
                                   <h4 className="font-medium">
-                                    {member.user.name}
+                                    <Link
+                                      href={`/profile/${member.user.id}`}
+                                      className="text-[#161616] hover:underline"
+                                    >
+                                      {member.user.name}
+                                    </Link>
                                   </h4>
                                   <div className="flex items-center gap-2 text-xs text-[#525252]">
                                     <span
@@ -526,7 +544,10 @@ export default function ComunidadesPage() {
                 )}
 
                 {activeTab === "Moderadores" && (
-                  <div className="border border-[#e0e0e0] bg-white">
+                  <div
+                    className="border border-[#e0e0e0] bg-white flex flex-col"
+                    style={{ maxHeight: contentMaxHeight }}
+                  >
                     <div className="p-4 border-b border-[#e0e0e0]">
                       <h3 className="font-medium">
                         Moderadores e Administradores
@@ -536,7 +557,11 @@ export default function ComunidadesPage() {
                         moderadores/administradores
                       </p>
                     </div>
-                    <div className="p-4">
+                    <div
+                      className="p-4 flex-1 overflow-auto"
+                      style={{ maxHeight: listScrollMaxHeight }}
+                    >
+                      
                       {membersLoading ? (
                         <div className="text-center py-8">
                           <div className="text-[#525252]">
@@ -576,7 +601,12 @@ export default function ComunidadesPage() {
                                   </div>
                                   <div>
                                     <h4 className="font-medium">
-                                      {member.user.name}
+                                      <Link
+                                        href={`/profile/${member.user.id}`}
+                                        className="text-[#161616] hover:underline"
+                                      >
+                                        {member.user.name}
+                                      </Link>
                                     </h4>
                                     <div className="flex items-center gap-2 text-xs">
                                       <span
@@ -622,18 +652,20 @@ export default function ComunidadesPage() {
                 )}
 
                 {activeTab === "Discussão" && (
-                  <div className="border border-[#e0e0e0] bg-white p-4">
-                    <p className="text-[#525252]">
-                      Discussões da comunidade aparecerão aqui.
-                    </p>
+                  <div
+                    className="border border-[#e0e0e0] bg-white p-4 flex items-center justify-center text-center text-[#525252]"
+                    style={{ maxHeight: contentMaxHeight }}
+                  >
+                    Discussões da comunidade aparecerão aqui.
                   </div>
                 )}
 
                 {activeTab === "Avaliações" && (
-                  <div className="border border-[#e0e0e0] bg-white p-4">
-                    <p className="text-[#525252]">
-                      Avaliações da comunidade aparecerão aqui.
-                    </p>
+                  <div
+                    className="border border-[#e0e0e0] bg-white p-4 flex items-center justify-center text-center text-[#525252]"
+                    style={{ maxHeight: contentMaxHeight }}
+                  >
+                    Avaliações da comunidade aparecerão aqui.
                   </div>
                 )}
               </div>

@@ -25,7 +25,6 @@ import {
   Bookmark,
   Activity,
   Award,
-  X,
 } from "lucide-react";
 import { CheckmarkFilled, Forum, OverflowMenuHorizontal, ArrowUp } from "@carbon/icons-react";
 import FilePicker from "@/components/ui/FilePicker";
@@ -34,6 +33,7 @@ import EditProfileModal from "../components/EditProfileModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getConnectionStatus, requestConnection, deleteConnection } from "@/app/api/src/services/connection/connectionService";
+import { API_URL } from "@/config";
 
 // --- Interfaces ---
 export interface User {
@@ -55,6 +55,9 @@ const levels = [
   { label: "Colaborador", min: 5001, max: 7500 },
   { label: "Líder", min: 7501, max: 10000 },
 ];
+
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 export default function ProfilePage() {
   const params = useParams();
@@ -93,7 +96,7 @@ export default function ProfilePage() {
 
   // Hooks para ações com posts
   const { likePost, unlikePost } = usePostActions();
-  const { participate } = useCampaignParticipation();
+  const { participate, checkParticipation, participating: campaignParticipation } = useCampaignParticipation();
   const { reportPost } = useReportPost();
 
   const router = useRouter();
@@ -251,12 +254,21 @@ export default function ProfilePage() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (currentUserId) {
-      if (!urlParamId || urlParamId === "[username]" || urlParamId === "%5Busername%5D" || urlParamId === "space") {
-        window.location.href = `/profile/${currentUserId}`;
-      }
+    if (!currentUserId || !urlParamId) return;
+
+    const shouldRedirectToId =
+      !isUuid(urlParamId) &&
+      (
+        urlParamId === "[username]" ||
+        urlParamId === "%5Busername%5D" ||
+        urlParamId === "space" ||
+        urlParamId === (authUser as any)?.username
+      );
+
+    if (shouldRedirectToId) {
+      router.replace(`/profile/${currentUserId}`);
     }
-  }, [currentUserId, urlParamId]);
+  }, [currentUserId, urlParamId, authUser, router]);
 
   const handleImageChange = (newImageUrl: string) => {
     setUser((prev) =>
@@ -306,7 +318,34 @@ export default function ProfilePage() {
     setOpenCommentsPostId((prev) => (prev === postId ? null : postId));
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const checkProblemConfirmation = useCallback(async (postId: string, communityId: string) => {
+    try {
+      const token = getTokenFromCookies();
+      if (!token) {
+        return false;
+      }
+
+      const response = await fetch(`${API_URL}/communities/${communityId}/complaints/${postId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+      const currentUserId = JSON.parse(atob(token.split('.')[1])).sub;
+      return data.confirmations?.some((confirmation: any) => confirmation.user_id === currentUserId) ?? false;
+    } catch (error) {
+      console.error('Erro ao verificar confirmação do problema:', error);
+      return false;
+    }
+  }, []);
+
   const handleConfirmComplaint = useCallback(async (post: any) => {
     try {
       const token = getTokenFromCookies();
@@ -314,6 +353,11 @@ export default function ProfilePage() {
       
       if (!communityId) {
         toast.error('ID da comunidade não encontrado');
+        return;
+      }
+
+      if (post.user?.id && post.user.id === currentUserId) {
+        toast.info('Você não pode confirmar um problema que criou.');
         return;
       }
 
@@ -327,13 +371,22 @@ export default function ProfilePage() {
     } catch {
       toast.error('Erro ao confirmar problema');
     }
-  }, [confirmedProblems]);
+  }, [confirmedProblems, currentUserId]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleParticipate = useCallback(async (post: any) => {
     const communityId = post.community?.id;
     if (!communityId) {
       toast.error('ID da comunidade não encontrado');
+      return;
+    }
+
+    if (post.user?.id && post.user.id === currentUserId) {
+      toast.info('Você não pode participar da própria campanha.');
+      return;
+    }
+
+    if (campaignParticipation[post.id]) {
+      toast.info('Você já participa desta campanha.');
       return;
     }
     
@@ -343,7 +396,44 @@ export default function ProfilePage() {
     } catch {
       toast.error('Erro ao participar da campanha');
     }
-  }, [participate]);
+  }, [participate, campaignParticipation, currentUserId]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const initializePostStates = async () => {
+      const confirmedMap: Record<string, boolean> = {};
+
+      for (const post of userPosts) {
+        const communityId = post.community?.id;
+        if (!communityId) continue;
+
+        const postType = translatePostType(post.type_post || '');
+
+        if (postType === 'Denúncia') {
+          confirmedMap[post.id] = await checkProblemConfirmation(post.id, communityId);
+        }
+
+        if (postType === 'Campanha') {
+          await checkParticipation(communityId, post.id);
+        }
+      }
+
+      if (!isCancelled) {
+        setConfirmedProblems(confirmedMap);
+      }
+    };
+
+    if (userPosts.length > 0) {
+      initializePostStates();
+    } else {
+      setConfirmedProblems({});
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [userPosts, checkProblemConfirmation, checkParticipation]);
 
   // 3. Carrega status de conexão com o usuário visitado
   useEffect(() => {
@@ -395,11 +485,15 @@ export default function ProfilePage() {
     }
   };
 
-  // Handler para enviar mensagem
+  // Handler para enviar mensagem - Navega para página de mensagens com userId e userName
   const handleSendMessage = () => {
     if (!user?.id) return;
-    // Navega para página de mensagens com o usuário
-    router.push(`/messages?user=${user.id}`);
+    // Passa userId e userName como parâmetros para a página de mensagens
+    const params = new URLSearchParams({
+      userId: user.id,
+      userName: user.name || user.username,
+    });
+    router.push(`/messages?${params.toString()}`);
   };
 
   // Handler para desconectar
@@ -652,6 +746,8 @@ export default function ProfilePage() {
                       const checkmarkClass = getCheckmarkColorClass(post.user?.role || '');
                       const postType = translatePostType(post.type_post || '');
                       const postTime = getRelativeTime(post.created_at);
+                      const isParticipating = !!campaignParticipation[post.id];
+                      const hasConfirmedProblem = !!confirmedProblems[post.id];
                       
                       // Debug para enquetes
                       if (postType === 'Enquete') {
@@ -683,7 +779,7 @@ export default function ProfilePage() {
                                     <div className="flex gap-2 items-center w-full h-[23px]">
                                       <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                                         <Link
-                                          href={`/profile/${post.user?.username || post.user?.id}`}
+                                          href={`/profile/${post.user?.id || post.user?.username}`}
                                           className="self-stretch my-auto text-sm text-neutral-800 hover:text-blue-600 whitespace-nowrap transition-colors hover:underline"
                                         >
                                           {post.user?.name}
@@ -866,24 +962,32 @@ export default function ProfilePage() {
                                 {/* Botão Participar da Campanha */}
                                 {postType === 'Campanha' && (
                                   <button
-                                    className="mt-4 w-full py-2 px-4 text-left font-regular transition-colors cursor-pointer bg-neutral-900 text-white hover:bg-neutral-800"
+                                    className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${isParticipating ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'cursor-pointer bg-neutral-900 text-white hover:bg-neutral-800'}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      if (!isParticipating) {
+                                        handleParticipate(post);
+                                      }
                                     }}
+                                    disabled={isParticipating}
                                   >
-                                    Participar da Campanha
+                                    {isParticipating ? 'Já participa da campanha' : 'Participar da Campanha'}
                                   </button>
                                 )}
 
                                 {/* Botão Confirmar problema para Denúncia */}
                                 {postType === 'Denúncia' && (
                                   <button
-                                    className="mt-4 w-full py-2 px-4 text-left font-regular transition-colors bg-neutral-900 text-white hover:bg-neutral-800"
+                                    className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${hasConfirmedProblem ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      if (!hasConfirmedProblem) {
+                                        handleConfirmComplaint(post);
+                                      }
                                     }}
+                                    disabled={hasConfirmedProblem}
                                   >
-                                    Confirmar problema
+                                    {hasConfirmedProblem ? 'Problema confirmado' : 'Confirmar problema'}
                                   </button>
                                 )}
                               </div>

@@ -146,7 +146,13 @@ export default function Sidebar({ variant = "hover" }: SidebarProps) {
       <div className="p-7 py-4 border-gray-200">
         <div className="flex items-center justify-between overflow-hidden">
           <Link
-            href={user?.username ? `/profile/${user.username}` : "/profile"}
+            href={
+              user?.id
+                ? `/profile/${user.id}`
+                : user?.username
+                  ? `/profile/${user.username}`
+                  : "/profile"
+            }
             className="flex items-center gap-3 overflow-hidden"
           >
             <div

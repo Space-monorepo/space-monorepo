@@ -1,15 +1,44 @@
 import { API_URL } from "@/config";
 
+interface ConversationParticipantApi {
+  id: string;
+  name: string;
+  email?: string;
+  profile_image_url?: string;
+  profile_picture?: string;
+}
+
+interface ConversationResponseApi {
+  id: string;
+  user1_id: string;
+  user2_id: string;
+  created_at: string;
+  updated_at: string;
+  last_message_id?: string;
+  unread_count?: number;
+  last_message?: {
+    id: string;
+    content?: string;
+    created_at?: string;
+  };
+  user1?: ConversationParticipantApi;
+  user2?: ConversationParticipantApi;
+  other_participant?: ConversationParticipantApi;
+  participant?: ConversationParticipantApi;
+}
+
+export interface ConversationParticipant {
+  id: string;
+  name: string;
+  email?: string;
+  profile_image_url?: string;
+  profile_picture?: string;
+}
+
 export interface Conversation {
   id: string;
   participant_user_id: string;
-  participant: {
-    id: string;
-    name: string;
-    email: string;
-    profile_image_url?: string;
-    profile_picture?: string;
-  };
+  participant: ConversationParticipant;
   last_message?: string;
   last_message_timestamp?: string;
   unread_count?: number;
@@ -78,7 +107,12 @@ export const fetchConversations = async (
     throw new Error(errorData.message || "Erro ao carregar conversas");
   }
 
-  return response.json();
+  const data: PaginationResponse<ConversationResponseApi> = await response.json();
+
+  return {
+    ...data,
+    items: data.items.map(normalizeConversationResponse),
+  };
 };
 
 // Buscar conversa específica
@@ -101,7 +135,8 @@ export const fetchConversation = async (
     throw new Error(errorData.message || "Erro ao carregar conversa");
   }
 
-  return response.json();
+  const data: ConversationResponseApi = await response.json();
+  return normalizeConversationResponse(data);
 };
 
 // Criar nova conversa
@@ -127,7 +162,8 @@ export const createConversation = async (
     throw new Error(errorData.message || "Erro ao criar conversa");
   }
 
-  return response.json();
+  const data: ConversationResponseApi = await response.json();
+  return normalizeConversationResponse(data);
 };
 
 // Buscar mensagens de uma conversa
@@ -266,4 +302,29 @@ export const getUnreadCount = async (
 
   const data = await response.json();
   return data.unread_count || 0;
+};
+
+const normalizeConversationResponse = (
+  conversation: ConversationResponseApi
+): Conversation => {
+  const participantSource =
+    conversation.other_participant || conversation.participant;
+
+  const participant: ConversationParticipant = {
+    id: participantSource?.id || "",
+    name: participantSource?.name || "Usuário",
+    email: participantSource?.email,
+    profile_image_url: participantSource?.profile_image_url,
+    profile_picture: participantSource?.profile_picture,
+  };
+
+  return {
+    id: conversation.id,
+    participant_user_id: participant.id,
+    participant,
+    last_message: conversation.last_message?.content,
+    last_message_timestamp: conversation.last_message?.created_at,
+    unread_count: conversation.unread_count,
+    created_at: conversation.created_at,
+  };
 };

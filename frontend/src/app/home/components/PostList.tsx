@@ -450,6 +450,7 @@ export default function PostList() {
   const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(null);
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const postsPerPage = 3;
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
@@ -478,6 +479,8 @@ export default function PostList() {
       return [];
     }
     try {
+      const decodedUserId = JSON.parse(atob(token.split('.')[1])).sub;
+      setCurrentUserId((prev) => prev ?? decodedUserId);
       // Busca o feed do usuário (não precisa de communityId específico)
       const response = await fetch(`${API_URL}/posts/feed?limit=9999`, {
         method: 'GET',
@@ -494,11 +497,10 @@ export default function PostList() {
       const feedData: PostsListFeed = await response.json();
       const userCampaigns = await fetchUserCampaigns();
       const userCampaignPostIds = userCampaigns.map((c: any) => c.post?.id).filter(Boolean);
-      const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).sub : null;
       const fetchedPosts = feedData.items.map((item: PostResponse): PostDisplay => {
         let alreadyParticipating = false;
         if (translatePostType(item.type_post) === 'Campanha') {
-          alreadyParticipating = item.user.id === currentUserId || userCampaignPostIds.includes(item.id);
+          alreadyParticipating = item.user.id === decodedUserId || userCampaignPostIds.includes(item.id);
         }
         // Detecta se o usuário já votou na enquete
         let userVotedOptionId: string | undefined = undefined;
@@ -544,6 +546,17 @@ export default function PostList() {
     if (fetchedPosts.length === 0) setShowNoCommunitiesMessage(true);
     setLoading(false);
   };
+
+  useEffect(() => {
+    const token = getTokenFromCookies();
+    if (!token) return;
+    try {
+      const decoded = JSON.parse(atob(token.split('.')[1])).sub;
+      setCurrentUserId(decoded);
+    } catch (err) {
+      console.error('Erro ao decodificar token do usuário atual:', err);
+    }
+  }, []);
 
   // Atualização periódica: busca novos posts a cada 5s
   useEffect(() => {
@@ -681,10 +694,20 @@ export default function PostList() {
         return;
       }
 
+      if (post.user?.id && post.user.id === currentUserId) {
+        toast.info('Você não pode confirmar um problema que criou.');
+        return;
+      }
+
       if (!confirmedProblems[post.id]) {
         await confirmComplaint(communityId, post.id, token ?? undefined);
         setConfirmedProblems((prev) => ({ ...prev, [post.id]: true }));
         setDisplayedPosts((prev: PostDisplay[]) =>
+          prev.map((p: PostDisplay) =>
+            p.id === post.id ? { ...p, confirmations_count: (p.confirmations_count ?? 0) + 1 } : p
+          )
+        );
+        setAllPosts((prev: PostDisplay[]) =>
           prev.map((p: PostDisplay) =>
             p.id === post.id ? { ...p, confirmations_count: (p.confirmations_count ?? 0) + 1 } : p
           )
@@ -800,15 +823,38 @@ export default function PostList() {
       toast.error('ID da comunidade não encontrado');
       return;
     }
+    if (post.user?.id && post.user.id === currentUserId) {
+      toast.info('Você não pode participar da própria campanha.');
+      return;
+    }
     
     try {
       await participate(communityId, post.id);
       setDisplayedPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
+      setAllPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
       toast.success('Você agora faz parte da campanha!');
     } catch (err) {
       toast.error('Erro ao participar da campanha');
     }
   };
+
+  useEffect(() => {
+    if (allPosts.length === 0) return;
+
+    const syncParticipation = async () => {
+      const tasks = allPosts
+        .filter((post) => post.community?.id && post.type === 'Campanha')
+        .map((post) => checkParticipation(post.community!.id, post.id));
+
+      try {
+        await Promise.all(tasks);
+      } catch (err) {
+        console.warn('Erro ao sincronizar participação em campanhas:', err);
+      }
+    };
+
+    syncParticipation();
+  }, [allPosts, checkParticipation]);
 
   // Função para votar em uma enquete
   const handleVotePoll = async (post: PostDisplay, optionId: string) => {
@@ -926,7 +972,7 @@ export default function PostList() {
                         <div className="flex gap-2 items-center w-full h-[23px]">
                           <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                             <Link
-                              href={`/profile/${post.username || post.user.id}`}
+                              href={`/profile/${post.user?.id || post.username}`}
                               className="self-stretch my-auto text-sm text-neutral-800 hover:text-blue-600 whitespace-nowrap transition-colors hover:underline"
                             >
                               {post.author}
