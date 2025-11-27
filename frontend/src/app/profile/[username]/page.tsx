@@ -733,7 +733,7 @@ export default function ProfilePage() {
                     </p>
                     {isOwnProfile && (
                       <div className="flex gap-8 items-center mt-4 max-w-full text-sm leading-none text-zinc-100 ">
-                        <button className="gap-2.5 self-stretch py-2 pr-16 pl-3.5 my-auto rounded-sm bg-neutral-800 text-zinc-100 smax-md:pr-5">
+                        <button className="gap-2.5 self-stretch py-2 pr-16 pl-3.5 my-auto rounded-sm bg-neutral-800 text-zinc-100 cursor-pointer hover:bg-neutral-900 transition-colors smax-md:pr-5">
                           Criar publicação
                         </button>
                       </div>

@@ -90,7 +90,7 @@ export default function Header() {
         </div>
         <button
           onClick={handleOpenModal}
-          className="flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded bg-[#161616] px-4 text-sm font-medium text-white transition-colors hover:bg-black min-[900px]:w-auto min-[900px]:min-w-[164px] min-[900px]:flex-shrink-0"
+          className="flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded bg-[#161616] px-4 text-sm font-medium text-white transition-colors hover:bg-black cursor-pointer min-[900px]:w-auto min-[900px]:min-w-[164px] min-[900px]:flex-shrink-0"
         >
           Criar publicação
         </button>

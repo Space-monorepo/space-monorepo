@@ -19,7 +19,7 @@ export default function Home() {
             <section className="flex-1 min-w-0">
               <PostList />
             </section>
-            <aside className="hidden min-[1360px]:flex w-[320px] shrink-0 ml-auto">
+            <aside className="hidden min-[1360px]:flex w-[320px] shrink-0 ml-auto min-h-[calc(100vh-6rem)]">
               <RightSidebar />
             </aside>
           </div>

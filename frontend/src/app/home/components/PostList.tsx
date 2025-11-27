@@ -7,6 +7,7 @@ import Link from "next/link";
 import {
   EllipsisVerticalIcon as OverflowMenuVertical,
   Activity,
+  Loader2,
 } from "lucide-react";
 import {
   fetchPostsByCommunity,
@@ -15,6 +16,7 @@ import {
 } from "@/app/api/src/services/post/postService";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
 import { fetchUserCampaigns } from "@/app/api/src/services/post/fetchUserCampaigns";
+import { fetchUserCommunities } from "@/app/api/src/services/community/communityService";
 import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { PostResponse, PostsListFeed } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
@@ -627,15 +629,20 @@ export default function PostList() {
   const [error, setError] = useState<Error | null>(null);
   const [showNoCommunitiesMessage, setShowNoCommunitiesMessage] =
     useState(false);
+  const [hasCommunities, setHasCommunities] = useState<boolean | null>(null);
+  const [isFeedEmpty, setIsFeedEmpty] = useState(false);
   const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(
     null,
   );
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshingFeed, setIsRefreshingFeed] = useState(false);
   const postsPerPage = 3;
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
+  const pullStartYRef = useRef<number | null>(null);
 
   const { likePost, unlikePost, addComment, sharePost } = usePostActions();
 
@@ -665,6 +672,7 @@ export default function PostList() {
   const allPostsRef = useRef<PostDisplay[]>(allPosts);
   const votingPostsRef = useRef<{ [key: string]: boolean }>(votingPosts);
   const displayedPostsRef = useRef<PostDisplay[]>(displayedPosts);
+  const pullDistanceRef = useRef(0);
 
   // Sincroniza refs com os estados correspondentes
   useEffect(() => {
@@ -679,8 +687,35 @@ export default function PostList() {
     displayedPostsRef.current = displayedPosts;
   }, [displayedPosts]);
 
+  useEffect(() => {
+    pullDistanceRef.current = pullDistance;
+  }, [pullDistance]);
+
+  useEffect(() => {
+    const verifyUserCommunities = async () => {
+      const token = getTokenFromCookies();
+      if (!token) {
+        setHasCommunities(null);
+        setShowNoCommunitiesMessage(false);
+        return;
+      }
+      try {
+        const decodedUserId = JSON.parse(atob(token.split(".")[1])).sub;
+        const response = await fetchUserCommunities(token, decodedUserId);
+        const participates = (response?.items?.length ?? 0) > 0;
+        setHasCommunities(participates);
+        setShowNoCommunitiesMessage(!participates);
+      } catch (err) {
+        console.error("Erro ao verificar comunidades do usuário:", err);
+        setHasCommunities(null);
+        setShowNoCommunitiesMessage(false);
+      }
+    };
+    verifyUserCommunities();
+  }, []);
+
   // Função para buscar posts do backend (usada tanto para inicial quanto para atualização)
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     const token = getTokenFromCookies();
     if (!token) {
       setError(new Error("Usuário não autenticado."));
@@ -759,19 +794,19 @@ export default function PostList() {
       console.error("Erro ao buscar posts:", err);
       return [];
     }
-  };
+  }, []);
 
   // Carrega posts iniciais
-  const loadInitialPosts = async () => {
+  const loadInitialPosts = useCallback(async () => {
     setLoading(true);
     const fetchedPosts = await fetchPosts();
     setAllPosts(fetchedPosts);
     setDisplayedPosts(fetchedPosts.slice(0, postsPerPage));
     setCurrentPage(1);
-    if (fetchedPosts.length <= postsPerPage) setHasMorePosts(false);
-    if (fetchedPosts.length === 0) setShowNoCommunitiesMessage(true);
+    setHasMorePosts(fetchedPosts.length > postsPerPage);
+    setIsFeedEmpty(fetchedPosts.length === 0);
     setLoading(false);
-  };
+  }, [fetchPosts, postsPerPage]);
 
   // Polling global otimizado: cria apenas UM intervalo e usa refs para acessar estados mais recentes
   useEffect(() => {
@@ -815,6 +850,7 @@ export default function PostList() {
             : updatedExisting;
 
         setAllPosts(merged);
+        setIsFeedEmpty(merged.length === 0);
 
         const shownCount = Math.max(
           displayedPostsRef.current.length,
@@ -833,6 +869,13 @@ export default function PostList() {
   }, []);
 
   // Função para carregar mais posts (scroll infinito)
+  const handleManualRefresh = useCallback(async () => {
+    setIsRefreshingFeed(true);
+    await loadInitialPosts();
+    setIsRefreshingFeed(false);
+    setPullDistance(0);
+  }, [loadInitialPosts]);
+
   const loadMorePosts = useCallback(async () => {
     if (loadingMore || !hasMorePosts) return;
     setLoadingMore(true);
@@ -876,8 +919,51 @@ export default function PostList() {
 
   useEffect(() => {
     loadInitialPosts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadInitialPosts]);
+
+  useEffect(() => {
+    const handleTouchStart = (event: TouchEvent) => {
+      if (window.scrollY <= 0) {
+        pullStartYRef.current = event.touches[0].clientY;
+      } else {
+        pullStartYRef.current = null;
+      }
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (pullStartYRef.current === null) return;
+      const distance = event.touches[0].clientY - pullStartYRef.current;
+      if (distance > 0) {
+        setPullDistance(distance);
+      } else {
+        setPullDistance(0);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (pullStartYRef.current === null) return;
+      if (
+        pullDistanceRef.current > 70 &&
+        !isRefreshingFeed &&
+        !loading
+      ) {
+        handleManualRefresh();
+      } else {
+        setPullDistance(0);
+      }
+      pullStartYRef.current = null;
+    };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [handleManualRefresh, isRefreshingFeed, loading]);
 
   const handleLike = async (post: PostDisplay) => {
     const communityId = post.community?.id;
@@ -1285,11 +1371,11 @@ export default function PostList() {
 
   if (showNoCommunitiesMessage) {
     return (
-      <div className="flex flex-col justify-center items-center h-full w-full px-4 mt-62 text-center">
-        <p className="mb-4 text-lg">
+      <div className="flex flex-col justify-center items-center w-full px-4 text-center gap-3 min-h-[calc(100vh-12rem)]">
+        <p className="text-lg font-medium">
           Você ainda não participa de nenhuma comunidade.
         </p>
-        <p className="mb-4">
+        <p>
           Peça para um administrador convidá-lo para a comunidade.
         </p>
         <Link href="/notifications" legacyBehavior>
@@ -1301,9 +1387,47 @@ export default function PostList() {
     );
   }
 
+  if (!loading && !error && isFeedEmpty && !showNoCommunitiesMessage) {
+    return (
+      <div className="flex flex-col justify-center items-center w-full px-4 text-center text-neutral-700 gap-2 min-h-[calc(100vh-12rem)]">
+        <p className="text-lg font-medium">
+          Não há publicações aparente...
+        </p>
+        <p className="text-sm">
+          Atualize a página para carregar novas publicações.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 p-4 min-[900px]:p-6 flex justify-center">
       <main className="post-content overflow-hidden max-w-[680px] w-full space-y-6">
+        {(pullDistance > 0 || isRefreshingFeed) && (
+          <div
+            className="flex justify-center items-center text-xs text-neutral-600 transition-all duration-200"
+            style={{
+              height: Math.min(80, pullDistance || (isRefreshingFeed ? 60 : 0)),
+              opacity:
+                pullDistance > 0
+                  ? Math.min(1, pullDistance / 70)
+                  : isRefreshingFeed
+                    ? 1
+                    : 0,
+            }}
+          >
+            {isRefreshingFeed ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Atualizando feed...
+              </>
+            ) : pullDistance > 70 ? (
+              "Solte para atualizar"
+            ) : (
+              "Puxe para atualizar"
+            )}
+          </div>
+        )}
         {/* Banner de novos posts fixo na tela */}
         {showNewPostsBanner && newPosts.length > 0 && (
           <div
