@@ -1359,6 +1359,8 @@ def test_create_complaint_service_success():
         fake_complaint_final,
     ]
 
+    mock_complaint_confirmation_repo = Mock()
+
     fake_member_association = Mock()
     fake_member_association.id = fake_member_id
 
@@ -1369,6 +1371,7 @@ def test_create_complaint_service_success():
 
     service = PostService(mock_tm)
     service.complaint_repo = mock_complaint_repo
+    service.complaint_confirmation_repo = mock_complaint_confirmation_repo
     service.community_service = mock_community_service
     service.reputation_service = mock_reputation_service
 
@@ -1389,6 +1392,12 @@ def test_create_complaint_service_success():
     mock_community_service.get_member_association.assert_called_once_with(
         fake_user_id, fake_community_id
     )
+
+    # Verificar que o registro de confirmação foi criado para o criador
+    mock_complaint_confirmation_repo.save.assert_called_once()
+    confirmation_call = mock_complaint_confirmation_repo.save.call_args[0][0]
+    assert confirmation_call.post_id == fake_post_id
+    assert confirmation_call.member_id == fake_member_id
 
     # Verificar que reward_complaint_creation_to_member foi chamado
     mock_reputation_service.reward_complaint_creation_to_member.assert_called_once_with(

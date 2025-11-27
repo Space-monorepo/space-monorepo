@@ -264,6 +264,14 @@ def test_create_complaint_route(authenticate_client, community_member_on_db):
     assert response.json()['level_complaint'] == ComplaintLevelEnum.LOW
     assert response.json()['status_complaint'] == ComplaintStatusEnum.PENDING
 
+    # Verificar se o criador aparece como confirmado
+    post_id = response.json()['post']['id']
+    check_response = authenticate_client.get(
+        f'/posts/{community_member_on_db.community_id}/complaint/{post_id}/check-confirmation'
+    )
+    assert check_response.status_code == status.HTTP_200_OK
+    assert check_response.json()['has_confirmed'] is True  # Criador já confirmou automaticamente
+
 
 @pytest.mark.integration
 def test_create_poll_route(authenticate_client, community_member_on_db):

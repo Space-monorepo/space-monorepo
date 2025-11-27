@@ -455,6 +455,13 @@ class PostService:
             complaint_saved.confirmations_count += 1
             complaint_saved = self.complaint_repo.save(complaint_saved)
 
+            # Criar registro de confirmação para o criador
+            confirmation = ComplaintConfirmation(
+                post_id=created_post.id,
+                member_id=member.id,
+            )
+            self.complaint_confirmation_repo.save(confirmation)
+
             self.reputation_service.reward_complaint_confirmation_to_member(member.id)
             self.reputation_service.reward_complaint_creation_to_member(member.id)
 
