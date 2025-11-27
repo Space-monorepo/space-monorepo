@@ -25,6 +25,7 @@ import { CheckmarkFilled, Forum, OverflowMenuHorizontal, ArrowUp } from "@carbon
 import FilePicker from "@/components/ui/FilePicker";
 import Sidebar from "@/components/ui/sidebar";
 import EditProfileModal from "../components/EditProfileModal";
+import ModalResponsibility from "@/components/modals/responsabilty/ModalResponsabilty";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getConnectionStatus, requestConnection, deleteConnection } from "@/app/api/src/services/connection/connectionService";
@@ -86,6 +87,7 @@ export default function ProfilePage() {
   const [confirmedProblems, setConfirmedProblems] = useState<{ [key: string]: boolean }>({});
   // Novo estado local para armazenar participação em campanhas por post
   const [localCampaignParticipation, setLocalCampaignParticipation] = useState<{ [postId: string]: boolean }>({});
+  const [isResponsibilityModalOpen, setIsResponsibilityModalOpen] = useState(false);
 
   // Estados para Conexão
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
@@ -769,7 +771,10 @@ export default function ProfilePage() {
                     </p>
                     {isOwnProfile && (
                       <div className="flex gap-8 items-center mt-4 max-w-full text-sm leading-none text-zinc-100 ">
-                        <button className="gap-2.5 self-stretch py-2 pr-16 pl-3.5 my-auto rounded-sm bg-neutral-800 text-zinc-100 cursor-pointer hover:bg-neutral-900 transition-colors smax-md:pr-5">
+                        <button
+                          className="gap-2.5 self-stretch py-2 pr-16 pl-3.5 my-auto rounded-sm bg-neutral-800 text-zinc-100 cursor-pointer hover:bg-neutral-900 transition-colors smax-md:pr-5"
+                          onClick={() => setIsResponsibilityModalOpen(true)}
+                        >
                           Criar publicação
                         </button>
                       </div>
@@ -1102,6 +1107,9 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+      )}
+      {isResponsibilityModalOpen && (
+        <ModalResponsibility onClose={() => setIsResponsibilityModalOpen(false)} />
       )}
     </div>
   );
