@@ -33,7 +33,9 @@ interface PostPreviewModalProps {
         role?: string;
         location?: string;
         type?: string;
+        type_post?: string;
         time?: string;
+        created_at?: string;
         imageUrl?: string;
         likes?: number;
         comments?: number;
@@ -534,13 +536,13 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                         <div className="self-start px-3 mt-2 text-[10px] font-semibold tracking-normal whitespace-nowrap text-neutral-500">
                                             <div className="flex items-center gap-1">
                                                 <div className="self-stretch my-auto text-neutral-500">
-                                                    {localPost.type || "Tipo não informado"}
+                                                    {translatePostType(localPost.type_post || localPost.type as any) || "Tipo não informado"}
                                                 </div>
                                                 <div className="self-stretch my-auto text-[10px] text-neutral-500">
                                                     •
                                                 </div>
                                                 <div className="self-stretch my-auto text-neutral-500">
-                                                    {localPost.time}
+                                                    {localPost.created_at ? getRelativeTime(localPost.created_at) : localPost.time}
                                                 </div>
                                             </div>
                                         </div>

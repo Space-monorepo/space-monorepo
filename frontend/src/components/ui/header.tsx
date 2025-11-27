@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react"
+import PostPreviewModal from "@/components/modals/PostPreviewModal"
+import { useRouter } from "next/navigation"
 import ModalResponsibility from "@/components/modals/responsabilty/ModalResponsabilty"
 import { SearchBar } from "@/components/ui/search-bar"
 import { API_URL } from "@/config"
@@ -6,6 +8,92 @@ import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies"
 
 export default function Header() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isPostPreviewOpen, setIsPostPreviewOpen] = useState(false)
+  const [postPreviewData, setPostPreviewData] = useState<any>(null)
+  const router = useRouter()
+  const fetchPostDetails = async (postId: string, communityId: string) => {
+    const token = getTokenFromCookies();
+
+    if (!communityId) {
+      console.error("Community ID não fornecido para buscar post");
+      return { id: postId, title: "Post indisponível", content: "" }
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/posts/${communityId}/post/${postId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        } as HeadersInit,
+      });
+
+      if (res.ok) {
+        const data: any = await res.json();
+
+        // Mapeia os dados do backend para o formato esperado pelo modal
+        return {
+          id: data.id,
+          title: data.title,
+          content: data.content,
+          type: data.type_post,
+          type_post: data.type_post,
+          author: data.user?.name,
+          avatar: data.user?.profile_picture,
+          location: data.community?.name,
+          user: {
+            id: data.user?.id,
+            profile_picture: data.user?.profile_picture,
+            profile_image_url: data.user?.profile_picture,
+          },
+          role: data.user?.role,
+          imageUrl: data.image_url,
+          likes: data.likes_count,
+          comments: data.comments_count,
+          shares: 0, // API não retorna shares diretamente
+          time: data.created_at,
+          created_at: data.created_at,
+          community: { id: communityId },
+          liked: false, // Por padrão false, seria necessário outra chamada para verificar
+          poll_question: data.poll_question,
+          poll_options: data.poll_options,
+        }
+      } else {
+        console.error(`Erro ao buscar post: ${res.status}`);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar detalhes do post:", err);
+    }
+
+    return { id: postId, title: "Post indisponível", content: "" }
+  }
+  const navigateToResult = async (result: any) => {
+    if (!result) return
+    // Navigate to user profile or open post preview modal
+    let path = "/"
+    if (result.type === "user") {
+      path = `/profile/${result.id}`
+      router.push(path)
+      return
+    }
+    if (result.type === "post") {
+      // Usa o community_id retornado pela API de search
+      const communityId = result?.community_id ?? result?.communityId;
+
+      if (!communityId) {
+        console.error("Community ID não encontrado no resultado da pesquisa:", result);
+        return;
+      }
+
+      const postData = await fetchPostDetails(result.id, communityId)
+      setPostPreviewData(postData)
+      setIsPostPreviewOpen(true)
+      return
+    }
+    // Fallback genérico
+    const fallbackPath = `/${result.type ?? "item"}/${result.id ?? ""}`
+    router.push(fallbackPath)
+  }
   const [searchValue, setSearchValue] = useState("")
   const [searchResults, setSearchResults] = useState([])
 
@@ -57,7 +145,16 @@ export default function Header() {
               {searchResults.length > 0 ? (
                 <ul className="max-h-80 divide-y divide-gray-100 overflow-y-auto">
                   {searchResults.map((result: any) => (
-                    <li key={result.id} className="flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-gray-50">
+                    <li
+                      key={result.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigateToResult(result)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") navigateToResult(result)
+                      }}
+                      className="flex cursor-pointer items-center gap-3 p-3 transition-colors hover:bg-gray-50"
+                    >
                       {result.type === "user" ? (
                         <>
                           {result.profile_image_url ? (
@@ -96,6 +193,13 @@ export default function Header() {
         </button>
       </div>
       {isModalOpen && <ModalResponsibility onClose={handleCloseModal} />}
+      {isPostPreviewOpen && postPreviewData && (
+        <PostPreviewModal
+          post={postPreviewData}
+          isOpen={isPostPreviewOpen}
+          onClose={() => setIsPostPreviewOpen(false)}
+        />
+      )}
     </header>
   )
 }
