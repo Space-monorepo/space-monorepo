@@ -689,12 +689,19 @@ export default function NotificacoesPage() {
     console.log(`Liked interaction ${id}`);
   };
 
-  // Mapear os dados da API para o formato usado no componente
+  // Mapear os dados da API para o formato usado no componente (defensivo caso `notifications` seja undefined)
+  const safeNotifications = notifications || { campaigns: [], announcements: [], connections: [], interactions: [] } as {
+    campaigns: Notification[];
+    announcements: Notification[];
+    connections: Notification[];
+    interactions: Notification[];
+  };
+
   const notificationsTabs: Record<NotificationType, Notification[]> = {
-    Campanhas: notifications.campaigns,
-    "Avisos oficiais": notifications.announcements,
-    Conexões: notifications.connections,
-    Interações: notifications.interactions,
+    Campanhas: safeNotifications.campaigns || [],
+    "Avisos oficiais": safeNotifications.announcements || [],
+    Conexões: safeNotifications.connections || [],
+    Interações: safeNotifications.interactions || [],
   }
 
   const currentNotifications = notificationsTabs[activeTab] || []
@@ -757,18 +764,35 @@ export default function NotificacoesPage() {
           </div>
           {/* Navigation Tabs */}
           <nav className="py-4">
-            {(Object.keys(notificationsTabs) as NotificationType[]).map((tab) => (
-              <button
-                key={tab}
-                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${activeTab === tab
-                  ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
-                  : "text-[#525252]"
-                  }`}
-                onClick={() => handleTabChange(tab)}
-              >
-                <span>{tab}</span>
-              </button>
-            ))}
+            {(Object.keys(notificationsTabs) as NotificationType[]).map((tab) => {
+              const count = notificationsTabs[tab]?.length ?? 0;
+              return (
+                <button
+                  key={tab}
+                  className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${activeTab === tab
+                    ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
+                    : "text-[#525252]"
+                    }`}
+                  onClick={() => handleTabChange(tab)}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span>{tab}</span>
+                    <div className="flex items-center">
+                      {typeof count === "number" && count > 0 ? (
+                        <div className="flex gap-2.5 justify-center items-center px-2 rounded-full bg-neutral-800">
+                          <span className="self-stretch text-sm text-zinc-100">
+                            {count > 99 ? "99+" : count}
+                          </span>
+                        </div>
+                      ) : (
+                        // placeholder para evitar shift de layout enquanto carrega
+                        <span aria-hidden className="inline-block w-6 h-4" />
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </nav>
         </div>
 
