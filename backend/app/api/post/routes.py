@@ -285,3 +285,16 @@ def vote_poll(
 ) -> PollVoteResponse:
     with TransactionManager(session) as tm:
         return PostService(tm).vote_poll(poll_option_id, member.id)
+
+
+@router.delete(
+    '/{community_id}/post/poll-options/{poll_option_id}/vote',
+    status_code=status.HTTP_200_OK,
+)
+def unvote_poll(
+    poll_option_id: str,
+    session: Session = Depends(get_db),
+    member: CommunityMember = Depends(require_roles(['member'])),
+) -> dict:
+    with TransactionManager(session) as tm:
+        return PostService(tm).unvote_poll(poll_option_id, member.id)

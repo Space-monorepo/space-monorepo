@@ -1,7 +1,7 @@
 import pytest
 from fastapi import status
 
-from app.api.post.model import CampaignPost
+from app.api.post.model import CampaignPost, PollOptions
 from app.api.post.schemas import (
     CampaignStatusEnum,
     ComplaintLevelEnum,
@@ -212,7 +212,7 @@ def test_create_campaign_route(authenticate_client, community_member_on_db):
     assert response.json()['post']['image_url'] == post.image_url
     assert response.json()['post']['status'] == PostStatusEnum.ACTIVE
     assert response.json()['target_participants'] == 100
-    assert response.json()['current_participants'] == 1  # Criador já participa automaticamente
+    assert response.json()['current_participants'] == 1
     assert response.json()['status_campaign'] == CampaignStatusEnum.PENDING
 
 
@@ -258,7 +258,9 @@ def test_create_complaint_route(authenticate_client, community_member_on_db):
     assert response.json()['post']['type_post'] == post.type_post
     assert response.json()['post']['image_url'] == post.image_url
     assert response.json()['post']['status'] == PostStatusEnum.ACTIVE
-    assert response.json()['confirmations_count'] == 1  # Criador já confirmou automaticamente
+    assert (
+        response.json()['confirmations_count'] == 1
+    )  # Criador já confirmou automaticamente
     assert response.json()['level_complaint'] == ComplaintLevelEnum.LOW
     assert response.json()['status_complaint'] == ComplaintStatusEnum.PENDING
 
@@ -324,14 +326,12 @@ def test_vote_poll_same_option_twice_route(
     - Then it should return 409 Conflict
     """
     poll_option = poll_option_on_db[0]
-    
-    # Primeiro voto
+
     response = authenticate_client.patch(
         f'/posts/{community_member_on_db.community_id}/post/poll-options/{poll_option.id}/vote',
     )
     assert response.status_code == status.HTTP_200_OK
-    
-    # Segundo voto na mesma opção
+
     response = authenticate_client.patch(
         f'/posts/{community_member_on_db.community_id}/post/poll-options/{poll_option.id}/vote',
     )
@@ -350,36 +350,113 @@ def test_vote_poll_change_vote_route(
     - When the member votes on option B (different option)
     - Then it should return 200 OK with updated vote, option A should have 0 votes and option B should have 1 vote
     """
-    from app.api.post.model import PollOptions
-    
     option_a = poll_option_on_db[0]
     option_b = poll_option_on_db[1]
-    
-    # Votar na opção A
+
     response = authenticate_client.patch(
         f'/posts/{community_member_on_db.community_id}/post/poll-options/{option_a.id}/vote',
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json()['poll_option_id'] == str(option_a.id)
-    
-    # Verificar que opção A tem 1 voto
-    option_a_db = session_sql.query(PollOptions).filter(PollOptions.id == option_a.id).first()
+
+    option_a_db = (
+        session_sql.query(PollOptions).filter(PollOptions.id == option_a.id).first()
+    )
     assert option_a_db.votes_count == 1
-    
-    # Votar na opção B (mudar voto)
+
     response = authenticate_client.patch(
         f'/posts/{community_member_on_db.community_id}/post/poll-options/{option_b.id}/vote',
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json()['poll_option_id'] == str(option_b.id)
-    
-    # Verificar que opção A agora tem 0 votos (decrementou)
+
     session_sql.refresh(option_a_db)
     assert option_a_db.votes_count == 0
-    
-    # Verificar que opção B tem 1 voto
-    option_b_db = session_sql.query(PollOptions).filter(PollOptions.id == option_b.id).first()
+
+    option_b_db = (
+        session_sql.query(PollOptions).filter(PollOptions.id == option_b.id).first()
+    )
     assert option_b_db.votes_count == 1
+
+
+@pytest.mark.integration
+def test_unvote_poll_route(
+    session_sql, authenticate_client, community_member_on_db, poll_option_on_db
+):
+    """
+    Tests the unvote_poll route for removing a vote.
+
+    Scenario:
+    - Given a member who has voted on a poll option
+    - When the member removes their vote via DELETE
+    - Then it should return 200 OK and decrement votes_count
+    """
+    poll_option = poll_option_on_db[0]
+
+    response = authenticate_client.patch(
+        f'/posts/{community_member_on_db.community_id}/post/poll-options/{poll_option.id}/vote',
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    option_db = (
+        session_sql.query(PollOptions).filter(PollOptions.id == poll_option.id).first()
+    )
+    assert option_db.votes_count == 1
+
+    response = authenticate_client.delete(
+        f'/posts/{community_member_on_db.community_id}/post/poll-options/{poll_option.id}/vote',
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['message'] == 'Vote removed successfully'
+
+    session_sql.refresh(option_db)
+    assert option_db.votes_count == 0
+
+
+@pytest.mark.integration
+def test_unvote_poll_no_vote_route(
+    authenticate_client, community_member_on_db, poll_option_on_db
+):
+    """
+    Tests the unvote_poll route when no vote exists.
+
+    Scenario:
+    - Given a member who has NOT voted on a poll option
+    - When the member tries to remove a vote via DELETE
+    - Then it should return 404 Not Found
+    """
+    poll_option = poll_option_on_db[0]
+
+    response = authenticate_client.delete(
+        f'/posts/{community_member_on_db.community_id}/post/poll-options/{poll_option.id}/vote',
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.integration
+def test_unvote_poll_wrong_option_route(
+    session_sql, authenticate_client, community_member_on_db, poll_option_on_db
+):
+    """
+    Tests the unvote_poll route when trying to unvote from wrong option.
+
+    Scenario:
+    - Given a member who voted on option A
+    - When the member tries to remove vote from option B
+    - Then it should return 404 Not Found
+    """
+    option_a = poll_option_on_db[0]
+    option_b = poll_option_on_db[1]
+
+    response = authenticate_client.patch(
+        f'/posts/{community_member_on_db.community_id}/post/poll-options/{option_a.id}/vote',
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = authenticate_client.delete(
+        f'/posts/{community_member_on_db.community_id}/post/poll-options/{option_b.id}/vote',
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.integration
@@ -397,16 +474,13 @@ def test_get_user_feed_route_with_polls(
     poll_option_on_db,
 ):
 
-    # Testar feed
     response = authenticate_client.get('/posts/feed')
     assert response.status_code == status.HTTP_200_OK
-    
     items = response.json()['items']
-    # Encontrar o post poll no feed
     poll_item = next(
         (item for item in items if item['type_post'] == PostTypeEnum.POLL), None
     )
-    
+
     assert poll_item is not None
     assert poll_item['poll_question'] == 'Test Poll'
     assert poll_item['poll_options'] is not None
@@ -451,11 +525,11 @@ def test_report_post_route(authenticate_client, post_on_db):
     - Then it should increment report_count and return updated post
     """
     initial_report_count = post_on_db.report_count or 0
-    
+
     response = authenticate_client.patch(
         f'/posts/{post_on_db.community_id}/post/{post_on_db.id}/report'
     )
-    
+
     response_data = response.json()
     assert response.status_code == status.HTTP_200_OK
     assert response_data['id'] == str(post_on_db.id)
@@ -475,14 +549,15 @@ def test_report_post_suspended_route(session_sql, authenticate_client, post_on_d
     """
     # Atualizar post para status SUSPENDED
     from app.api.post.model import Post
+
     post = session_sql.query(Post).filter(Post.id == post_on_db.id).first()
     post.status = PostStatusEnum.SUSPENDED
     session_sql.commit()
-    
+
     response = authenticate_client.patch(
         f'/posts/{post_on_db.community_id}/post/{post_on_db.id}/report'
     )
-    
+
     assert response.status_code == status.HTTP_409_CONFLICT
 
 
@@ -498,15 +573,16 @@ def test_report_post_threshold_route(session_sql, authenticate_client, post_on_d
     """
     # Atualizar post para ter report_count próximo ao threshold
     from app.api.post.model import Post
+
     post = session_sql.query(Post).filter(Post.id == post_on_db.id).first()
     post.report_count = 29  # Um abaixo do threshold de 30
     post.status = PostStatusEnum.ACTIVE
     session_sql.commit()
-    
+
     response = authenticate_client.patch(
         f'/posts/{post_on_db.community_id}/post/{post_on_db.id}/report'
     )
-    
+
     response_data = response.json()
     assert response.status_code == status.HTTP_200_OK
     assert response_data['report_count'] == 30
@@ -525,17 +601,17 @@ def test_confirm_complaint_route(authenticate_client, complaint_post_on_db, post
     """
     initial_confirmations = complaint_post_on_db.confirmations_count or 0
     initial_level = complaint_post_on_db.level_complaint or ComplaintLevelEnum.LOW
-    
+
     response = authenticate_client.post(
         f'/posts/{post_on_db.community_id}/complaint/{complaint_post_on_db.post_id}/confirm'
     )
-    
+
     response_data = response.json()
     assert response.status_code == status.HTTP_200_OK
     assert response_data['post']['id'] == str(complaint_post_on_db.post_id)
     assert response_data['confirmations_count'] == initial_confirmations + 1
     assert response_data['status_complaint'] == complaint_post_on_db.status_complaint
-    
+
     # Verificar se o level foi atualizado corretamente
     new_confirmations = initial_confirmations + 1
     if new_confirmations >= 50:

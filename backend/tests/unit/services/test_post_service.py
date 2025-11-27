@@ -5,7 +5,11 @@ from uuid import uuid4
 import pytest
 
 from app.api.communities.schema import CommunityMemberRoleEnum
-from app.api.post.exceptions import PollVoteAlreadyExistsError, PostSuspendedError
+from app.api.post.exceptions import (
+    PollVoteAlreadyExistsError,
+    PollVoteNotFoundError,
+    PostSuspendedError,
+)
 from app.api.post.model import CampaignPost, ComplaintPost, PollOptions, PollPosts, Post
 from app.api.post.schemas import (
     CampaignStatusEnum,
@@ -14,7 +18,6 @@ from app.api.post.schemas import (
     ComplaintResponse,
     ComplaintStatusEnum,
     PollCreate,
-    PollOptionResponse,
     PollVoteResponse,
     PostAuthor,
     PostCreate,
@@ -1789,6 +1792,225 @@ def test_vote_poll_service_change_vote():
     assert result.poll_option_id == fake_new_option_id
     assert result.member_id == fake_member_id
     assert result.created_at == fake_new_vote_saved.created_at
+
+
+@pytest.mark.unit
+def test_unvote_poll_service_success():
+    """
+    Tests the `unvote_poll` method of PostService.
+
+    Scenario:
+    - Given a member who has voted on a poll option
+    - When the member removes their vote
+    - Then it should decrement votes count and delete the vote
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_poll_option_id = uuid4()
+    fake_member_id = uuid4()
+    fake_vote_id = uuid4()
+
+    # Mock da opção votada
+    fake_poll_option = Mock(spec=PollOptions)
+    fake_poll_option.id = fake_poll_option_id
+    fake_poll_option.post_id = fake_post_id
+    fake_poll_option.answer = 'Python'
+    fake_poll_option.votes_count = 5  # Tem votos
+
+    # Mock do voto existente
+    fake_existing_vote = Mock()
+    fake_existing_vote.id = fake_vote_id
+    fake_existing_vote.poll_post_id = fake_post_id
+    fake_existing_vote.poll_option_id = fake_poll_option_id
+    fake_existing_vote.member_id = fake_member_id
+
+    mock_tm = Mock()
+    mock_poll_options_repo = Mock()
+    mock_poll_options_repo.get_by_id.return_value = fake_poll_option
+    mock_poll_options_repo.save.return_value = fake_poll_option
+
+    mock_poll_votes_repo = Mock()
+    mock_poll_votes_repo.member_has_voted.return_value = fake_existing_vote
+
+    service = PostService(mock_tm)
+    service.poll_options_repo = mock_poll_options_repo
+    service.poll_votes_repo = mock_poll_votes_repo
+
+    # Act
+    result = service.unvote_poll(fake_poll_option_id, fake_member_id)
+
+    # Assert
+    mock_poll_options_repo.get_by_id.assert_called_once_with(fake_poll_option_id)
+    mock_poll_votes_repo.member_has_voted.assert_called_once_with(
+        fake_member_id, fake_post_id
+    )
+    mock_poll_options_repo.save.assert_called_once_with(fake_poll_option)
+    mock_poll_votes_repo.delete.assert_called_once_with(fake_existing_vote)
+
+    # Verificar que o voto foi decrementado
+    assert fake_poll_option.votes_count == 4  # Era 5, decrementou para 4
+
+    # Verificar o resultado
+    assert result is not None
+    assert result['message'] == 'Vote removed successfully'
+
+
+@pytest.mark.unit
+def test_unvote_poll_service_no_vote_found():
+    """
+    Tests the `unvote_poll` method of PostService when no vote exists.
+
+    Scenario:
+    - Given a member who has NOT voted on a poll option
+    - When the member tries to remove a vote
+    - Then it should raise PollVoteNotFoundError
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_poll_option_id = uuid4()
+    fake_member_id = uuid4()
+
+    # Mock da opção
+    fake_poll_option = Mock(spec=PollOptions)
+    fake_poll_option.id = fake_poll_option_id
+    fake_poll_option.post_id = fake_post_id
+    fake_poll_option.answer = 'Python'
+    fake_poll_option.votes_count = 5
+
+    mock_tm = Mock()
+    mock_poll_options_repo = Mock()
+    mock_poll_options_repo.get_by_id.return_value = fake_poll_option
+
+    mock_poll_votes_repo = Mock()
+    mock_poll_votes_repo.member_has_voted.return_value = None  # Não tem voto
+
+    service = PostService(mock_tm)
+    service.poll_options_repo = mock_poll_options_repo
+    service.poll_votes_repo = mock_poll_votes_repo
+
+    # Act & Assert
+    with pytest.raises(PollVoteNotFoundError) as exc_info:
+        service.unvote_poll(fake_poll_option_id, fake_member_id)
+
+    assert 'Poll vote not found' in str(exc_info.value)
+    mock_poll_options_repo.get_by_id.assert_called_once_with(fake_poll_option_id)
+    mock_poll_votes_repo.member_has_voted.assert_called_once_with(
+        fake_member_id, fake_post_id
+    )
+    # Verificar que nenhum delete foi chamado
+    mock_poll_votes_repo.delete.assert_not_called()
+    mock_poll_options_repo.save.assert_not_called()
+
+
+@pytest.mark.unit
+def test_unvote_poll_service_vote_on_different_option():
+    """
+    Tests the `unvote_poll` method of PostService when vote is on different option.
+
+    Scenario:
+    - Given a member who voted on option A
+    - When the member tries to remove vote from option B
+    - Then it should raise PollVoteNotFoundError
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_option_a_id = uuid4()
+    fake_option_b_id = uuid4()
+    fake_member_id = uuid4()
+
+    # Mock da opção B (onde quer remover o voto)
+    fake_option_b = Mock(spec=PollOptions)
+    fake_option_b.id = fake_option_b_id
+    fake_option_b.post_id = fake_post_id
+    fake_option_b.answer = 'JavaScript'
+    fake_option_b.votes_count = 3
+
+    # Mock do voto existente (na opção A, não na B)
+    fake_existing_vote = Mock()
+    fake_existing_vote.id = uuid4()
+    fake_existing_vote.poll_post_id = fake_post_id
+    fake_existing_vote.poll_option_id = fake_option_a_id  # Votou na opção A
+    fake_existing_vote.member_id = fake_member_id
+
+    mock_tm = Mock()
+    mock_poll_options_repo = Mock()
+    mock_poll_options_repo.get_by_id.return_value = fake_option_b
+
+    mock_poll_votes_repo = Mock()
+    mock_poll_votes_repo.member_has_voted.return_value = fake_existing_vote
+
+    service = PostService(mock_tm)
+    service.poll_options_repo = mock_poll_options_repo
+    service.poll_votes_repo = mock_poll_votes_repo
+
+    # Act & Assert
+    with pytest.raises(PollVoteNotFoundError) as exc_info:
+        service.unvote_poll(fake_option_b_id, fake_member_id)
+
+    assert 'Poll vote not found for this option' in str(exc_info.value)
+    mock_poll_options_repo.get_by_id.assert_called_once_with(fake_option_b_id)
+    mock_poll_votes_repo.member_has_voted.assert_called_once_with(
+        fake_member_id, fake_post_id
+    )
+    # Verificar que nenhum delete foi chamado
+    mock_poll_votes_repo.delete.assert_not_called()
+    mock_poll_options_repo.save.assert_not_called()
+
+
+@pytest.mark.unit
+def test_unvote_poll_service_votes_count_does_not_go_negative():
+    """
+    Tests the `unvote_poll` method ensures votes_count doesn't go negative.
+
+    Scenario:
+    - Given a poll option with 0 votes but somehow a vote exists
+    - When the member removes their vote
+    - Then votes_count should remain 0 (not go negative)
+    """
+    # Arrange
+    fake_post_id = uuid4()
+    fake_poll_option_id = uuid4()
+    fake_member_id = uuid4()
+    fake_vote_id = uuid4()
+
+    # Mock da opção com 0 votos
+    fake_poll_option = Mock(spec=PollOptions)
+    fake_poll_option.id = fake_poll_option_id
+    fake_poll_option.post_id = fake_post_id
+    fake_poll_option.answer = 'Python'
+    fake_poll_option.votes_count = 0  # Já está em 0
+
+    # Mock do voto existente
+    fake_existing_vote = Mock()
+    fake_existing_vote.id = fake_vote_id
+    fake_existing_vote.poll_post_id = fake_post_id
+    fake_existing_vote.poll_option_id = fake_poll_option_id
+    fake_existing_vote.member_id = fake_member_id
+
+    mock_tm = Mock()
+    mock_poll_options_repo = Mock()
+    mock_poll_options_repo.get_by_id.return_value = fake_poll_option
+    mock_poll_options_repo.save.return_value = fake_poll_option
+
+    mock_poll_votes_repo = Mock()
+    mock_poll_votes_repo.member_has_voted.return_value = fake_existing_vote
+
+    service = PostService(mock_tm)
+    service.poll_options_repo = mock_poll_options_repo
+    service.poll_votes_repo = mock_poll_votes_repo
+
+    # Act
+    result = service.unvote_poll(fake_poll_option_id, fake_member_id)
+
+    # Assert
+    # Verificar que o voto não ficou negativo
+    assert fake_poll_option.votes_count == 0  # Deve permanecer 0, não -1
+
+    # Verificar que o voto foi deletado
+    mock_poll_votes_repo.delete.assert_called_once_with(fake_existing_vote)
+
+    # Verificar o resultado
+    assert result['message'] == 'Vote removed successfully'
 
 
 @pytest.mark.unit

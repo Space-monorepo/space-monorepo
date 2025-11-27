@@ -8,15 +8,28 @@ import {
   EllipsisVerticalIcon as OverflowMenuVertical,
   Activity,
 } from "lucide-react";
-import { fetchPostsByCommunity } from "@/app/api/src/services/post/postService";
-import { voteOnPoll } from "@/app/api/src/services/post/postService";
+import {
+  fetchPostsByCommunity,
+  voteOnPoll,
+  unvoteOnPoll,
+} from "@/app/api/src/services/post/postService";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
 import { fetchUserCampaigns } from "@/app/api/src/services/post/fetchUserCampaigns";
 import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { PostResponse, PostsListFeed } from "@/app/api/src/types/posts/Post";
 import { translateUserRole } from "@/lib/roleTranslations";
 import { translatePostType } from "@/lib/postTypeTranslations";
-import { Forum, FaceSatisfied, TextBold, TextItalic, ListNumbered, ListBulleted, CheckmarkFilled, OverflowMenuHorizontal, ArrowUp } from "@carbon/icons-react";
+import {
+  Forum,
+  FaceSatisfied,
+  TextBold,
+  TextItalic,
+  ListNumbered,
+  ListBulleted,
+  CheckmarkFilled,
+  OverflowMenuHorizontal,
+  ArrowUp,
+} from "@carbon/icons-react";
 import useReportPost from "@/app/api/src/hooks/post/useReportPost";
 import { getRelativeTime } from "@/lib/relativeTime";
 import { API_URL } from "@/config";
@@ -48,23 +61,37 @@ interface Comment {
   likes_count?: number;
 }
 
-function CommentsSection({ communityId, postId, refreshSignal }: { communityId: string; postId: string; refreshSignal?: number }) {
-  const { listComments, addComment, replyComment, likeComment, unlikeComment } = usePostActions();
-  const [likedComments, setLikedComments] = React.useState<{ [key: string]: boolean }>({});
+function CommentsSection({
+  communityId,
+  postId,
+  refreshSignal,
+}: {
+  communityId: string;
+  postId: string;
+  refreshSignal?: number;
+}) {
+  const { listComments, addComment, replyComment, likeComment, unlikeComment } =
+    usePostActions();
+  const [likedComments, setLikedComments] = React.useState<{
+    [key: string]: boolean;
+  }>({});
   const [comments, setComments] = React.useState<Comment[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [commentInput, setCommentInput] = React.useState('');
+  const [commentInput, setCommentInput] = React.useState("");
   const [replyingTo, setReplyingTo] = React.useState<string | null>(null);
-  const [replyInput, setReplyInput] = React.useState<{ [key: string]: string }>({});
+  const [replyInput, setReplyInput] = React.useState<{ [key: string]: string }>(
+    {},
+  );
 
   function buildCommentsTree(flatComments: Comment[]): Comment[] {
-    const commentsMap: { [key: string]: Comment & { children: Comment[] } } = {};
+    const commentsMap: { [key: string]: Comment & { children: Comment[] } } =
+      {};
     const roots: (Comment & { children: Comment[] })[] = [];
-    flatComments.forEach(comment => {
+    flatComments.forEach((comment) => {
       commentsMap[comment.id] = { ...comment, children: [] };
     });
-    flatComments.forEach(comment => {
+    flatComments.forEach((comment) => {
       if (comment.parent_id && commentsMap[comment.parent_id]) {
         commentsMap[comment.parent_id].children.push(commentsMap[comment.id]);
       } else {
@@ -88,7 +115,7 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
       });
       setLikedComments(likedMap);
     } catch (err: any) {
-      setError('Erro ao carregar comentários');
+      setError("Erro ao carregar comentários");
     } finally {
       setLoading(false);
     }
@@ -101,7 +128,7 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
 
   // Quando o sinal de refresh mudar (vindo do polling global), refazemos os comentários
   React.useEffect(() => {
-    if (typeof refreshSignal !== 'undefined') {
+    if (typeof refreshSignal !== "undefined") {
       fetchComments();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,10 +138,10 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
     if (!commentInput.trim()) return;
     try {
       await addComment(communityId, postId, commentInput);
-      setCommentInput('');
+      setCommentInput("");
       fetchComments();
     } catch (err) {
-      setError('Erro ao comentar');
+      setError("Erro ao comentar");
     }
   };
 
@@ -123,23 +150,34 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
     if (!content?.trim()) return;
     try {
       await replyComment(communityId, postId, parentId, content);
-      setReplyInput((prev) => ({ ...prev, [parentId]: '' }));
+      setReplyInput((prev) => ({ ...prev, [parentId]: "" }));
       setReplyingTo(null);
       fetchComments();
     } catch (err) {
-      setError('Erro ao responder comentário');
+      setError("Erro ao responder comentário");
     }
   };
 
   // Atualiza likes recursivamente na árvore de comentários
-  function updateCommentLikes(comments: Comment[], commentId: string, increment: number): Comment[] {
-    return comments.map(comment => {
+  function updateCommentLikes(
+    comments: Comment[],
+    commentId: string,
+    increment: number,
+  ): Comment[] {
+    return comments.map((comment) => {
       if (comment.id === commentId) {
-        return { ...comment, likes_count: Math.max(0, (comment.likes_count || 0) + increment) };
+        return {
+          ...comment,
+          likes_count: Math.max(0, (comment.likes_count || 0) + increment),
+        };
       }
       // Atualiza filhos e replies recursivamente
-      let children = comment.children ? updateCommentLikes(comment.children, commentId, increment) : undefined;
-      let replies = comment.replies ? updateCommentLikes(comment.replies, commentId, increment) : undefined;
+      let children = comment.children
+        ? updateCommentLikes(comment.children, commentId, increment)
+        : undefined;
+      let replies = comment.replies
+        ? updateCommentLikes(comment.replies, commentId, increment)
+        : undefined;
       return { ...comment, children, replies };
     });
   }
@@ -149,15 +187,15 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
     try {
       if (!likedComments[comment.id]) {
         await likeComment(communityId, comment.id);
-        setComments(prev => updateCommentLikes(prev, comment.id, 1));
-        setLikedComments(prev => ({ ...prev, [comment.id]: true }));
+        setComments((prev) => updateCommentLikes(prev, comment.id, 1));
+        setLikedComments((prev) => ({ ...prev, [comment.id]: true }));
       } else {
         await unlikeComment(communityId, comment.id);
-        setComments(prev => updateCommentLikes(prev, comment.id, -1));
-        setLikedComments(prev => ({ ...prev, [comment.id]: false }));
+        setComments((prev) => updateCommentLikes(prev, comment.id, -1));
+        setLikedComments((prev) => ({ ...prev, [comment.id]: false }));
       }
     } catch (err) {
-      setError('Erro ao curtir/descurtir comentário');
+      setError("Erro ao curtir/descurtir comentário");
     }
   };
 
@@ -166,31 +204,45 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
     const userObj = comment.member || comment.user;
 
     // Nome do usuário
-    const displayName = userObj?.name ||
+    const displayName =
+      userObj?.name ||
       (userObj as any)?.username ||
       (userObj as any)?.full_name ||
-      'Usuário';
+      "Usuário";
 
     // Role do membro
-    const memberRole = userObj?.member_role ||
-      (userObj as any)?.role;
+    const memberRole = userObj?.member_role || (userObj as any)?.role;
 
     return (
-      <div key={comment.id} className={`${isChild ? 'flex flex-wrap items-start self-end mt-6 w-full max-w-[592px]' : 'flex flex-wrap justify-between w-full max-[899px]:max-w-full'}`}>
+      <div
+        key={comment.id}
+        className={`${isChild ? "flex flex-wrap items-start self-end mt-6 w-full max-w-[592px]" : "flex flex-wrap justify-between w-full max-[899px]:max-w-full"}`}
+      >
         <div className="flex flex-col items-center w-11">
           <img
-            src={userObj?.profile_image_url || userObj?.profile_picture || '/no-profile-pic.png'}
+            src={
+              userObj?.profile_image_url ||
+              userObj?.profile_picture ||
+              "/no-profile-pic.png"
+            }
             alt={`${displayName} avatar`}
-            className={`object-contain w-11 aspect-square ${isChild ? 'rounded-[32px]' : ''}`}
+            className={`object-contain w-11 aspect-square ${isChild ? "rounded-[32px]" : ""}`}
           />
-          {!isChild && ((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) && (
-            <div className="flex mt-2 w-px bg-zinc-300 min-h-[78px]" />
-          )}
+          {!isChild &&
+            ((Array.isArray(comment.children) && comment.children.length > 0) ||
+              (Array.isArray(comment.replies) &&
+                comment.replies.length > 0)) && (
+              <div className="flex mt-2 w-px bg-zinc-300 min-h-[78px]" />
+            )}
         </div>
         <div className="flex-1 shrink basis-0 min-w-0 max-[899px]:max-w-full min-[900px]:min-w-60">
           <div className="flex flex-wrap gap-3 items-center py-3 w-full max-[899px]:max-w-full">
-            <div className={`flex items-center self-stretch my-auto text-neutral-800 min-w-0 w-full min-[900px]:min-w-60 ${isChild ? 'min-[900px]:w-[360px]' : 'min-[900px]:w-[380px]'}`}>
-              <div className={`self-stretch my-auto min-w-0 w-full min-[900px]:min-w-60 ${isChild ? 'min-[900px]:w-[360px]' : 'min-[900px]:w-[380px]'}`}>
+            <div
+              className={`flex items-center self-stretch my-auto text-neutral-800 min-w-0 w-full min-[900px]:min-w-60 ${isChild ? "min-[900px]:w-[360px]" : "min-[900px]:w-[380px]"}`}
+            >
+              <div
+                className={`self-stretch my-auto min-w-0 w-full min-[900px]:min-w-60 ${isChild ? "min-[900px]:w-[360px]" : "min-[900px]:w-[380px]"}`}
+              >
                 <div className="flex gap-2 items-center w-full h-[23px]">
                   <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                     <div className="self-stretch my-auto whitespace-nowrap text-sm text-neutral-800">
@@ -204,7 +256,9 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
                       •
                     </div>
                     {memberRole && (
-                      <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(memberRole)}`}>
+                      <div
+                        className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(memberRole)}`}
+                      >
                         <div className="self-stretch my-auto">
                           {translateUserRole(memberRole)}
                         </div>
@@ -227,20 +281,28 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
             </div>
           </div>
           <div className="px-3 mt-2 w-full max-[899px]:max-w-full">
-            <div className={`flex ${isChild ? 'overflow-hidden ' : ''}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-[899px]:max-w-full`}>
+            <div
+              className={`flex ${isChild ? "overflow-hidden " : ""}gap-2.5 items-center w-full text-sm leading-5 text-neutral-800 max-[899px]:max-w-full`}
+            >
               <div className="flex-1 shrink self-stretch my-auto basis-0 text-neutral-800 max-[899px]:max-w-full">
                 {comment.content}
               </div>
             </div>
-            <div className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? 'whitespace-nowrap ' : ''}text-neutral-500 max-[899px]:max-w-full`}>
+            <div
+              className={`flex justify-between items-center mt-4 w-full text-xs font-medium leading-none text-justify ${isChild ? "whitespace-nowrap " : ""}text-neutral-500 max-[899px]:max-w-full`}
+            >
               <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5">
-                <div className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? '' : 'whitespace-nowrap'}`}>
+                <div
+                  className={`flex overflow-hidden gap-2 items-center self-stretch my-auto ${isChild ? "" : "whitespace-nowrap"}`}
+                >
                   <ArrowUp
                     className="object-contain shrink-0 self-stretch my-auto w-3 aspect-square cursor-pointer hover:opacity-70 transition-opacity text-neutral-500"
                     onClick={() => handleLikeComment(comment)}
                     aria-label="Curtir"
                   />
-                  <div className={`self-stretch my-auto ${likedComments[comment.id] ? 'text-neutral-600' : 'text-neutral-500'}`}>
+                  <div
+                    className={`self-stretch my-auto ${likedComments[comment.id] ? "text-neutral-600" : "text-neutral-500"}`}
+                  >
                     {comment.likes_count ?? 0}
                   </div>
                 </div>
@@ -248,11 +310,24 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
                   <img
                     src="https://api.builder.io/api/v1/image/assets/367ac41a58454bf7adac62a5f3afc83b/76fc42bedb22beda24433b506515bdee6ba7cab0?placeholderIfAbsent=true"
                     className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square cursor-pointer hover:opacity-70 transition-opacity"
-                    onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                    onClick={() =>
+                      setReplyingTo(
+                        replyingTo === comment.id ? null : comment.id,
+                      )
+                    }
                     alt="Reply"
                   />
-                  <div className="self-stretch my-auto text-neutral-500 cursor-pointer hover:text-neutral-700 transition-colors" onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}>
-                    {isChild ? 'Responder' : `Responder${((Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0)) ? ` (${(comment.children?.length || 0) + (comment.replies?.length || 0)})` : ''}`}
+                  <div
+                    className="self-stretch my-auto text-neutral-500 cursor-pointer hover:text-neutral-700 transition-colors"
+                    onClick={() =>
+                      setReplyingTo(
+                        replyingTo === comment.id ? null : comment.id,
+                      )
+                    }
+                  >
+                    {isChild
+                      ? "Responder"
+                      : `Responder${(Array.isArray(comment.children) && comment.children.length > 0) || (Array.isArray(comment.replies) && comment.replies.length > 0) ? ` (${(comment.children?.length || 0) + (comment.replies?.length || 0)})` : ""}`}
                   </div>
                 </div>
               </div>
@@ -265,10 +340,15 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
                       className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-[539px]:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
                       rows={2}
                       placeholder="Digite sua resposta..."
-                      value={replyInput[comment.id] || ''}
-                      onChange={e => setReplyInput(prev => ({ ...prev, [comment.id]: e.target.value }))}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
+                      value={replyInput[comment.id] || ""}
+                      onChange={(e) =>
+                        setReplyInput((prev) => ({
+                          ...prev,
+                          [comment.id]: e.target.value,
+                        }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
                           handleReply(comment.id);
                         }
@@ -277,19 +357,34 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
                     <div className="flex flex-row justify-between items-end w-full mt-2">
                       <div className="flex gap-4 items-center max-[539px]:gap-3">
                         <button type="button" aria-label="Adicionar emoji">
-                          <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
+                          <FaceSatisfied
+                            size={20}
+                            className="toolbar-icon text-neutral-500"
+                          />
                         </button>
                         <button type="button" aria-label="Negrito">
-                          <TextBold size={20} className="toolbar-icon text-neutral-500" />
+                          <TextBold
+                            size={20}
+                            className="toolbar-icon text-neutral-500"
+                          />
                         </button>
                         <button type="button" aria-label="Itálico">
-                          <TextItalic size={20} className="toolbar-icon text-neutral-500" />
+                          <TextItalic
+                            size={20}
+                            className="toolbar-icon text-neutral-500"
+                          />
                         </button>
                         <button type="button" aria-label="Lista numerada">
-                          <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
+                          <ListNumbered
+                            size={20}
+                            className="toolbar-icon text-neutral-500"
+                          />
                         </button>
                         <button type="button" aria-label="Lista com marcadores">
-                          <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
+                          <ListBulleted
+                            size={20}
+                            className="toolbar-icon text-neutral-500"
+                          />
                         </button>
                       </div>
                       <div className="flex flex-row items-end">
@@ -316,13 +411,13 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
         {/* Renderizar children recursivamente */}
         {Array.isArray(comment.children) && comment.children.length > 0 && (
           <div className="flex flex-wrap items-start self-end mt-6 w-full max-w-[592px]">
-            {comment.children.map(child => renderComment(child, true))}
+            {comment.children.map((child) => renderComment(child, true))}
           </div>
         )}
         {/* Renderizar replies recursivamente */}
         {Array.isArray(comment.replies) && comment.replies.length > 0 && (
           <div className="flex flex-wrap items-start self-end mb-6 w-full max-w-[592px] min-[900px]:pl-12">
-            {comment.replies.map(child => renderComment(child, true))}
+            {comment.replies.map((child) => renderComment(child, true))}
           </div>
         )}
       </div>
@@ -356,12 +451,12 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
               <textarea
                 id="comment-textarea"
                 value={commentInput}
-                onChange={e => setCommentInput(e.target.value)}
+                onChange={(e) => setCommentInput(e.target.value)}
                 placeholder="Adicione um comentário"
                 className="w-full h-full bg-transparent text-sm leading-6 text-neutral-600 max-[539px]:text-sm resize-none border-none outline-none placeholder:text-neutral-600"
                 rows={2}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     handleAddComment();
                   }
@@ -370,19 +465,34 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
               <div className="flex flex-row justify-between items-end w-full mt-2">
                 <div className="flex gap-4 items-center max-[539px]:gap-3">
                   <button type="button" aria-label="Adicionar emoji">
-                    <FaceSatisfied size={20} className="toolbar-icon text-neutral-500" />
+                    <FaceSatisfied
+                      size={20}
+                      className="toolbar-icon text-neutral-500"
+                    />
                   </button>
                   <button type="button" aria-label="Negrito">
-                    <TextBold size={20} className="toolbar-icon text-neutral-500" />
+                    <TextBold
+                      size={20}
+                      className="toolbar-icon text-neutral-500"
+                    />
                   </button>
                   <button type="button" aria-label="Itálico">
-                    <TextItalic size={20} className="toolbar-icon text-neutral-500" />
+                    <TextItalic
+                      size={20}
+                      className="toolbar-icon text-neutral-500"
+                    />
                   </button>
                   <button type="button" aria-label="Lista numerada">
-                    <ListNumbered size={20} className="toolbar-icon text-neutral-500" />
+                    <ListNumbered
+                      size={20}
+                      className="toolbar-icon text-neutral-500"
+                    />
                   </button>
                   <button type="button" aria-label="Lista com marcadores">
-                    <ListBulleted size={20} className="toolbar-icon text-neutral-500" />
+                    <ListBulleted
+                      size={20}
+                      className="toolbar-icon text-neutral-500"
+                    />
                   </button>
                 </div>
                 <div className="flex flex-row items-end">
@@ -412,12 +522,14 @@ function CommentsSection({ communityId, postId, refreshSignal }: { communityId: 
         {/* Comments List */}
         <section
           className="flex flex-col p-4 bg-white rounded-sm max-w-[648px] w-full no-scrollbar"
-          style={{ maxHeight: 800, overflowY: 'auto' }}
+          style={{ maxHeight: 800, overflowY: "auto" }}
         >
           {loading && <div>Carregando comentários...</div>}
           {error && <div className="text-red-500">{error}</div>}
-          {!loading && comments.length === 0 && <div className="px-2">Nenhum comentário ainda.</div>}
-          {comments.map(comment => renderComment(comment))}
+          {!loading && comments.length === 0 && (
+            <div className="px-2">Nenhum comentário ainda.</div>
+          )}
+          {comments.map((comment) => renderComment(comment))}
         </section>
       </main>
     </>
@@ -453,8 +565,11 @@ export default function PostList() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [showNoCommunitiesMessage, setShowNoCommunitiesMessage] = useState(false);
-  const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(null);
+  const [showNoCommunitiesMessage, setShowNoCommunitiesMessage] =
+    useState(false);
+  const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(
+    null,
+  );
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -462,24 +577,30 @@ export default function PostList() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
 
-  const {
-    likePost,
-    unlikePost,
-    addComment,
-    sharePost,
-  } = usePostActions();
+  const { likePost, unlikePost, addComment, sharePost } = usePostActions();
 
-  const { participating, loading: loadingParticipation, checkParticipation, participate } = useCampaignParticipation();
+  const {
+    participating,
+    loading: loadingParticipation,
+    checkParticipation,
+    participate,
+  } = useCampaignParticipation();
 
   const [isPostPreviewOpen, setIsPostPreviewOpen] = useState(false);
   const [postPreviewData, setPostPreviewData] = useState<any>(null);
 
   // Adicionar estado para rastrear confirmações de problemas
-  const [confirmedProblems, setConfirmedProblems] = useState<{ [key: string]: boolean }>({});
+  const [confirmedProblems, setConfirmedProblems] = useState<{
+    [key: string]: boolean;
+  }>({});
   // Estado para bloquear requisições de voto por post (previne votos duplicados)
-  const [votingPosts, setVotingPosts] = useState<{ [key: string]: boolean }>({});
+  const [votingPosts, setVotingPosts] = useState<{ [key: string]: boolean }>(
+    {},
+  );
   // Sinal para forçar refresh dos comentários por post (incremental)
-  const [commentsRefreshSignal, setCommentsRefreshSignal] = useState<{ [key: string]: number }>({});
+  const [commentsRefreshSignal, setCommentsRefreshSignal] = useState<{
+    [key: string]: number;
+  }>({});
   // Refs para evitar recriar o intervalo de polling quando estados mudam
   const allPostsRef = useRef<PostDisplay[]>(allPosts);
   const votingPostsRef = useRef<{ [key: string]: boolean }>(votingPosts);
@@ -507,54 +628,71 @@ export default function PostList() {
       return [];
     }
     try {
-      const decodedUserId = JSON.parse(atob(token.split('.')[1])).sub;
+      const decodedUserId = JSON.parse(atob(token.split(".")[1])).sub;
       setCurrentUserId((prev) => prev ?? decodedUserId);
       // Busca o feed do usuário (não precisa de communityId específico)
       const response = await fetch(`${API_URL}/posts/feed?limit=9999`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao carregar posts');
+        throw new Error("Erro ao carregar posts");
       }
 
       const feedData: PostsListFeed = await response.json();
       const userCampaigns = await fetchUserCampaigns();
-      const userCampaignPostIds = userCampaigns.map((c: any) => c.post?.id).filter(Boolean);
-      const fetchedPosts = feedData.items.map((item: PostResponse): PostDisplay => {
-        let alreadyParticipating = false;
-        if (translatePostType(item.type_post) === 'Campanha') {
-          alreadyParticipating = item.user.id === decodedUserId || userCampaignPostIds.includes(item.id);
-        }
-        // Detecta se o usuário já votou na enquete
-        let userVotedOptionId: string | undefined = undefined;
-        if (item.poll_options && Array.isArray(item.poll_options)) {
-          const votedOption = item.poll_options.find((opt: any) => Array.isArray(opt.votes) && opt.votes.some((v: any) => v.user_id === currentUserId));
-          if (votedOption) userVotedOptionId = votedOption.id;
-        }
-        return {
-          ...item,
-          author: item.user.name,
-          username: item.user.username || item.user.id,
-          avatar: item.user.profile_picture || "/no-profile-pic.png",
-          role: translateUserRole(item.user.role),
-          location: item.community.name,
-          type: translatePostType(item.type_post),
-          time: getRelativeTime(item.created_at),
-          image: item.image_url || "",
-          likes: item.likes_count,
-          comments: item.comments_count,
-          shares: item.report_count,
-          liked: false,
-          alreadyParticipating,
-          userVotedOptionId,
-          confirmations_count: translatePostType(item.type_post) === 'Denúncia' && typeof (item as any).confirmations_count === 'number' ? (item as any).confirmations_count : 0,
-        };
-      });
+      const userCampaignPostIds = userCampaigns
+        .map((c: any) => c.post?.id)
+        .filter(Boolean);
+      const currentUserId = token
+        ? JSON.parse(atob(token.split(".")[1])).sub
+        : null;
+      const fetchedPosts = feedData.items.map(
+        (item: PostResponse): PostDisplay => {
+          let alreadyParticipating = false;
+          if (translatePostType(item.type_post) === "Campanha") {
+            alreadyParticipating =
+              item.user.id === currentUserId ||
+              userCampaignPostIds.includes(item.id);
+          }
+          // Detecta se o usuário já votou na enquete
+          let userVotedOptionId: string | undefined = undefined;
+          if (item.poll_options && Array.isArray(item.poll_options)) {
+            const votedOption = item.poll_options.find(
+              (opt: any) =>
+                Array.isArray(opt.votes) &&
+                opt.votes.some((v: any) => v.user_id === currentUserId),
+            );
+            if (votedOption) userVotedOptionId = votedOption.id;
+          }
+          return {
+            ...item,
+            author: item.user.name,
+            username: item.user.username || item.user.id,
+            avatar: item.user.profile_picture || "/no-profile-pic.png",
+            role: translateUserRole(item.user.role),
+            location: item.community.name,
+            type: translatePostType(item.type_post),
+            time: getRelativeTime(item.created_at),
+            image: item.image_url || "",
+            likes: item.likes_count,
+            comments: item.comments_count,
+            shares: item.report_count,
+            liked: false,
+            alreadyParticipating,
+            userVotedOptionId,
+            confirmations_count:
+              translatePostType(item.type_post) === "Denúncia" &&
+              typeof (item as any).confirmations_count === "number"
+                ? (item as any).confirmations_count
+                : 0,
+          };
+        },
+      );
       return fetchedPosts;
     } catch (err) {
       setError(err as Error);
@@ -584,7 +722,7 @@ export default function PostList() {
 
         // Mesclar fetched com snapshot atual de allPosts (via ref)
         const prevAllSnapshot = allPostsRef.current;
-        const prevMap = new Map(prevAllSnapshot.map(p => [p.id, p]));
+        const prevMap = new Map(prevAllSnapshot.map((p) => [p.id, p]));
         const merged: PostDisplay[] = [];
 
         fetched.forEach((fp) => {
@@ -595,37 +733,81 @@ export default function PostList() {
             if (votingPostsRef.current[fp.id]) {
               merged.push(existing);
             } else {
+              // Preserva a ordem das opções da enquete ao mesclar com dados do backend
+              let mergedPollOptions = existing.poll_options;
+              const fetchedPollOptions = (fp as any).poll_options;
+              if (
+                Array.isArray(fetchedPollOptions) &&
+                fetchedPollOptions.length > 0
+              ) {
+                if (
+                  Array.isArray(existing.poll_options) &&
+                  existing.poll_options.length > 0
+                ) {
+                  // Cria um mapa das opções atualizadas do backend
+                  const optionsMap: { [key: string]: any } = {};
+                  fetchedPollOptions.forEach((o: any) => {
+                    optionsMap[o.id] = o;
+                  });
+                  // Mantém a ordem das opções existentes, atualizando apenas os dados
+                  mergedPollOptions = existing.poll_options.map(
+                    (o: any) => optionsMap[o.id] ?? o,
+                  );
+                  // Adiciona quaisquer novas opções que não existiam antes
+                  fetchedPollOptions.forEach((o: any) => {
+                    if (!mergedPollOptions.some((m: any) => m.id === o.id)) {
+                      mergedPollOptions.push(o);
+                    }
+                  });
+                } else {
+                  mergedPollOptions = fetchedPollOptions;
+                }
+              }
+
               const updated: PostDisplay = {
                 ...existing,
                 ...fp,
                 likes: (fp as any).likes_count ?? existing.likes,
                 comments: (fp as any).comments_count ?? existing.comments,
                 shares: (fp as any).report_count ?? existing.shares,
-                poll_options: (fp as any).poll_options ?? existing.poll_options,
-                poll_question: (fp as any).poll_question ?? existing.poll_question,
-                userVotedOptionId: fp.userVotedOptionId ?? existing.userVotedOptionId,
-                confirmations_count: (fp as any).confirmations_count ?? existing.confirmations_count,
+                poll_options: mergedPollOptions,
+                poll_question:
+                  (fp as any).poll_question ?? existing.poll_question,
+                userVotedOptionId:
+                  fp.userVotedOptionId ?? existing.userVotedOptionId,
+                confirmations_count:
+                  (fp as any).confirmations_count ??
+                  existing.confirmations_count,
               } as PostDisplay;
               merged.push(updated);
 
-              if ((fp as any).comments_count !== undefined && (fp as any).comments_count !== existing.comments) {
-                setCommentsRefreshSignal(prev => ({ ...prev, [fp.id]: (prev[fp.id] || 0) + 1 }));
+              if (
+                (fp as any).comments_count !== undefined &&
+                (fp as any).comments_count !== existing.comments
+              ) {
+                setCommentsRefreshSignal((prev) => ({
+                  ...prev,
+                  [fp.id]: (prev[fp.id] || 0) + 1,
+                }));
               }
             }
           }
           prevMap.delete(fp.id);
         });
-        prevMap.forEach(p => merged.push(p));
+        prevMap.forEach((p) => merged.push(p));
 
         // Atualiza estados a partir do merged
         setAllPosts(merged);
 
-        const shownCount = Math.max(displayedPostsRef.current.length, postsPerPage);
+        const shownCount = Math.max(
+          displayedPostsRef.current.length,
+          postsPerPage,
+        );
         setDisplayedPosts(merged.slice(0, shownCount));
 
         setHasMorePosts(!(fetched.length <= shownCount));
       } catch (err) {
-        console.warn('Polling failed:', err);
+        console.warn("Polling failed:", err);
       }
     }, 5000);
 
@@ -637,13 +819,13 @@ export default function PostList() {
   const loadMorePosts = useCallback(async () => {
     if (loadingMore || !hasMorePosts) return;
     setLoadingMore(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     const startIndex = currentPage * postsPerPage;
     const endIndex = startIndex + postsPerPage;
     const morePosts = allPosts.slice(startIndex, endIndex);
     if (morePosts.length > 0) {
-      setDisplayedPosts(prev => [...prev, ...morePosts]);
-      setCurrentPage(prev => prev + 1);
+      setDisplayedPosts((prev) => [...prev, ...morePosts]);
+      setCurrentPage((prev) => prev + 1);
       if (endIndex >= allPosts.length) setHasMorePosts(false);
     } else {
       setHasMorePosts(false);
@@ -659,7 +841,7 @@ export default function PostList() {
           loadMorePosts();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     if (loadingRef.current) {
@@ -687,14 +869,20 @@ export default function PostList() {
     try {
       if (!post.liked) {
         await likePost(communityId, post.id);
-        setDisplayedPosts(posts => posts.map((p) =>
-          p.id === post.id ? { ...p, likes: p.likes + 1, liked: true } : p
-        ));
+        setDisplayedPosts((posts) =>
+          posts.map((p) =>
+            p.id === post.id ? { ...p, likes: p.likes + 1, liked: true } : p,
+          ),
+        );
       } else {
         await unlikePost(communityId, post.id);
-        setDisplayedPosts(posts => posts.map((p) =>
-          p.id === post.id ? { ...p, likes: Math.max(0, p.likes - 1), liked: false } : p
-        ));
+        setDisplayedPosts((posts) =>
+          posts.map((p) =>
+            p.id === post.id
+              ? { ...p, likes: Math.max(0, p.likes - 1), liked: false }
+              : p,
+          ),
+        );
       }
     } catch (err) {
       // Tratar erro se necessário
@@ -717,25 +905,36 @@ export default function PostList() {
   };
 
   // Função para verificar se o problema já foi confirmado pelo usuário
-  const checkProblemConfirmation = async (postId: string, communityId: string) => {
+  const checkProblemConfirmation = async (
+    postId: string,
+    communityId: string,
+  ) => {
     try {
       const token = getTokenFromCookies();
-      const response = await fetch(`${API_URL}/communities/${communityId}/complaints/${postId}`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const response = await fetch(
+        `${API_URL}/communities/${communityId}/complaints/${postId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
       if (!response.ok) {
         return false;
       }
       const data = await response.json();
       // Verifica se o usuário atual está na lista de confirmações
-      const currentUserId = token ? JSON.parse(atob(token.split('.')[1])).sub : null;
-      return data.confirmations?.some((c: any) => c.user_id === currentUserId) ?? false;
+      const currentUserId = token
+        ? JSON.parse(atob(token.split(".")[1])).sub
+        : null;
+      return (
+        data.confirmations?.some((c: any) => c.user_id === currentUserId) ??
+        false
+      );
     } catch (err) {
-      console.error('Erro ao verificar confirmação do problema:', err);
+      console.error("Erro ao verificar confirmação do problema:", err);
       return false;
     }
   };
@@ -747,12 +946,12 @@ export default function PostList() {
       const communityId = post.community?.id;
 
       if (!communityId) {
-        toast.error('ID da comunidade não encontrado');
+        toast.error("ID da comunidade não encontrado");
         return;
       }
 
       if (post.user?.id && post.user.id === currentUserId) {
-        toast.info('Você não pode confirmar um problema que criou.');
+        toast.info("Você não pode confirmar um problema que criou.");
         return;
       }
 
@@ -761,20 +960,24 @@ export default function PostList() {
         setConfirmedProblems((prev) => ({ ...prev, [post.id]: true }));
         setDisplayedPosts((prev: PostDisplay[]) =>
           prev.map((p: PostDisplay) =>
-            p.id === post.id ? { ...p, confirmations_count: (p.confirmations_count ?? 0) + 1 } : p
-          )
+            p.id === post.id
+              ? { ...p, confirmations_count: (p.confirmations_count ?? 0) + 1 }
+              : p,
+          ),
         );
         setAllPosts((prev: PostDisplay[]) =>
           prev.map((p: PostDisplay) =>
-            p.id === post.id ? { ...p, confirmations_count: (p.confirmations_count ?? 0) + 1 } : p
-          )
+            p.id === post.id
+              ? { ...p, confirmations_count: (p.confirmations_count ?? 0) + 1 }
+              : p,
+          ),
         );
-        toast.success('Confirmação registrada!');
+        toast.success("Confirmação registrada!");
       } else {
-        toast.info('Você já confirmou este problema.');
+        toast.info("Você já confirmou este problema.");
       }
     } catch (err) {
-      toast.error('Erro ao confirmar problema');
+      toast.error("Erro ao confirmar problema");
     }
   };
 
@@ -783,8 +986,14 @@ export default function PostList() {
     const fetchConfirmedProblems = async () => {
       const confirmedMap: { [key: string]: boolean } = {};
       for (const post of allPosts) {
-        if (post.community?.id && translatePostType(post.type_post) === 'Denúncia') {
-          confirmedMap[post.id] = await checkProblemConfirmation(post.id, post.community.id);
+        if (
+          post.community?.id &&
+          translatePostType(post.type_post) === "Denúncia"
+        ) {
+          confirmedMap[post.id] = await checkProblemConfirmation(
+            post.id,
+            post.community.id,
+          );
         }
       }
       setConfirmedProblems(confirmedMap);
@@ -795,81 +1004,102 @@ export default function PostList() {
     }
   }, [allPosts]);
 
+  // Função auxiliar para atualizar o estado do post com novas opções de enquete
+  const updatePollState = (
+    postId: string,
+    newOptions: any[],
+    newUserVotedOptionId: string | undefined,
+    pollQuestion?: string,
+  ) => {
+    const updatePost = (p: PostDisplay) => {
+      if (p.id !== postId) return p;
+      return {
+        ...p,
+        poll_options: newOptions,
+        userVotedOptionId: newUserVotedOptionId,
+        ...(pollQuestion && { poll_question: pollQuestion }),
+      } as PostDisplay;
+    };
+
+    setAllPosts((prev) => prev.map(updatePost));
+    setDisplayedPosts((prev) => prev.map(updatePost));
+    if (postPreviewData && postPreviewData.id === postId) {
+      setPostPreviewData((prev: any) => ({
+        ...prev,
+        poll_options: newOptions,
+        userVotedOptionId: newUserVotedOptionId,
+        ...(pollQuestion && { poll_question: pollQuestion }),
+      }));
+    }
+  };
+
+  // Função auxiliar para mesclar opções do backend preservando a ordem local
+  const mergeOptionsPreservingOrder = (
+    localOptions: any[],
+    backendOptions: any[],
+  ): any[] => {
+    if (!Array.isArray(backendOptions) || backendOptions.length === 0) {
+      return localOptions;
+    }
+    if (!Array.isArray(localOptions) || localOptions.length === 0) {
+      return backendOptions;
+    }
+
+    const backendMap: { [key: string]: any } = {};
+    backendOptions.forEach((o) => {
+      backendMap[o.id] = o;
+    });
+
+    // Mantém a ordem das opções locais, apenas atualizando os dados do backend
+    const merged = localOptions.map((o) => backendMap[o.id] ?? o);
+
+    // Adiciona novas opções que possam ter sido criadas
+    backendOptions.forEach((o) => {
+      if (!merged.some((m) => m.id === o.id)) {
+        merged.push(o);
+      }
+    });
+
+    return merged;
+  };
+
   // Função para retirar o voto
   const handleUnvotePoll = async (post: PostDisplay) => {
     if (!post.userVotedOptionId) return;
     const token = getTokenFromCookies();
     const communityId = post.community?.id;
     if (!communityId) return;
-    // Otimista: decrementa imediatamente a opção votada localmente
-    const previousAllPostsUn = allPosts.slice();
-    const previousDisplayedUn = displayedPosts.slice();
-    const optimisticOptionsUn = Array.isArray(post.poll_options) ? post.poll_options.map((o: any) => ({ ...o })) : [];
-    const votedId = post.userVotedOptionId;
-    if (optimisticOptionsUn.length > 0 && votedId) {
-      const opt = optimisticOptionsUn.find((o: any) => o.id === votedId);
-      if (opt) opt.votes_count = Math.max(0, (opt.votes_count || 0) - 1);
-    }
-    setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptionsUn, userVotedOptionId: undefined } as any : p));
-    setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptionsUn, userVotedOptionId: undefined } as any : p));
-    if (postPreviewData && postPreviewData.id === post.id) {
-      setPostPreviewData((prev: any) => ({ ...prev, poll_options: optimisticOptionsUn, userVotedOptionId: undefined }));
-    }
+
+    // Salva estado anterior para rollback em caso de erro
+    const previousOptions = post.poll_options ?? [];
+    const previousVotedId = post.userVotedOptionId;
+
+    // Atualização otimista imediata
+    const optimisticOptions = Array.isArray(post.poll_options)
+      ? post.poll_options.map((o: any) => {
+          if (o.id === post.userVotedOptionId) {
+            return { ...o, votes_count: Math.max(0, (o.votes_count || 0) - 1) };
+          }
+          return { ...o };
+        })
+      : [];
+
+    updatePollState(post.id, optimisticOptions, undefined);
 
     try {
-      // Para retirar o voto, basta chamar voteOnPoll novamente na opção votada, e o backend deve tratar como unvote
-      const response = await voteOnPoll(communityId, post.userVotedOptionId, token ?? undefined);
-      // Atualiza contagem de votos usando os dados mais recentes do backend
-      const updatedOptions = response?.post?.poll_options ?? response?.options ?? [];
-      const updatedQuestion = response?.question ?? response?.post?.poll_question ?? post.poll_question;
+      await unvoteOnPoll(
+        communityId,
+        post.userVotedOptionId,
+        token ?? undefined,
+      );
 
-      // Preserva ordem das opções otimistas (optimisticOptionsUn) como em handleVotePoll
-      let finalOptions: any[] = optimisticOptionsUn.slice();
-      if (Array.isArray(updatedOptions) && updatedOptions.length > 0) {
-        if (optimisticOptionsUn.length > 0) {
-          const updatedMap: { [key: string]: any } = {};
-          updatedOptions.forEach((o: any) => { updatedMap[o.id] = o; });
-          finalOptions = optimisticOptionsUn.map((o: any) => updatedMap[o.id] ?? o);
-          updatedOptions.forEach((o: any) => {
-            if (!finalOptions.some((f: any) => f.id === o.id)) finalOptions.push(o);
-          });
-        } else {
-          finalOptions = updatedOptions.slice();
-        }
-      }
-
-      setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: undefined } as any : p));
-      setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: undefined } as any : p));
-      if (postPreviewData && postPreviewData.id === post.id) {
-        setPostPreviewData((prev: any) => ({ ...prev, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: undefined }));
-      }
-      // Recarrega posts do backend para garantir consistência após remover voto
-      try {
-        const refreshed = await fetchPosts();
-        // Preserva a ordem das opções já calculada em `finalOptions` ao mesclar
-        const merged = refreshed.map((p: any) => {
-          if (p.id === post.id) {
-            return { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: undefined };
-          }
-          return p;
-        });
-        setAllPosts(merged);
-        const shownCount = Math.max(displayedPosts.length, postsPerPage);
-        setDisplayedPosts(merged.slice(0, shownCount));
-        setHasMorePosts(!(merged.length <= shownCount));
-      } catch (err) {
-        console.warn('Falha ao recarregar posts após remover voto:', err);
-      }
-      toast.success('Voto removido');
+      // Mantém as opções otimistas já atualizadas (voto já foi decrementado)
+      toast.success("Voto removido");
     } catch (err: any) {
-      console.error('Erro ao remover voto', err);
-      // Reverte otimista em caso de erro
-      setAllPosts(previousAllPostsUn);
-      setDisplayedPosts(previousDisplayedUn);
-      if (postPreviewData && postPreviewData.id === post.id) {
-        setPostPreviewData((prev: any) => ({ ...prev, poll_options: post.poll_options, userVotedOptionId: post.userVotedOptionId }));
-      }
-      toast.error(err?.message || 'Erro ao remover voto');
+      console.error("Erro ao remover voto", err);
+      // Rollback
+      updatePollState(post.id, previousOptions, previousVotedId);
+      toast.error(err?.message || "Erro ao remover voto");
     }
   };
 
@@ -877,17 +1107,25 @@ export default function PostList() {
   const handleParticipateCampaign = async (post: PostDisplay) => {
     const communityId = post.community?.id;
     if (!communityId) {
-      toast.error('ID da comunidade não encontrado');
+      toast.error("ID da comunidade não encontrado");
       return;
     }
 
     try {
       await participate(communityId, post.id);
-      setDisplayedPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
-      setAllPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, alreadyParticipating: true } : p));
-      toast.success('Você agora faz parte da campanha!');
+      setDisplayedPosts((prev) =>
+        prev.map((p) =>
+          p.id === post.id ? { ...p, alreadyParticipating: true } : p,
+        ),
+      );
+      setAllPosts((prev) =>
+        prev.map((p) =>
+          p.id === post.id ? { ...p, alreadyParticipating: true } : p,
+        ),
+      );
+      toast.success("Você agora faz parte da campanha!");
     } catch (err) {
-      toast.error('Erro ao participar da campanha');
+      toast.error("Erro ao participar da campanha");
     }
   };
 
@@ -906,83 +1144,62 @@ export default function PostList() {
       return;
     }
 
-    // Otimista: aplique mudança localmente (incrementa nova opção, decrementa antiga se houver)
-    const previousAllPosts = allPosts.slice();
-    const previousDisplayed = displayedPosts.slice();
+    // Salva estado anterior para rollback em caso de erro
+    const previousOptions = post.poll_options ?? [];
+    const previousVotedId = post.userVotedOptionId;
 
-    const optimisticOptions = Array.isArray(post.poll_options) ? post.poll_options.map((o: any) => ({ ...o })) : [];
-    // decrement previous vote
-    if (post.userVotedOptionId) {
-      const prevOpt = optimisticOptions.find((o: any) => o.id === post.userVotedOptionId);
-      if (prevOpt) prevOpt.votes_count = Math.max(0, (prevOpt.votes_count || 0) - 1);
-    }
-    // increment new vote
-    const newOpt = optimisticOptions.find((o: any) => o.id === optionId);
-    if (newOpt) newOpt.votes_count = (newOpt.votes_count || 0) + 1;
+    // Atualização otimista imediata - decrementa voto anterior e incrementa novo
+    const optimisticOptions = Array.isArray(post.poll_options)
+      ? post.poll_options.map((o: any) => {
+          let newVotesCount = o.votes_count || 0;
 
-    setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptions, userVotedOptionId: optionId } as any : p));
-    setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: optimisticOptions, userVotedOptionId: optionId } as any : p));
-    if (postPreviewData && postPreviewData.id === post.id) {
-      setPostPreviewData((prev: any) => ({ ...prev, poll_options: optimisticOptions, userVotedOptionId: optionId }));
-    }
+          // Decrementa o voto anterior (se existir)
+          if (previousVotedId && o.id === previousVotedId) {
+            newVotesCount = Math.max(0, newVotesCount - 1);
+          }
 
-    setVotingPosts(prev => ({ ...prev, [post.id]: true }));
+          // Incrementa o novo voto
+          if (o.id === optionId) {
+            newVotesCount = newVotesCount + 1;
+          }
+
+          return { ...o, votes_count: newVotesCount };
+        })
+      : [];
+
+    // Aplica atualização otimista imediatamente
+    updatePollState(post.id, optimisticOptions, optionId);
+    setVotingPosts((prev) => ({ ...prev, [post.id]: true }));
 
     try {
-      const response = await voteOnPoll(communityId, optionId, token ?? undefined);
-      const updatedOptions = response?.post?.poll_options ?? response?.options ?? [];
-      const updatedQuestion = response?.question ?? response?.post?.poll_question ?? post.poll_question;
+      const response = await voteOnPoll(
+        communityId,
+        optionId,
+        token ?? undefined,
+      );
 
-      // Preserva ordem das opções otimistas ao mesclar com as atualizadas do backend
-      let finalOptions: any[] = optimisticOptions.slice();
-      if (Array.isArray(updatedOptions) && updatedOptions.length > 0) {
-        if (optimisticOptions.length > 0) {
-          const updatedMap: { [key: string]: any } = {};
-          updatedOptions.forEach((o: any) => { updatedMap[o.id] = o; });
-          finalOptions = optimisticOptions.map((o: any) => updatedMap[o.id] ?? o);
-          updatedOptions.forEach((o: any) => {
-            if (!finalOptions.some((f: any) => f.id === o.id)) finalOptions.push(o);
-          });
-        } else {
-          finalOptions = updatedOptions.slice();
-        }
-      }
+      // Mescla resposta do backend preservando ordem local
+      const backendOptions =
+        response?.post?.poll_options ?? response?.options ?? [];
+      const finalOptions = mergeOptionsPreservingOrder(
+        optimisticOptions,
+        backendOptions,
+      );
 
-      setAllPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId } as any : p));
-      setDisplayedPosts(prev => prev.map(p => p.id === post.id ? { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId } as any : p));
-      if (postPreviewData && postPreviewData.id === post.id) {
-        setPostPreviewData((prev: any) => ({ ...prev, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId }));
-      }
-
-      // Opcional: recarrega posts para garantir consistência
-      try {
-        const refreshed = await fetchPosts();
-        const merged = refreshed.map((p: any) => {
-          if (p.id === post.id) {
-            return { ...p, poll_options: finalOptions, poll_question: updatedQuestion, userVotedOptionId: optionId };
-          }
-          return p;
-        });
-        setAllPosts(merged);
-        const shownCount = Math.max(displayedPosts.length, postsPerPage);
-        setDisplayedPosts(merged.slice(0, shownCount));
-        setHasMorePosts(!(merged.length <= shownCount));
-      } catch (err) {
-        // ignora falha de refresh
-      }
-
-      toast.success('Voto registrado');
+      updatePollState(
+        post.id,
+        finalOptions,
+        optionId,
+        response?.post?.poll_question,
+      );
+      toast.success("Voto registrado");
     } catch (err: any) {
-      console.error('Erro ao votar na enquete:', err);
-      // Reverter otimista
-      setAllPosts(previousAllPosts);
-      setDisplayedPosts(previousDisplayed);
-      if (postPreviewData && postPreviewData.id === post.id) {
-        setPostPreviewData((prev: any) => ({ ...prev, poll_options: post.poll_options, userVotedOptionId: post.userVotedOptionId }));
-      }
-      toast.error(err?.message || 'Erro ao registrar o voto.');
+      console.error("Erro ao votar na enquete:", err);
+      // Rollback para estado anterior
+      updatePollState(post.id, previousOptions, previousVotedId);
+      toast.error(err?.message || "Erro ao registrar o voto.");
     } finally {
-      setVotingPosts(prev => ({ ...prev, [post.id]: false }));
+      setVotingPosts((prev) => ({ ...prev, [post.id]: false }));
     }
   };
 
@@ -1027,10 +1244,10 @@ export default function PostList() {
         {showNewPostsBanner && newPosts.length > 0 && (
           <div
             style={{
-              position: 'fixed',
+              position: "fixed",
               top: 70,
-              left: '50%',
-              transform: 'translateX(-50%)',
+              left: "50%",
+              transform: "translateX(-50%)",
               zIndex: 0,
               minWidth: 220,
               maxWidth: 360,
@@ -1040,21 +1257,21 @@ export default function PostList() {
             <button
               className="px-4 py-2 bg-black text-white rounded-xl shadow-lg hover:bg-gray-900 transition-colors border-gray-200 cursor-pointer"
               onClick={() => {
-                setAllPosts(prev => [...newPosts, ...prev]);
-                setDisplayedPosts(prev => [...newPosts, ...prev]);
+                setAllPosts((prev) => [...newPosts, ...prev]);
+                setDisplayedPosts((prev) => [...newPosts, ...prev]);
                 setShowNewPostsBanner(false);
                 setNewPosts([]);
               }}
             >
-              {newPosts.length === 1 ? '1 publicado' : `${newPosts.length} publicados`}
+              {newPosts.length === 1
+                ? "1 publicado"
+                : `${newPosts.length} publicados`}
             </button>
           </div>
         )}
         {displayedPosts.map((post) => (
           <React.Fragment key={post.id}>
-            <article
-              className="flex flex-col justify-center px-6 py-4 w-full bg-white rounded border-solid shadow-sm border-[0.5px] border-stone-300 max-md:px-5 max-md:max-w-full"
-            >
+            <article className="flex flex-col justify-center px-6 py-4 w-full bg-white rounded border-solid shadow-sm border-[0.5px] border-stone-300 max-md:px-5 max-md:max-w-full">
               <div className="w-full max-w-[632px] max-md:max-w-full">
                 <div className="w-full max-md:max-w-full">
                   <header className="flex items-start justify-between gap-4 w-full max-md:max-w-full">
@@ -1082,7 +1299,9 @@ export default function PostList() {
                             <div className="self-stretch my-auto text-[10px] font-semibold max-[480px]:hidden">
                               •
                             </div>
-                            <div className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(post.role)} max-[480px]:hidden`}>
+                            <div
+                              className={`flex gap-2.5 justify-center items-center self-stretch px-3 py-1 my-auto text-xs whitespace-nowrap rounded ${getRoleBadgeClasses(post.role)} max-[480px]:hidden`}
+                            >
                               <div className="self-stretch my-auto">
                                 {post.role}
                               </div>
@@ -1093,7 +1312,9 @@ export default function PostList() {
                           </div>
                         </div>
                         <div className="hidden max-[480px]:flex items-center gap-2 px-1.5 text-xs text-neutral-800 mt-1">
-                          <div className={`flex gap-2 justify-center items-center px-2 py-0.5 text-[10px] whitespace-nowrap rounded ${getRoleBadgeClasses(post.role)}`}>
+                          <div
+                            className={`flex gap-2 justify-center items-center px-2 py-0.5 text-[10px] whitespace-nowrap rounded ${getRoleBadgeClasses(post.role)}`}
+                          >
                             <span>{post.role}</span>
                           </div>
                           <div className="text-[11px] text-neutral-600">
@@ -1121,7 +1342,9 @@ export default function PostList() {
                           className="p-1 hover:bg-gray-100 rounded-full cursor-pointer transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setOpenMenuPostId(openMenuPostId === post.id ? null : post.id);
+                            setOpenMenuPostId(
+                              openMenuPostId === post.id ? null : post.id,
+                            );
                           }}
                           aria-label="Mais opções"
                         >
@@ -1141,11 +1364,13 @@ export default function PostList() {
                                 try {
                                   const communityId = post.community?.id;
                                   if (!communityId) {
-                                    toast.error('ID da comunidade não encontrado');
+                                    toast.error(
+                                      "ID da comunidade não encontrado",
+                                    );
                                     return;
                                   }
                                   await reportPost(communityId, post.id);
-                                } catch { }
+                                } catch {}
                               }}
                             >
                               Reportar post
@@ -1160,7 +1385,7 @@ export default function PostList() {
                     <div className="flex flex-row justify-between items-center w-full max-md:max-w-full">
                       <div
                         className="flex gap-2.5 items-center text-xl font-bold leading-relaxed min-w-60 px-0 w-0 flex-1 cursor-pointer"
-                        style={{ wordBreak: 'break-word' }}
+                        style={{ wordBreak: "break-word" }}
                         onClick={() => {
                           setPostPreviewData({
                             id: post.id,
@@ -1187,17 +1412,23 @@ export default function PostList() {
                             username: post.username,
                             user: {
                               id: post.user.id,
-                              profile_picture: post.user.profile_picture
+                              profile_picture: post.user.profile_picture,
                             },
                             poll_question: post.poll_question,
-                            poll_options: post.poll_options
+                            poll_options: post.poll_options,
                           });
                           setIsPostPreviewOpen(true);
                         }}
                       >
                         <h2
                           className="text-neutral-800 px-0 font-georgia font-bold break-words w-full max-w-full"
-                          style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}
+                          style={{
+                            fontFamily: "Georgia, serif",
+                            fontWeight: "bold",
+                            wordBreak: "break-word",
+                            overflowWrap: "break-word",
+                            whiteSpace: "pre-line",
+                          }}
                         >
                           {post.title}
                         </h2>
@@ -1213,7 +1444,11 @@ export default function PostList() {
                     {post.content && (
                       <div
                         className="mt-4 text-sm leading-5 text-justify text-neutral-800 max-md:max-w-full whitespace-pre-line font-regular break-words w-full max-w-full cursor-pointer"
-                        style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}
+                        style={{
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word",
+                          whiteSpace: "pre-line",
+                        }}
                         onClick={() => {
                           setPostPreviewData({
                             id: post.id,
@@ -1240,10 +1475,10 @@ export default function PostList() {
                             username: post.username,
                             user: {
                               id: post.user.id,
-                              profile_picture: post.user.profile_picture
+                              profile_picture: post.user.profile_picture,
                             },
                             poll_question: post.poll_question,
-                            poll_options: post.poll_options
+                            poll_options: post.poll_options,
                           });
                           setIsPostPreviewOpen(true);
                         }}
@@ -1261,89 +1496,116 @@ export default function PostList() {
                     )}
 
                     {/* Opções de Enquete */}
-                    {post.type === 'Enquete' && Array.isArray(post.poll_options) && post.poll_options.length > 0 && (
-                      <div className="mt-6 w-full">
-                        {post.poll_question && (
-                          <h3 className="text-base font-semibold text-neutral-800 mb-6">
-                            {post.poll_question}
-                          </h3>
-                        )}
-                        {(() => {
-                          const totalVotes = Array.isArray(post.poll_options) ? post.poll_options.reduce((sum, opt) => sum + opt.votes_count, 0) : 0;
-                          return (post.poll_options ?? []).map((option) => {
-                            const percent = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
-                            const isUserVote = post.userVotedOptionId === option.id;
-                            return (
-                              <div
-                                key={`${option.id}-${option.votes_count}`}
-                                className={`mb-4 cursor-pointer hover:opacity-80 transition-opacity`}
-                              >
-                                <button
-                                  className={`w-full text-left bg-transparent border-none outline-none p-0 m-0 ${votingPosts[post.id] ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!votingPosts[post.id]) handleVotePoll(post, option.id);
-                                  }}
-                                  disabled={votingPosts[post.id]}
+                    {post.type === "Enquete" &&
+                      Array.isArray(post.poll_options) &&
+                      post.poll_options.length > 0 && (
+                        <div className="mt-6 w-full">
+                          {post.poll_question && (
+                            <h3 className="text-base font-semibold text-neutral-800 mb-6">
+                              {post.poll_question}
+                            </h3>
+                          )}
+                          {(() => {
+                            const totalVotes = Array.isArray(post.poll_options)
+                              ? post.poll_options.reduce(
+                                  (sum, opt) => sum + opt.votes_count,
+                                  0,
+                                )
+                              : 0;
+                            return (post.poll_options ?? []).map((option) => {
+                              const percent =
+                                totalVotes > 0
+                                  ? Math.round(
+                                      (option.votes_count / totalVotes) * 100,
+                                    )
+                                  : 0;
+                              const isUserVote =
+                                post.userVotedOptionId === option.id;
+                              return (
+                                <div
+                                  key={`${option.id}-${option.votes_count}`}
+                                  className={`mb-4 cursor-pointer hover:opacity-80 transition-opacity`}
                                 >
-                                  <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none">
-                                    <div className="flex gap-2 items-center self-stretch my-auto">
-                                      <span className="self-stretch my-auto text-neutral-800 font-medium">
-                                        {percent}%
-                                      </span>
-                                      <span className="self-stretch my-auto text-neutral-900">
-                                        {option.answer}
+                                  <button
+                                    className={`w-full text-left bg-transparent border-none outline-none p-0 m-0 ${votingPosts[post.id] ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!votingPosts[post.id])
+                                        handleVotePoll(post, option.id);
+                                    }}
+                                    disabled={votingPosts[post.id]}
+                                  >
+                                    <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none">
+                                      <div className="flex gap-2 items-center self-stretch my-auto">
+                                        <span className="self-stretch my-auto text-neutral-800 font-medium">
+                                          {percent}%
+                                        </span>
+                                        <span className="self-stretch my-auto text-neutral-900">
+                                          {option.answer}
+                                        </span>
+                                      </div>
+                                      <span className="self-stretch my-auto text-neutral-500">
+                                        {option.votes_count}{" "}
+                                        {option.votes_count === 1
+                                          ? "voto"
+                                          : "votos"}
                                       </span>
                                     </div>
-                                    <span className="self-stretch my-auto text-neutral-500">
-                                      {option.votes_count} {option.votes_count === 1 ? 'voto' : 'votos'}
-                                    </span>
-                                  </div>
-                                  <div className="mt-2 w-full rounded-sm">
-                                    <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300">
-                                      <div
-                                        className="flex shrink-0 h-2 rounded-sm bg-neutral-800"
-                                        style={{ width: `${percent}%`, minWidth: '8px', transition: 'width 300ms ease' }}
-                                      />
+                                    <div className="mt-2 w-full rounded-sm">
+                                      <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300">
+                                        <div
+                                          className="flex shrink-0 h-2 rounded-sm bg-neutral-800"
+                                          style={{
+                                            width: `${percent}%`,
+                                            minWidth: "8px",
+                                            transition: "width 300ms ease",
+                                          }}
+                                        />
+                                      </div>
                                     </div>
-                                  </div>
-                                </button>
-                              </div>
-                            );
-                          });
-                        })()}
-                      </div>
-                    )}
+                                  </button>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      )}
 
                     {/* Botão Participar da Campanha */}
-                    {post.type === 'Campanha' && (
+                    {post.type === "Campanha" && (
                       <button
-                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors cursor-pointer ${post.alreadyParticipating || participating[post.id] ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors cursor-pointer ${post.alreadyParticipating || participating[post.id] ? "bg-neutral-200 text-neutral-700 cursor-not-allowed" : "bg-neutral-900 text-white hover:bg-neutral-800"}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!post.alreadyParticipating && !participating[post.id]) handleParticipateCampaign(post);
+                          if (
+                            !post.alreadyParticipating &&
+                            !participating[post.id]
+                          )
+                            handleParticipateCampaign(post);
                         }}
-                        disabled={post.alreadyParticipating || participating[post.id]}
+                        disabled={
+                          post.alreadyParticipating || participating[post.id]
+                        }
                       >
-                        {post.alreadyParticipating || participating[post.id] ? 'Já participa da campanha' : 'Participar da Campanha'}
+                        {post.alreadyParticipating || participating[post.id]
+                          ? "Já participa da campanha"
+                          : "Participar da Campanha"}
                       </button>
                     )}
 
                     {/* Botão Confirmar problema para Denúncia */}
-                    {post.type === 'Denúncia' && (
+                    {post.type === "Denúncia" && (
                       <button
-                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${(post.confirmations_count ?? 0) > 0 ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                        className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${(post.confirmations_count ?? 0) > 0 ? "bg-neutral-200 text-neutral-700 cursor-not-allowed" : "bg-neutral-900 text-white hover:bg-neutral-800"}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleConfirmComplaint(post);
                         }}
                         disabled={(post.confirmations_count ?? 0) > 0}
                       >
-                        {(post.confirmations_count ?? 0) > 0 ? (
-                          'Problema confirmado'
-                        ) : (
-                          'Confirmar problema'
-                        )}
+                        {(post.confirmations_count ?? 0) > 0
+                          ? "Problema confirmado"
+                          : "Confirmar problema"}
                       </button>
                     )}
                   </div>
@@ -1365,15 +1627,19 @@ export default function PostList() {
                       </div>
                     </button>
                     <button
-                      className={`flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap transition-colors px-3 py-1 cursor-pointer ${openCommentsPostId === post.id ? 'bg-neutral-200' : ''}`}
+                      className={`flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap transition-colors px-3 py-1 cursor-pointer ${openCommentsPostId === post.id ? "bg-neutral-200" : ""}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleComment(post);
                       }}
                       title="Comentar"
                     >
-                      <Forum className={`h-4 w-4 ${openCommentsPostId === post.id ? 'text-black-300' : 'text-gray-500'}`} />
-                      <div className={`self-stretch my-auto ${openCommentsPostId === post.id ? 'text-black-600' : 'text-neutral-500'}`}>
+                      <Forum
+                        className={`h-4 w-4 ${openCommentsPostId === post.id ? "text-black-300" : "text-gray-500"}`}
+                      />
+                      <div
+                        className={`self-stretch my-auto ${openCommentsPostId === post.id ? "text-black-600" : "text-neutral-500"}`}
+                      >
                         {post.comments}
                       </div>
                     </button>
@@ -1386,9 +1652,7 @@ export default function PostList() {
                       title="Compartilhar"
                     >
                       <Activity className="h-4 w-4 text-teal-700" />
-                      <div className="self-stretch my-auto">
-                        {post.shares}
-                      </div>
+                      <div className="self-stretch my-auto">{post.shares}</div>
                     </button>
                   </div>
                 </div>
@@ -1397,7 +1661,11 @@ export default function PostList() {
             {openCommentsPostId === post.id && (
               <div className="flex justify-center w-full -mt-6">
                 {post.community?.id && (
-                  <CommentsSection communityId={post.community.id} postId={post.id} refreshSignal={commentsRefreshSignal[post.id]} />
+                  <CommentsSection
+                    communityId={post.community.id}
+                    postId={post.id}
+                    refreshSignal={commentsRefreshSignal[post.id]}
+                  />
                 )}
               </div>
             )}
