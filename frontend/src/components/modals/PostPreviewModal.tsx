@@ -66,7 +66,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
     const [localPost, setLocalPost] = React.useState(post);
     // Estado para rastrear se o usuário já confirmou o problema
     const [hasConfirmedProblem, setHasConfirmedProblem] = React.useState(false);
-    
+
     // Confirmação de denúncia
     const handleConfirmComplaint = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -674,54 +674,73 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                 )}
 
                                 {/* Opções de Enquete */}
-                                {localPost.type === 'Enquete' && Array.isArray(localPost.poll_options) && localPost.poll_options.length > 0 && (
+                                {(() => {
+                                    const isPoll = localPost.type === 'Enquete' || localPost.type_post === 'Enquete' ||
+                                        localPost.type === 'enquete' || localPost.type_post === 'enquete' ||
+                                        localPost.type === 'poll' || localPost.type_post === 'poll';
+                                    const hasOptions = Array.isArray(localPost.poll_options) && localPost.poll_options.length > 0;
+
+                                    if (isPoll) {
+                                        console.log('🔍 Verificação de enquete:', {
+                                            type: localPost.type,
+                                            type_post: localPost.type_post,
+                                            isPoll,
+                                            hasOptions,
+                                            poll_options: localPost.poll_options,
+                                            poll_question: localPost.poll_question
+                                        });
+                                    }
+
+                                    return null;
+                                })()}
+                                {(localPost.type === 'Enquete' || localPost.type_post === 'Enquete' || localPost.type === 'enquete' || localPost.type_post === 'enquete' || localPost.type === 'poll' || localPost.type_post === 'poll') && Array.isArray(localPost.poll_options) && localPost.poll_options.length > 0 && (
                                     <div className="mt-6 w-full">
                                         {localPost.poll_question && (
-                                            <h3 className="text-base font-semibold text-neutral-800 mb-6">
+                                            <h3 className="text-base font-semibold text-neutral-800 mb-4">
                                                 {localPost.poll_question}
                                             </h3>
                                         )}
-                                        {(localPost.poll_options ?? []).map((option) => {
-                                            const totalVotes = Array.isArray(localPost.poll_options) ? localPost.poll_options.reduce((sum, opt) => sum + (opt.votes_count || 0), 0) : 0;
-                                            const percent = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
-                                            const isUserVote = (localPost as any).userVotedOptionId === option.id;
-                                            return (
-                                                <div
-                                                    key={option.id}
-                                                    className={`mb-4 cursor-pointer hover:opacity-80 transition-opacity`}
-                                                >
-                                                    <button
-                                                        className={`w-full text-left bg-transparent border-none outline-none p-0 m-0 cursor-pointer`}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleVotePoll(option.id);
-                                                        }}
+                                        <div className="space-y-3">
+                                            {(localPost.poll_options ?? []).map((option) => {
+                                                const totalVotes = Array.isArray(localPost.poll_options) ? localPost.poll_options.reduce((sum, opt) => sum + (opt.votes_count || 0), 0) : 0;
+                                                const percent = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
+                                                const isUserVote = (localPost as any).userVotedOptionId === option.id;
+                                                return (
+                                                    <div
+                                                        key={option.id}
+                                                        className={`relative cursor-pointer hover:opacity-90 transition-all duration-200`}
                                                     >
-                                                        <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none">
-                                                            <div className="flex gap-2 items-center self-stretch my-auto">
-                                                                <span className="self-stretch my-auto text-neutral-800 font-medium">
-                                                                    {percent}%
-                                                                </span>
-                                                                <span className="self-stretch my-auto text-neutral-900">
-                                                                    {option.answer}
+                                                        <button
+                                                            className={`w-full text-left bg-transparent border-none outline-none p-0 m-0 cursor-pointer`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleVotePoll(option.id);
+                                                            }}
+                                                        >
+                                                            <div className="flex flex-wrap gap-4 justify-between items-center w-full text-sm mb-2">
+                                                                <div className="flex gap-3 items-center self-stretch my-auto flex-1">
+                                                                    <span className="self-stretch my-auto text-neutral-800 font-semibold min-w-[40px]">
+                                                                        {percent}%
+                                                                    </span>
+                                                                    <span className="self-stretch my-auto text-neutral-900 font-medium">
+                                                                        {option.answer}
+                                                                    </span>
+                                                                </div>
+                                                                <span className="self-stretch my-auto text-neutral-500 text-xs">
+                                                                    {option.votes_count} {option.votes_count === 1 ? 'voto' : 'votos'}
                                                                 </span>
                                                             </div>
-                                                            <span className="self-stretch my-auto text-neutral-500">
-                                                                {option.votes_count} {option.votes_count === 1 ? 'voto' : 'votos'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="mt-2 w-full rounded-sm">
-                                                            <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300">
+                                                            <div className="w-full rounded-sm overflow-hidden bg-gray-200 h-3">
                                                                 <div
-                                                                    className="flex shrink-0 h-2 rounded-sm bg-neutral-800"
-                                                                    style={{ width: `${percent}%`, minWidth: '8px' }}
+                                                                    className={`h-full rounded-sm transition-all duration-300 ${isUserVote ? 'bg-blue-600' : 'bg-neutral-800'}`}
+                                                                    style={{ width: `${percent}%`, minWidth: percent > 0 ? '8px' : '0' }}
                                                                 />
                                                             </div>
-                                                        </div>
-                                                    </button>
-                                                </div>
-                                            );
-                                        })}
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 )}
 

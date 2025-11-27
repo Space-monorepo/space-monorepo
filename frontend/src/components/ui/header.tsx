@@ -31,6 +31,15 @@ export default function Header() {
       if (res.ok) {
         const data: any = await res.json();
 
+        // Log temporário para debug
+        if (data.type_post === 'poll' || data.type_post === 'enquete') {
+          console.log('📊 Post tipo enquete detectado:', {
+            type: data.type_post,
+            question: data.poll_question,
+            options: data.poll_options
+          });
+        }
+
         // Mapeia os dados do backend para o formato esperado pelo modal
         return {
           id: data.id,
@@ -57,7 +66,7 @@ export default function Header() {
           liked: false, // Por padrão false, seria necessário outra chamada para verificar
           poll_question: data.poll_question,
           poll_options: data.poll_options,
-        }
+        };
       } else {
         console.error(`Erro ao buscar post: ${res.status}`);
       }
