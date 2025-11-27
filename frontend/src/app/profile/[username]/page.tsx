@@ -31,6 +31,9 @@ import FilePicker from "@/components/ui/FilePicker";
 import Sidebar from "@/components/ui/sidebar";
 import EditProfileModal from "../components/EditProfileModal";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getConnectionStatus, requestConnection, deleteConnection } from "@/app/api/src/services/connection/connectionService";
+import { API_URL } from "@/config";
 
 // --- Interfaces ---
 export interface User {
@@ -52,6 +55,9 @@ const levels = [
   { label: "Colaborador", min: 5001, max: 7500 },
   { label: "Líder", min: 7501, max: 10000 },
 ];
+
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 export default function ProfilePage() {
   const params = useParams();
@@ -83,10 +89,17 @@ export default function ProfilePage() {
   const [openCommentsPostId, setOpenCommentsPostId] = useState<string | null>(null);
   const [confirmedProblems, setConfirmedProblems] = useState<{ [key: string]: boolean }>({});
 
+  // Estados para Conexão
+  const [connectionStatus, setConnectionStatus] = useState<any>(null);
+  const [loadingConnection, setLoadingConnection] = useState(false);
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+
   // Hooks para ações com posts
   const { likePost, unlikePost } = usePostActions();
-  const { participate } = useCampaignParticipation();
+  const { participate, checkParticipation, participating: campaignParticipation } = useCampaignParticipation();
   const { reportPost } = useReportPost();
+
+  const router = useRouter();
 
   // Helper para saber qual nível está ativo
   const getCurrentLevel = (points: number) => {
@@ -239,16 +252,23 @@ export default function ProfilePage() {
 
     loadCommunityData();
   }, [user?.id]);
-  // 3. Redirecionamentos e helpers
-  const isOwnProfile = currentUserId && user?.id && currentUserId === user.id;
 
   useEffect(() => {
-    if (currentUserId) {
-      if (!urlParamId || urlParamId === "[username]" || urlParamId === "%5Busername%5D" || urlParamId === "space") {
-        window.location.href = `/profile/${currentUserId}`;
-      }
+    if (!currentUserId || !urlParamId) return;
+
+    const shouldRedirectToId =
+      !isUuid(urlParamId) &&
+      (
+        urlParamId === "[username]" ||
+        urlParamId === "%5Busername%5D" ||
+        urlParamId === "space" ||
+        urlParamId === (authUser as any)?.username
+      );
+
+    if (shouldRedirectToId) {
+      router.replace(`/profile/${currentUserId}`);
     }
-  }, [currentUserId, urlParamId]);
+  }, [currentUserId, urlParamId, authUser, router]);
 
   const handleImageChange = (newImageUrl: string) => {
     setUser((prev) =>
@@ -298,7 +318,34 @@ export default function ProfilePage() {
     setOpenCommentsPostId((prev) => (prev === postId ? null : postId));
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const checkProblemConfirmation = useCallback(async (postId: string, communityId: string) => {
+    try {
+      const token = getTokenFromCookies();
+      if (!token) {
+        return false;
+      }
+
+      const response = await fetch(`${API_URL}/communities/${communityId}/complaints/${postId}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+      const currentUserId = JSON.parse(atob(token.split('.')[1])).sub;
+      return data.confirmations?.some((confirmation: any) => confirmation.user_id === currentUserId) ?? false;
+    } catch (error) {
+      console.error('Erro ao verificar confirmação do problema:', error);
+      return false;
+    }
+  }, []);
+
   const handleConfirmComplaint = useCallback(async (post: any) => {
     try {
       const token = getTokenFromCookies();
@@ -306,6 +353,11 @@ export default function ProfilePage() {
       
       if (!communityId) {
         toast.error('ID da comunidade não encontrado');
+        return;
+      }
+
+      if (post.user?.id && post.user.id === currentUserId) {
+        toast.info('Você não pode confirmar um problema que criou.');
         return;
       }
 
@@ -319,13 +371,22 @@ export default function ProfilePage() {
     } catch {
       toast.error('Erro ao confirmar problema');
     }
-  }, [confirmedProblems]);
+  }, [confirmedProblems, currentUserId]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleParticipate = useCallback(async (post: any) => {
     const communityId = post.community?.id;
     if (!communityId) {
       toast.error('ID da comunidade não encontrado');
+      return;
+    }
+
+    if (post.user?.id && post.user.id === currentUserId) {
+      toast.info('Você não pode participar da própria campanha.');
+      return;
+    }
+
+    if (campaignParticipation[post.id]) {
+      toast.info('Você já participa desta campanha.');
       return;
     }
     
@@ -335,7 +396,126 @@ export default function ProfilePage() {
     } catch {
       toast.error('Erro ao participar da campanha');
     }
-  }, [participate]);
+  }, [participate, campaignParticipation, currentUserId]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const initializePostStates = async () => {
+      const confirmedMap: Record<string, boolean> = {};
+
+      for (const post of userPosts) {
+        const communityId = post.community?.id;
+        if (!communityId) continue;
+
+        const postType = translatePostType(post.type_post || '');
+
+        if (postType === 'Denúncia') {
+          confirmedMap[post.id] = await checkProblemConfirmation(post.id, communityId);
+        }
+
+        if (postType === 'Campanha') {
+          await checkParticipation(communityId, post.id);
+        }
+      }
+
+      if (!isCancelled) {
+        setConfirmedProblems(confirmedMap);
+      }
+    };
+
+    if (userPosts.length > 0) {
+      initializePostStates();
+    } else {
+      setConfirmedProblems({});
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [userPosts, checkProblemConfirmation, checkParticipation]);
+
+  // 3. Carrega status de conexão com o usuário visitado
+  useEffect(() => {
+    if (bypass || !user?.id || !currentUserId || currentUserId === user.id) {
+      // Se é o próprio perfil, não carregar conexão
+      setConnectionStatus(null);
+      return;
+    }
+
+    const loadConnectionStatus = async () => {
+      const token = getTokenFromCookies();
+      if (!token) return;
+
+      setLoadingConnection(true);
+      try {
+        const status = await getConnectionStatus(token, user.id || '');
+        setConnectionStatus(status);
+      } catch (error) {
+        console.error('Erro ao carregar status de conexão:', error);
+        setConnectionStatus(null);
+      } finally {
+        setLoadingConnection(false);
+      }
+    };
+
+    loadConnectionStatus();
+  }, [user?.id, currentUserId, bypass]);
+
+  // Helper para definir se é próprio perfil
+  const isOwnProfile = currentUserId && user?.id && currentUserId === user.id;
+
+  // Handler para enviar pedido de conexão
+  const handleSendConnectionRequest = async () => {
+    const token = getTokenFromCookies();
+    if (!token || !user?.id) {
+      toast.error('Erro: Usuário não encontrado');
+      return;
+    }
+
+    setLoadingConnection(true);
+    try {
+      await requestConnection(token, user.id);
+      setConnectionStatus({ status: 'pending', addressee_id: user.id });
+      toast.success('Pedido de conexão enviado!');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao enviar pedido de conexão');
+    } finally {
+      setLoadingConnection(false);
+    }
+  };
+
+  // Handler para enviar mensagem - Navega para página de mensagens com userId e userName
+  const handleSendMessage = () => {
+    if (!user?.id) return;
+    // Passa userId e userName como parâmetros para a página de mensagens
+    const params = new URLSearchParams({
+      userId: user.id,
+      userName: user.name || user.username,
+    });
+    router.push(`/messages?${params.toString()}`);
+  };
+
+  // Handler para desconectar
+  const handleDisconnect = async () => {
+    const token = getTokenFromCookies();
+    if (!token || !connectionStatus?.id) {
+      toast.error('Erro: Conexão não encontrada');
+      return;
+    }
+
+    setLoadingConnection(true);
+    try {
+      await deleteConnection(token, connectionStatus.id);
+      setConnectionStatus(null);
+      setShowDisconnectModal(false);
+      toast.success('Conexão encerrada');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao encerrar conexão');
+    } finally {
+      setLoadingConnection(false);
+    }
+  };
 
   if (loading && !bypass) {
     return (
@@ -396,12 +576,39 @@ export default function ProfilePage() {
                     </button>
                   ) : (
                     <div className="flex gap-2">
-                      <button className="px-4 py-2 bg-neutral-800 text-white hover:bg-neutral-700 transition-colors rounded-sm">
-                        Enviar mensagem
-                      </button>
-                      <button className="gap-2.5 self-stretch py-2 pr-16 pl-4 text-base rounded-sm bg-neutral-200 text-neutral-800 max-md:pr-5">
-                        Conectar
-                      </button>
+                      {connectionStatus?.status === 'accepted' ? (
+                        <>
+                          <button
+                            onClick={handleSendMessage}
+                            disabled={loadingConnection}
+                            className="px-4 py-2 bg-neutral-800 text-white hover:bg-neutral-700 transition-colors rounded-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {loadingConnection ? 'Carregando...' : 'Enviar mensagem'}
+                          </button>
+                          <button
+                            onClick={() => setShowDisconnectModal(true)}
+                            disabled={loadingConnection}
+                            className="gap-2.5 self-stretch py-2 pr-16 pl-4 text-base rounded-sm bg-neutral-200 text-neutral-800 hover:bg-neutral-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed max-md:pr-5"
+                          >
+                            Conectado
+                          </button>
+                        </>
+                      ) : connectionStatus?.status === 'pending' ? (
+                        <button
+                          disabled={true}
+                          className="px-4 py-2 bg-neutral-200 text-neutral-800 rounded-sm cursor-not-allowed"
+                        >
+                          Pedido enviado
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleSendConnectionRequest}
+                          disabled={loadingConnection}
+                          className="px-4 py-2 bg-neutral-800 text-white hover:bg-neutral-700 transition-colors rounded-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loadingConnection ? 'Enviando...' : 'Conectar-se'}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -539,6 +746,18 @@ export default function ProfilePage() {
                       const checkmarkClass = getCheckmarkColorClass(post.user?.role || '');
                       const postType = translatePostType(post.type_post || '');
                       const postTime = getRelativeTime(post.created_at);
+                      const isParticipating = !!campaignParticipation[post.id];
+                      const hasConfirmedProblem = !!confirmedProblems[post.id];
+                      
+                      // Debug para enquetes
+                      if (postType === 'Enquete') {
+                        console.log(`📊 [PROFILE POLL DEBUG] Post "${post.title}":`, {
+                          type: postType,
+                          poll_question: post.poll_question,
+                          poll_options_count: Array.isArray(post.poll_options) ? post.poll_options.length : 0,
+                          poll_options: post.poll_options
+                        });
+                      }
                       
                       return (
                         <article
@@ -551,7 +770,7 @@ export default function ProfilePage() {
                                 <div className="flex items-start min-w-60">
                                   <div className="w-11 h-11 rounded-[32px] overflow-hidden shrink-0 flex items-center justify-center bg-neutral-200">
                                     <img
-                                      src={post.user?.profile_image_url || post.user?.profile_picture || "/no-profile-pic.png"}
+                                      src={(post.user as any)?.profile_image_url || (post.user as any)?.profile_picture || "/no-profile-pic.png"}
                                       alt={`${post.user?.name} avatar`}
                                       className="object-cover w-full h-full"
                                     />
@@ -560,7 +779,7 @@ export default function ProfilePage() {
                                     <div className="flex gap-2 items-center w-full h-[23px]">
                                       <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                                         <Link
-                                          href={`/profile/${post.user?.username || post.user?.id}`}
+                                          href={`/profile/${post.user?.id || post.user?.username}`}
                                           className="self-stretch my-auto text-sm text-neutral-800 hover:text-blue-600 whitespace-nowrap transition-colors hover:underline"
                                         >
                                           {post.user?.name}
@@ -646,11 +865,32 @@ export default function ProfilePage() {
                                 </div>
                               </header>
 
-                              <div className="mt-6 w-full text-neutral-800">
-                                <h2 className="text-xl font-bold leading-relaxed">{post.title}</h2>
+                              <div className="mt-6 w-full text-neutral-800 max-md:max-w-full">
+                                <div className="flex flex-row justify-between items-center w-full max-md:max-w-full">
+                                  <div
+                                    className="flex gap-2.5 items-center text-xl font-bold leading-relaxed min-w-60 px-0 w-0 flex-1 cursor-pointer"
+                                    style={{ wordBreak: 'break-word' }}
+                                  >
+                                    <h2
+                                      className="text-neutral-800 px-0 font-georgia font-bold break-words w-full max-w-full"
+                                      style={{ fontFamily: 'Georgia, serif', fontWeight: 'bold', wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}
+                                    >
+                                      {post.title}
+                                    </h2>
+                                  </div>
+                                  <div className="flex gap-2 items-center px-3 py-1 my-auto text-sm leading-none text-justify whitespace-nowrap rounded-sm flex-shrink-0">
+                                    <div className="self-stretch my-auto text-neutral-800">
+                                      {(post.likes_count || 0) + (post.comments_count || 0) + (post.report_count || 0)}
+                                    </div>
+                                    <Activity className="h-4 w-4 text-gray-500" />
+                                  </div>
+                                </div>
 
                                 {post.content && (
-                                  <div className="mt-4 text-sm leading-5 text-justify text-neutral-800 whitespace-pre-line font-regular break-words">
+                                  <div
+                                    className="mt-4 text-sm leading-5 text-justify text-neutral-800 max-md:max-w-full whitespace-pre-line font-regular break-words w-full max-w-full cursor-pointer"
+                                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-line' }}
+                                  >
                                     {post.content}
                                   </div>
                                 )}
@@ -659,14 +899,102 @@ export default function ProfilePage() {
                                   <img
                                     src={post.image_url}
                                     alt="Post content"
-                                    className="object-contain mt-4 w-full rounded aspect-[2.26]"
+                                    className="object-contain mt-4 w-full rounded aspect-[2.26] max-md:max-w-full"
                                   />
+                                )}
+
+                                {/* Opções de Enquete */}
+                                {postType === 'Enquete' && (post.poll_question || (Array.isArray(post.poll_options) && post.poll_options.length > 0)) && (
+                                  <div className="mt-6 w-full">
+                                    {post.poll_question && (
+                                      <h3 className="text-base font-semibold text-neutral-800 mb-6">
+                                        {post.poll_question}
+                                      </h3>
+                                    )}
+                                    {Array.isArray(post.poll_options) && post.poll_options.length > 0 && (
+                                      <>
+                                        {(() => {
+                                          const totalVotes = post.poll_options.reduce((sum, opt) => sum + (opt.votes_count || 0), 0);
+                                          return post.poll_options.map((option) => {
+                                            const percent = totalVotes > 0 ? Math.round(((option.votes_count || 0) / totalVotes) * 100) : 0;
+                                            return (
+                                              <div
+                                                key={`${option.id}-${option.votes_count}`}
+                                                className="mb-4 cursor-pointer hover:opacity-80 transition-opacity"
+                                              >
+                                                <button
+                                                  className="w-full text-left bg-transparent border-none outline-none p-0 m-0 cursor-pointer"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                  }}
+                                                >
+                                                  <div className="flex flex-wrap gap-10 justify-between items-center w-full text-xs leading-none">
+                                                    <div className="flex gap-2 items-center self-stretch my-auto">
+                                                      <span className="self-stretch my-auto text-neutral-800 font-medium">
+                                                        {percent}%
+                                                      </span>
+                                                      <span className="self-stretch my-auto text-neutral-900">
+                                                        {option.answer}
+                                                      </span>
+                                                    </div>
+                                                    <span className="self-stretch my-auto text-neutral-500">
+                                                      {option.votes_count || 0} {(option.votes_count || 0) === 1 ? 'voto' : 'votos'}
+                                                    </span>
+                                                  </div>
+                                                  <div className="mt-2 w-full rounded-sm">
+                                                    <div className="flex flex-col items-start rounded-sm border border-solid border-stone-300">
+                                                      <div
+                                                        className="flex shrink-0 h-2 rounded-sm bg-neutral-800"
+                                                        style={{ width: `${percent}%`, minWidth: '8px', transition: 'width 300ms ease' }}
+                                                      />
+                                                    </div>
+                                                  </div>
+                                                </button>
+                                              </div>
+                                            );
+                                          });
+                                        })()}
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Botão Participar da Campanha */}
+                                {postType === 'Campanha' && (
+                                  <button
+                                    className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${isParticipating ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'cursor-pointer bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!isParticipating) {
+                                        handleParticipate(post);
+                                      }
+                                    }}
+                                    disabled={isParticipating}
+                                  >
+                                    {isParticipating ? 'Já participa da campanha' : 'Participar da Campanha'}
+                                  </button>
+                                )}
+
+                                {/* Botão Confirmar problema para Denúncia */}
+                                {postType === 'Denúncia' && (
+                                  <button
+                                    className={`mt-4 w-full py-2 px-4 text-left font-regular transition-colors ${hasConfirmedProblem ? 'bg-neutral-200 text-neutral-700 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!hasConfirmedProblem) {
+                                        handleConfirmComplaint(post);
+                                      }
+                                    }}
+                                    disabled={hasConfirmedProblem}
+                                  >
+                                    {hasConfirmedProblem ? 'Problema confirmado' : 'Confirmar problema'}
+                                  </button>
                                 )}
                               </div>
                             </div>
 
-                            <div className="flex justify-between items-center mt-10 w-full text-xs font-medium leading-none text-neutral-500">
-                              <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5">
+                            <div className="flex justify-between items-center mt-10 w-full text-xs font-medium leading-none text-neutral-500 max-md:max-w-full">
+                              <div className="flex overflow-hidden gap-8 items-center self-stretch my-auto min-h-5 w-[214px]">
                                 <button
                                   className="flex overflow-hidden gap-2 items-center self-stretch my-auto text-justify whitespace-nowrap cursor-pointer hover:text-neutral-700 transition-colors"
                                   onClick={(e) => {
@@ -723,6 +1051,36 @@ export default function ProfilePage() {
           user={user}
           onSave={handleSaveProfile}
         />
+      )}
+
+      {/* Modal de Desconexão */}
+      {showDisconnectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-lg font-semibold text-neutral-900">Encerrar conexão</h2>
+            </div>
+            <p className="text-neutral-600 mb-6">
+              Você tem certeza que deseja encerrar a conexão com {user?.name}? Isso impedirá que você envie mensagens.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDisconnectModal(false)}
+                disabled={loadingConnection}
+                className="px-4 py-2 bg-neutral-200 text-neutral-800 hover:bg-neutral-300 transition-colors rounded-sm disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDisconnect}
+                disabled={loadingConnection}
+                className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 transition-colors rounded-sm disabled:opacity-50"
+              >
+                {loadingConnection ? 'Encerrando...' : 'Encerrar conexão'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
