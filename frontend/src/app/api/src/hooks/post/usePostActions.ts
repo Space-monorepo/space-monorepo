@@ -582,6 +582,61 @@ const usePostActions = ({ onSuccess, onError }: UsePostActionsProps = {}) => {
     },
     likeComment,
     unlikeComment,
+    reportMember: async (
+      communityId: string,
+      reportedMemberId: string,
+      reason: string = "other",
+      description: string = "Denúncia enviada pelos comentários.",
+    ) => {
+      setIsLoading(true);
+      try {
+        const { token, userId } = await getBasePostData();
+        const membersResponse = await axios.get(
+          `${API_URL}/communities/${communityId}/members`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            params: { user_id: userId },
+          }
+        );
+        const memberItems = membersResponse.data?.items || [];
+        if (!memberItems.length) {
+          throw new Error("Usuário não é membro desta comunidade");
+        }
+
+        const reporterMember =
+          memberItems.find(
+            (member: any) =>
+              member?.user_id === userId || member?.user?.id === userId
+          ) || memberItems[0];
+
+        const payload = {
+          reporter_id: reporterMember.id,
+          type: "member_report",
+          reason,
+          description,
+        };
+
+        await axios.post(
+          `${API_URL}/reports/${communityId}/create-report-member/${reportedMemberId}`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        toast.success("Membro reportado com sucesso.");
+      } catch (error) {
+        console.error("Erro ao reportar membro:", error);
+        toast.error("Erro ao reportar membro.");
+        onError?.(error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
   };
 };
 

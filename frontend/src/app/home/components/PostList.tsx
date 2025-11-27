@@ -70,8 +70,14 @@ function CommentsSection({
   postId: string;
   refreshSignal?: number;
 }) {
-  const { listComments, addComment, replyComment, likeComment, unlikeComment } =
-    usePostActions();
+  const {
+    listComments,
+    addComment,
+    replyComment,
+    likeComment,
+    unlikeComment,
+    reportMember,
+  } = usePostActions();
   const [likedComments, setLikedComments] = React.useState<{
     [key: string]: boolean;
   }>({});
@@ -82,6 +88,9 @@ function CommentsSection({
   const [replyingTo, setReplyingTo] = React.useState<string | null>(null);
   const [replyInput, setReplyInput] = React.useState<{ [key: string]: string }>(
     {},
+  );
+  const [commentMenuOpen, setCommentMenuOpen] = React.useState<string | null>(
+    null,
   );
 
   function buildCommentsTree(flatComments: Comment[]): Comment[] {
@@ -124,6 +133,10 @@ function CommentsSection({
   React.useEffect(() => {
     fetchComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [communityId, postId]);
+
+  React.useEffect(() => {
+    setCommentMenuOpen(null);
   }, [communityId, postId]);
 
   // Quando o sinal de refresh mudar (vindo do polling global), refazemos os comentários
@@ -196,6 +209,29 @@ function CommentsSection({
       }
     } catch (err) {
       setError("Erro ao curtir/descurtir comentário");
+    }
+  };
+
+  const handleReportMember = async (comment: Comment) => {
+    const reportedMemberId =
+      comment.member?.id || (comment.user as any)?.member_id || null;
+    if (!reportedMemberId) {
+      toast.error("Não foi possível identificar o membro deste comentário.");
+      return;
+    }
+    try {
+      await reportMember(
+        communityId,
+        reportedMemberId,
+        "other",
+        `Comentário reportado: ${comment.content}`.slice(0, 140),
+      );
+      toast.success("Denúncia enviada.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao reportar o membro.");
+    } finally {
+      setCommentMenuOpen(null);
     }
   };
 
@@ -276,8 +312,32 @@ function CommentsSection({
                 </div>
               </div>
             </div>
-            <div className="flex gap-4 items-center self-stretch my-auto w-5 min-h-5">
-              {/* Menu de opções para comentários pode ser implementado aqui se necessário */}
+            <div className="flex gap-4 items-center self-stretch my-auto w-5 min-h-5 relative">
+              <button
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCommentMenuOpen(
+                    commentMenuOpen === comment.id ? null : comment.id,
+                  );
+                }}
+                aria-label="Opções do comentário"
+              >
+                <OverflowMenuHorizontal className="h-4 w-4 text-gray-500" />
+              </button>
+              {commentMenuOpen === comment.id && (
+                <div className="absolute right-0 top-6 z-20 mt-1 w-44 bg-white border border-gray-200 rounded shadow-lg">
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm cursor-pointer text-red-600 hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReportMember(comment);
+                    }}
+                  >
+                    Reportar membro
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           <div className="px-3 mt-2 w-full max-[899px]:max-w-full">
