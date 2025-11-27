@@ -61,7 +61,7 @@ const isUuid = (value: string) =>
 
 export default function ProfilePage() {
   const params = useParams();
-  const urlParamId = params.username as string;
+  const urlParamId = (params?.username ?? "") as string;
 
   const bypass = useBypassAuth();
   const { loading, user: authUser } = useCheckTokenValidity();
@@ -112,14 +112,14 @@ export default function ProfilePage() {
 
     const loadUserData = async () => {
       const token = getTokenFromCookies();
-      if (!token) return;
 
       try {
         let myId = (authUser as any)?.id;
 
         if (!myId) {
           try {
-            const myProfile = await loadUserProfile(token);
+            const tokenString = token ?? "";
+            const myProfile = await loadUserProfile(tokenString);
             myId = (myProfile as any).id;
             setCurrentUserId(myId);
           } catch (e) {
@@ -129,16 +129,20 @@ export default function ProfilePage() {
           setCurrentUserId(myId);
         }
 
-        // CORREÇÃO: Porta 8001
-        const apiUrl = 'http://localhost:8001';
-        console.log(`🔎 Buscando perfil pelo ID: ${urlParamId} na API ${apiUrl}`);
+        // Usar API_URL configurado
+        console.log(`🔎 Buscando perfil pelo ID: ${urlParamId} na API ${API_URL}`);
 
-        const response = await fetch(`${apiUrl}/users/user/${urlParamId}`, {
+        // Prepare headers, include Authorization only if token exists
+        const headers: any = {
+          'Content-Type': 'application/json',
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_URL}/users/user/${urlParamId}`, {
           method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+          headers,
         });
 
         if (response.ok) {
@@ -148,7 +152,8 @@ export default function ProfilePage() {
         } else {
           console.error(`❌ Usuário não encontrado (ID: ${urlParamId}). Status: ${response.status}`);
           if (myId && urlParamId === myId) {
-            const fallbackData = await loadUserProfile(token);
+            const tokenString = token ?? "";
+            const fallbackData = await loadUserProfile(tokenString);
             setUser(fallbackData);
             await fetchUserPosts(fallbackData);
           }
@@ -169,16 +174,17 @@ export default function ProfilePage() {
       if (!user?.id) return;
 
       const token = getTokenFromCookies();
-      const apiUrl = 'http://localhost:8001';
-      const headers = {
-        'Authorization': `Bearer ${token || ''}`,
+      const headers: any = {
         'Content-Type': 'application/json'
       };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       try {
         // 1. Buscar as comunidades que o usuário participa
         const communitiesResponse = await fetch(
-          `${apiUrl}/communities/user/${user.id}/communities?offset=0&limit=100`,
+          `${API_URL}/communities/user/${user.id}/communities?offset=0&limit=100`,
           { headers }
         );
 
@@ -199,13 +205,13 @@ export default function ProfilePage() {
         if (communities.length > 0) {
           // 2. Para cada comunidade, buscar os membros para encontrar o membro do usuário
           const membershipPromises = communities.map((community: any) =>
-            fetch(`${apiUrl}/communities/${community.id}/members?offset=0&limit=100`, { headers })
+            fetch(`${API_URL}/communities/${community.id}/members?offset=0&limit=100`, { headers })
               .then(res => res.ok ? res.json() : null)
               .catch(() => null)
           );
 
           const membershipsResults = await Promise.all(membershipPromises);
-          
+
           // 3. Filtrar apenas os memberships do usuário atual
           const myMemberships: any[] = [];
           membershipsResults.forEach((result) => {
@@ -228,7 +234,7 @@ export default function ProfilePage() {
 
             // 6. Buscar Badges para cada membership
             const badgePromises = myMemberships.map((member: any) =>
-              fetch(`${apiUrl}/badges/member/${member.id}`, { headers })
+              fetch(`${API_URL}/badges/member/${member.id}`, { headers })
                 .then(res => res.ok ? res.json() : [])
                 .catch(() => [])
             );
@@ -350,7 +356,7 @@ export default function ProfilePage() {
     try {
       const token = getTokenFromCookies();
       const communityId = post.community?.id;
-      
+
       if (!communityId) {
         toast.error('ID da comunidade não encontrado');
         return;
@@ -389,7 +395,7 @@ export default function ProfilePage() {
       toast.info('Você já participa desta campanha.');
       return;
     }
-    
+
     try {
       await participate(communityId, post.id);
       toast.success('Você agora faz parte da campanha!');
@@ -570,7 +576,7 @@ export default function ProfilePage() {
                   {isOwnProfile ? (
                     <button
                       onClick={() => setIsEditModalOpen(true)}
-                      className="gap-2.5 self-stretch py-2 pr-16 pl-4 text-base rounded-sm bg-neutral-200 text-neutral-800 hover:bg-neutral-300 transition-colors max-md:pr-5"
+                      className="gap-2.5 self-stretch cursor-pointer py-2 pr-16 pl-4 text-base rounded-sm bg-neutral-200 text-neutral-800 hover:bg-neutral-300 transition-colors max-md:pr-5"
                     >
                       Editar perfil
                     </button>
@@ -748,7 +754,7 @@ export default function ProfilePage() {
                       const postTime = getRelativeTime(post.created_at);
                       const isParticipating = !!campaignParticipation[post.id];
                       const hasConfirmedProblem = !!confirmedProblems[post.id];
-                      
+
                       // Debug para enquetes
                       if (postType === 'Enquete') {
                         console.log(`📊 [PROFILE POLL DEBUG] Post "${post.title}":`, {
@@ -758,7 +764,7 @@ export default function ProfilePage() {
                           poll_options: post.poll_options
                         });
                       }
-                      
+
                       return (
                         <article
                           key={post.id}
