@@ -108,7 +108,7 @@ def campaign_post_after_update(mapper, connection, target: CampaignPost):
         return
 
     info_stmt = (
-        select(Post.title, Community.name, Post.user_id)
+        select(Post.title, Community.name, Post.user_id, Post.community_id)
         .join(Community, Post.community_id == Community.id)
         .where(Post.id == target.post_id)
     )
@@ -117,7 +117,7 @@ def campaign_post_after_update(mapper, connection, target: CampaignPost):
     if not result:
         return
 
-    campaign_title, community_name, author_id = result
+    campaign_title, community_name, author_id, community_id = result
 
     feedback_content = None
     if event_type in {'approved', 'rejected'}:
@@ -135,6 +135,10 @@ def campaign_post_after_update(mapper, connection, target: CampaignPost):
         'campaign_title': campaign_title,
         'community_name': community_name,
         'campaign_status_type': event_type,
+        'post_id': str(target.post_id),
+        'community_id': str(community_id),
+        'current_participants': target.current_participants,
+        'target_participants': target.target_participants,
     }
 
     if feedback_content:
@@ -178,6 +182,7 @@ def post_after_insert(mapper, connection, target: Post):
         'notice_title': target.title,
         'community_name': community_name,
         'post_id': str(target.id),
+        'community_id': str(target.community_id),
     }
 
     _create_notifications_batch(
