@@ -957,6 +957,8 @@ export default function ModerationPage() {
   const [emailsToImport, setEmailsToImport] = useState("");
   const [isImportUserModalOpen, setIsImportUserModalOpen] = useState(false);
   const [hasLoadedMembers, setHasLoadedMembers] = useState(false);
+  // Rastreia os IDs de denúncias às quais já foi tomada uma ação
+  const [denunciaActedReportIds, setDenunciaActedReportIds] = useState<string[]>([]);
   const loadMembersRef = useRef(loadMembers);
 
   // Estados para a aba Comunidades
@@ -1535,6 +1537,8 @@ export default function ModerationPage() {
     setSelectedAnnouncement(null);
     setSelectedPoll(null);
     clearDetails();
+    // Reset per-report ação de denúncia quando muda de aba
+    setDenunciaActedReportIds([]);
 
     if (tab === "Reportes") {
       // Reset para primeira tab de reportes sem selecionar automaticamente
@@ -1893,6 +1897,10 @@ export default function ModerationPage() {
       });
 
       toast.success("Denúncia resolvida com sucesso!");
+      // Marcar esta denúncia como já atuada para ocultar os botões
+      if (selectedReport?.id) {
+        setDenunciaActedReportIds((prev) => Array.from(new Set([...prev, selectedReport.id!])));
+      }
     } catch (error: any) {
       toast.error(error?.message || "Erro ao resolver denúncia");
     }
@@ -1929,6 +1937,12 @@ export default function ModerationPage() {
       });
 
       toast.success("Denúncia dissolvida com sucesso!");
+      // Marcar denúncia como atuada para ocultar botões
+      if (selectedReport?.id) {
+        setDenunciaActedReportIds((prev) =>
+          Array.from(new Set([...prev, selectedReport.id!]))
+        );
+      }
     } catch (error: any) {
       toast.error(error?.message || "Erro ao dissolver denúncia");
     }
@@ -2192,7 +2206,7 @@ export default function ModerationPage() {
                       key={report.id}
                       className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
                         }`}
-                      onClick={() => setSelectedReport(report)}
+                      onClick={() => { setSelectedReport(report); }}
                     >
                       <div className="mb-2">
                         <h3 className="font-medium text-sm mb-1">
@@ -2443,30 +2457,32 @@ export default function ModerationPage() {
                         </div>
                       </div>
 
-                      <footer className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
-                        <button
-                          onClick={() => {
-                            setSelectedReport(selectedReport);
-                            handleDissolveReport();
-                          }}
-                          className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
-                        >
-                          <span className="self-stretch my-auto">
-                            Dissolver
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedReport(selectedReport);
-                            handleResolveReport();
-                          }}
-                          className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
-                        >
-                          <span className="self-stretch my-auto text-zinc-100">
-                            Resolver
-                          </span>
-                        </button>
-                      </footer>
+                      {selectedReport && !denunciaActedReportIds.includes(selectedReport.id) && (
+                        <footer className="flex flex-wrap gap-2 justify-between items-center mt-10 w-full leading-6 whitespace-nowrap max-w-[698px] max-md:max-w-full">
+                          <button
+                            onClick={() => {
+                              setSelectedReport(selectedReport);
+                              handleDissolveReport();
+                            }}
+                            className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-zinc-100 min-w-60 text-neutral-800 w-[345px] max-md:pr-5 hover:bg-zinc-200 transition-colors"
+                          >
+                            <span className="self-stretch my-auto">
+                              Dissolver
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedReport(selectedReport);
+                              handleResolveReport();
+                            }}
+                            className="flex gap-8 items-center self-stretch pt-4 pr-16 pb-6 pl-4 my-auto bg-neutral-800 min-w-60 text-zinc-100 w-[345px] max-md:pr-5 hover:bg-neutral-700 transition-colors"
+                          >
+                            <span className="self-stretch my-auto text-zinc-100">
+                              Resolver
+                            </span>
+                          </button>
+                        </footer>
+                      )}
                     </section>
                   </article>
                 </div>
