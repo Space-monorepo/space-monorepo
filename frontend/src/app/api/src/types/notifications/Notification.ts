@@ -36,10 +36,13 @@ export interface BaseNotification {
     description?: string
     stats?: NotificationStats
     image_url?: string
+    post_id?: string // ID do post relacionado à notificação
 }
 
 export interface CampaignNotification extends BaseNotification {
     // Específico para campanhas
+    target_participants?: number
+    current_participants?: number
 }
 
 export interface AnnouncementNotification extends BaseNotification {
@@ -52,7 +55,6 @@ export interface ConnectionNotification extends BaseNotification {
 
 export interface InteractionNotification extends BaseNotification {
     interaction_type: 'comment' | 'like' | 'participation'
-    post_id?: string
     comment_id?: string
 }
 
