@@ -10,7 +10,7 @@ export const useCheckTokenValidity = () => {
     username: string;
     profile_image_url: string;
     member_role?: string;
-    communities?: Array<{ id: string; name: string; role?: string; }>;
+    communities?: Array<{ id: string; name: string; role?: string }>;
     hasAdminOrModeratorRole?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,16 +43,20 @@ export const useCheckTokenValidity = () => {
           const data = await response.json();
 
           // Buscar as comunidades do usuário com suas associações (incluindo role)
-          let communities: Array<{ id: string; name: string; role?: string; }> = [];
+          let communities: Array<{ id: string; name: string; role?: string }> =
+            [];
           let hasAdminOrModeratorRole = false;
 
           try {
-            const communitiesResponse = await fetch(`${API_URL}/communities/user/${data.id}/communities`, {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${token}`,
+            const communitiesResponse = await fetch(
+              `${API_URL}/communities/user/${data.id}/communities`,
+              {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
               },
-            });
+            );
 
             if (communitiesResponse.ok) {
               const communitiesData = await communitiesResponse.json();
@@ -60,17 +64,22 @@ export const useCheckTokenValidity = () => {
               // Para cada comunidade, buscar o papel do usuário
               for (const community of communitiesData.items || []) {
                 try {
-                  const membersResponse = await fetch(`${API_URL}/communities/${community.id}/members?user_id=${data.id}`, {
-                    method: "GET",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
+                  const membersResponse = await fetch(
+                    `${API_URL}/communities/${community.id}/members?user_id=${data.id}`,
+                    {
+                      method: "GET",
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                      },
                     },
-                  });
+                  );
 
-                  let userRole = 'member'; // padrão
+                  let userRole = "member"; // padrão
                   if (membersResponse.ok) {
                     const membersData = await membersResponse.json();
-                    const userMember = membersData.items?.find((member: any) => member.user.id === data.id);
+                    const userMember = membersData.items?.find(
+                      (member: any) => member.user.id === data.id,
+                    );
                     if (userMember) {
                       userRole = userMember.role;
                     }
@@ -79,19 +88,22 @@ export const useCheckTokenValidity = () => {
                   communities.push({
                     id: community.id,
                     name: community.name,
-                    role: userRole
+                    role: userRole,
                   });
 
                   // Verificar se tem papel de admin ou moderador
-                  if (userRole === 'admin' || userRole === 'moderator') {
+                  if (userRole === "admin" || userRole === "moderator") {
                     hasAdminOrModeratorRole = true;
                   }
                 } catch (error) {
-                  console.error(`Erro ao buscar papel do usuário na comunidade ${community.id}:`, error);
+                  console.error(
+                    `Erro ao buscar papel do usuário na comunidade ${community.id}:`,
+                    error,
+                  );
                   communities.push({
                     id: community.id,
                     name: community.name,
-                    role: 'member'
+                    role: "member",
                   });
                 }
               }
@@ -100,13 +112,21 @@ export const useCheckTokenValidity = () => {
             console.error("Erro ao buscar comunidades do usuário:", error);
           }
 
+          // Determina o maior papel do usuário entre todas as comunidades
+          let globalRole = "member";
+          if (communities.some((c) => c.role === "admin")) {
+            globalRole = "admin";
+          } else if (communities.some((c) => c.role === "moderator")) {
+            globalRole = "moderator";
+          }
+
           setUser({
             name: data.name,
             username: data.username,
             profile_image_url: data.profile_image_url,
-            member_role: data.member_role || data.role || undefined,
+            member_role: globalRole,
             communities: communities,
-            hasAdminOrModeratorRole: hasAdminOrModeratorRole
+            hasAdminOrModeratorRole: hasAdminOrModeratorRole,
           });
         } else {
           Cookies.remove("token");

@@ -18,6 +18,7 @@ import { useModerationActions } from "@/app/api/src/hooks/moderation/useModerati
 import Sidebar from "@/components/ui/sidebar";
 import { CheckmarkFilled, Search } from "@carbon/icons-react";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
+import { getSidebarPermissions } from "@/lib/sidebarPermissions";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import ApproveCampaignModal from "@/components/modals/community/ApproveCampaignModal";
 import RejectCampaignModal from "@/components/modals/community/RejectCampaignModal";
@@ -77,13 +78,13 @@ type Campaign = {
   participants: number;
   date: string;
   status:
-  | "Em análise"
-  | "Aprovado"
-  | "Rejeitado"
-  | "Pendente"
-  | "Em progresso"
-  | "Cancelada"
-  | "Finalizada";
+    | "Em análise"
+    | "Aprovado"
+    | "Rejeitado"
+    | "Pendente"
+    | "Em progresso"
+    | "Cancelada"
+    | "Finalizada";
   description?: string;
   accesses?: number;
   likes?: number;
@@ -349,7 +350,7 @@ export default function ModerationPage() {
                       <span className="self-stretch my-auto text-neutral-800">
                         {report.reason
                           ? report.reason.charAt(0).toUpperCase() +
-                          report.reason.slice(1)
+                            report.reason.slice(1)
                           : ""}
                       </span>
                     </div>
@@ -398,8 +399,8 @@ export default function ModerationPage() {
                         <time className="self-stretch my-auto text-neutral-500">
                           {report.reportedUser.joined_date
                             ? new Date(
-                              report.reportedUser.joined_date,
-                            ).toLocaleDateString("pt-BR")
+                                report.reportedUser.joined_date,
+                              ).toLocaleDateString("pt-BR")
                             : report.date || "-"}
                         </time>
                       </div>
@@ -415,13 +416,13 @@ export default function ModerationPage() {
                               "under_observation"
                               ? "Sob Observação"
                               : report.reportedUser.reputation_level ===
-                                "helper"
+                                  "helper"
                                 ? "Ajudante"
                                 : report.reportedUser.reputation_level ===
-                                  "contributor"
+                                    "contributor"
                                   ? "Contribuidor"
                                   : report.reportedUser.reputation_level ===
-                                    "leader"
+                                      "leader"
                                     ? "Líder"
                                     : report.reportedUser.reputation_level
                             : report.status === "Resolvido"
@@ -436,7 +437,7 @@ export default function ModerationPage() {
                         <span className="self-stretch my-auto text-neutral-500">
                           {typeof report.reportedUser.popularity !==
                             "undefined" &&
-                            report.reportedUser.popularity !== null
+                          report.reportedUser.popularity !== null
                             ? `${report.reportedUser.popularity} visualizações`
                             : `0 visualizações`}
                         </span>
@@ -897,6 +898,9 @@ export default function ModerationPage() {
   });
 
   // Hook para buscar posts da comunidade (campanhas, denúncias, anúncios, enquetes)
+  // Só busca campanhas se for admin
+  const sidebarPermissions = getSidebarPermissions(user);
+
   const {
     campaigns: apiCampaigns,
     reports: apiReports,
@@ -905,7 +909,7 @@ export default function ModerationPage() {
     loading: postsLoading,
     error: postsError,
     fetchCommunityPosts,
-  } = useCommunityPosts();
+  } = useCommunityPosts(sidebarPermissions.canViewAdministrationTab);
 
   // Hook para buscar detalhes específicos de campanhas
   const {
@@ -1029,6 +1033,7 @@ export default function ModerationPage() {
     loadMembersRef.current = loadMembers;
   }, [loadMembers]);
 
+  // Não inclua "Campanhas" nas abas da moderação
   const tabs = ["Reportes", "Denúncias", "Enquetes", "Anúncios"];
 
   // Função para mapear status da API para status do frontend
@@ -1221,9 +1226,9 @@ export default function ModerationPage() {
     },
     reporter: normalizeReporter(
       (apiPost as any).reporter ||
-      (apiPost as any).reports?.[0]?.reporter ||
-      apiPost.user ||
-      {},
+        (apiPost as any).reports?.[0]?.reporter ||
+        apiPost.user ||
+        {},
     ),
     reason: "Conteúdo inapropriado",
     description:
@@ -1279,9 +1284,9 @@ export default function ModerationPage() {
       })(),
       date: new Date(
         apiComment.created_at ||
-        apiComment.createdAt ||
-        apiComment.date ||
-        Date.now(),
+          apiComment.createdAt ||
+          apiComment.date ||
+          Date.now(),
       ).toLocaleDateString("pt-BR"),
       postTitle:
         apiComment.post?.title ||
@@ -1294,10 +1299,10 @@ export default function ModerationPage() {
     // diretamente ou dentro de um array de reports. Usar fallbacks amigáveis.
     reporter: normalizeReporter(
       (apiComment as any).reporter ||
-      (apiComment as any).reported_by ||
-      (apiComment as any).reports?.[0]?.reporter ||
-      (apiComment as any).reports?.[0]?.user ||
-      {},
+        (apiComment as any).reported_by ||
+        (apiComment as any).reports?.[0]?.reporter ||
+        (apiComment as any).reports?.[0]?.user ||
+        {},
     ),
     reason:
       apiComment.reason ||
@@ -1340,8 +1345,8 @@ export default function ModerationPage() {
     // e usar o helper `mapComplaintStatusToFrontendStatus` para mapear corretamente
     status: mapComplaintStatusToFrontendStatus(
       (post as any).status_complaint ??
-      (post as any).statusComplaint ??
-      post.status,
+        (post as any).statusComplaint ??
+        post.status,
     ),
     description: post.content,
     category: "Comportamento",
@@ -1392,10 +1397,10 @@ export default function ModerationPage() {
     description: post.content,
     options: Array.isArray(post.poll_options)
       ? post.poll_options.map((opt) => ({
-        id: opt.id,
-        answer: opt.answer,
-        votes_count: opt.votes_count,
-      }))
+          id: opt.id,
+          answer: opt.answer,
+          votes_count: opt.votes_count,
+        }))
       : [],
     image: post.image_url || undefined,
     likes: post.likes_count ?? 0,
@@ -1403,7 +1408,10 @@ export default function ModerationPage() {
   });
 
   // Dados reais da API convertidos para os formatos esperados
-  const campaigns: Campaign[] = (apiCampaigns || []).map(convertPostToCampaign);
+  // Só converte campanhas se for admin
+  const campaigns: Campaign[] = sidebarPermissions.canViewAdministrationTab
+    ? (apiCampaigns || []).map(convertPostToCampaign)
+    : [];
   const reports: Report[] = (apiReports || []).map(convertPostToReport);
   const announcements: Announcement[] = (apiAnnouncements || []).map(
     convertPostToAnnouncement,
@@ -1474,9 +1482,9 @@ export default function ModerationPage() {
         },
         reporter: normalizeReporter(
           (apiPost as any).reporter ||
-          (apiPost as any).reports?.[0]?.reporter ||
-          apiPost.user ||
-          {},
+            (apiPost as any).reports?.[0]?.reporter ||
+            apiPost.user ||
+            {},
         ),
         reason: "Conteúdo inapropriado",
         description:
@@ -1509,9 +1517,9 @@ export default function ModerationPage() {
         },
         reporter: normalizeReporter(
           (apiComment as any).reporter ||
-          (apiComment as any).reports?.[0]?.reporter ||
-          (apiComment as any).reports?.[0]?.user ||
-          {},
+            (apiComment as any).reports?.[0]?.reporter ||
+            (apiComment as any).reports?.[0]?.user ||
+            {},
         ),
         reason: "Linguagem inadequada",
         description: `Comentário reportado (id: ${apiComment.id})`,
@@ -2033,8 +2041,9 @@ export default function ModerationPage() {
       aria-label="Toggle switch"
     >
       <div
-        className={`flex self-stretch my-auto w-4 h-4 rounded-full min-h-4 transition-all duration-200 ${checked ? "bg-white ml-auto" : "bg-gray-200"
-          }`}
+        className={`flex self-stretch my-auto w-4 h-4 rounded-full min-h-4 transition-all duration-200 ${
+          checked ? "bg-white ml-auto" : "bg-gray-200"
+        }`}
       />
     </button>
   );
@@ -2097,10 +2106,11 @@ export default function ModerationPage() {
             {tabs.map((tab) => (
               <button
                 key={tab}
-                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${activeTab === tab
-                  ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
-                  : "text-[#525252]"
-                  }`}
+                className={`w-full px-6 py-3 text-left hover:bg-[#f8f8f8] cursor-pointer ${
+                  activeTab === tab
+                    ? "bg-[#f4f4f4] border-r-4 border-black text-[#161616]"
+                    : "text-[#525252]"
+                }`}
                 onClick={() => handleTabChange(tab)}
               >
                 {tab}
@@ -2151,28 +2161,31 @@ export default function ModerationPage() {
               {activeTab === "Reportes" && (
                 <div className="space-y-0 mt-20">
                   <button
-                    className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "usuarios"
-                      ? "bg-[#f4f4f4] text-[#161616] font-medium"
-                      : "text-[#525252]"
-                      }`}
+                    className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${
+                      reportesActiveTab === "usuarios"
+                        ? "bg-[#f4f4f4] text-[#161616] font-medium"
+                        : "text-[#525252]"
+                    }`}
                     onClick={() => handleReportesTabChange("usuarios")}
                   >
                     Usuários
                   </button>
                   <button
-                    className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "publicacoes"
-                      ? "bg-[#f4f4f4] text-[#161616] font-medium"
-                      : "text-[#525252]"
-                      }`}
+                    className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${
+                      reportesActiveTab === "publicacoes"
+                        ? "bg-[#f4f4f4] text-[#161616] font-medium"
+                        : "text-[#525252]"
+                    }`}
                     onClick={() => handleReportesTabChange("publicacoes")}
                   >
                     Publicações
                   </button>
                   <button
-                    className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${reportesActiveTab === "comentarios"
-                      ? "bg-[#f4f4f4] text-[#161616] font-medium"
-                      : "text-[#525252]"
-                      }`}
+                    className={`w-full px-6 py-4 text-left border-[#e0e0e0] hover:bg-[#f8f8f8] cursor-pointer ${
+                      reportesActiveTab === "comentarios"
+                        ? "bg-[#f4f4f4] text-[#161616] font-medium"
+                        : "text-[#525252]"
+                    }`}
                     onClick={() => handleReportesTabChange("comentarios")}
                   >
                     Comentários
@@ -2190,8 +2203,9 @@ export default function ModerationPage() {
                   displayedReports.map((report) => (
                     <div
                       key={report.id}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
-                        }`}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
+                        selectedReport?.id === report.id ? "bg-[#f4f4f4]" : ""
+                      }`}
                       onClick={() => setSelectedReport(report)}
                     >
                       <div className="mb-2">
@@ -2268,10 +2282,11 @@ export default function ModerationPage() {
                   announcements.map((announcement) => (
                     <div
                       key={announcement.id}
-                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${selectedAnnouncement?.id === announcement.id
-                        ? "bg-[#f4f4f4]"
-                        : ""
-                        }`}
+                      className={`p-4 border-b border-[#e0e0e0] cursor-pointer hover:bg-[#f8f8f8] ${
+                        selectedAnnouncement?.id === announcement.id
+                          ? "bg-[#f4f4f4]"
+                          : ""
+                      }`}
                       onClick={() => setSelectedAnnouncement(announcement)}
                     >
                       <div className="mb-2">
@@ -2289,8 +2304,7 @@ export default function ModerationPage() {
                         </p>
                       </div>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                        </div>
+                        <div className="flex items-center gap-1"></div>
                       </div>
                     </div>
                   ))
@@ -2605,7 +2619,7 @@ export default function ModerationPage() {
                         </h3>
                         <div className="mt-6 w-full max-md:max-w-full">
                           {selectedPoll.options &&
-                            selectedPoll.options.length > 0 ? (
+                          selectedPoll.options.length > 0 ? (
                             selectedPoll.options.map((option) => {
                               const totalVotes = selectedPoll.options!.reduce(
                                 (sum, opt) => sum + opt.votes_count,
@@ -2614,8 +2628,8 @@ export default function ModerationPage() {
                               const percent =
                                 totalVotes > 0
                                   ? Math.round(
-                                    (option.votes_count / totalVotes) * 100,
-                                  )
+                                      (option.votes_count / totalVotes) * 100,
+                                    )
                                   : 0;
                               return (
                                 <div key={option.id} className="mb-4">
@@ -2720,7 +2734,7 @@ export default function ModerationPage() {
                                   >
                                     {translateUserRole(
                                       selectedAnnouncement.user.role ||
-                                      "member",
+                                        "member",
                                     )}
                                   </span>
                                 </div>
@@ -3021,8 +3035,8 @@ function UserReportDetails({
                     <time className="self-stretch my-auto text-neutral-500">
                       {report.reportedUser?.joined_date
                         ? new Date(
-                          report.reportedUser.joined_date,
-                        ).toLocaleDateString("pt-BR")
+                            report.reportedUser.joined_date,
+                          ).toLocaleDateString("pt-BR")
                         : report.date || "-"}
                     </time>
                   </div>
@@ -3034,7 +3048,7 @@ function UserReportDetails({
                     </span>
                     <span className="self-stretch my-auto text-neutral-500">
                       {typeof report.reportedUser?.reputation !== "undefined" &&
-                        report.reportedUser?.reputation !== null
+                      report.reportedUser?.reputation !== null
                         ? report.reportedUser.reputation
                         : report.status === "Resolvido"
                           ? "Suspenso"
@@ -3047,7 +3061,7 @@ function UserReportDetails({
                     </span>
                     <span className="self-stretch my-auto text-neutral-500">
                       {typeof report.reportedUser?.popularity !== "undefined" &&
-                        report.reportedUser?.popularity !== null
+                      report.reportedUser?.popularity !== null
                         ? `${report.reportedUser.popularity} visualizações`
                         : `0 visualizações`}
                     </span>
