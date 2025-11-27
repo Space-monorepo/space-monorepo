@@ -17,6 +17,7 @@ def test_search_returns_users_and_posts_same_community(
 ):
     """
     Testa se a busca encontra itens da MESMA comunidade que o usuário logado.
+    Verifica também se o community_id está presente nos posts retornados.
     """
     response = authenticate_client.get("/search/?q=Test")
 
@@ -24,8 +25,14 @@ def test_search_returns_users_and_posts_same_community(
     results = response.json()
 
     # Verifica se o post esperado está nos resultados
-    result_titles = [item.get('title') for item in results if item.get('type') == 'post']
+    post_results = [item for item in results if item.get('type') == 'post']
+    result_titles = [item.get('title') for item in post_results]
     assert post_on_db.title in result_titles
+    
+    # Verifica se todos os posts têm community_id
+    for post_result in post_results:
+        assert 'community_id' in post_result, "community_id deve estar presente no resultado do post"
+        assert post_result['community_id'] is not None, "community_id não deve ser None"
 
 
 def test_search_ignores_other_community_items(

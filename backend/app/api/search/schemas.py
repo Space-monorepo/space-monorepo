@@ -16,6 +16,7 @@ class UserSearchResult(BaseModel):
 class PostSearchResult(BaseModel):
     id: uuid.UUID | str
     title: str
+    community_id: uuid.UUID | str
     type: Literal['post'] = 'post'
 
     model_config = ConfigDict(from_attributes=True)

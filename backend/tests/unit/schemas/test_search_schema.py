@@ -32,15 +32,18 @@ class TestPostSearchResultSchema:
 
     def test_post_search_result_from_orm(self):
         """Testa a criação de uma instância a partir de um objeto ORM (Post)."""
+        community_id = uuid.uuid4()
         mock_post_orm = Post(
             id=uuid.uuid4(),
             title="ORM Post Title",
             content="Some content here.",
-            user_id=uuid.uuid4()
+            user_id=uuid.uuid4(),
+            community_id=community_id
         )
 
         result = schemas.PostSearchResult.from_orm(mock_post_orm)
 
         assert result.id == mock_post_orm.id
         assert result.title == mock_post_orm.title
+        assert result.community_id == mock_post_orm.community_id
         assert result.type == "post"

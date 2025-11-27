@@ -19,7 +19,12 @@ class TestSearchService:
     def test_perform_search_returns_users_and_posts(self, mock_db_session):
         # Arrange
         mock_user = User(id="a1b2c3d4-e5f6-7890-1234-567890abcdef", name="Test User")
-        mock_post = Post(id="f1e2d3c4-b5a6-7890-1234-567890abcdea", title="A Test Post")
+        community_id = "comm_id_1"
+        mock_post = Post(
+            id="f1e2d3c4-b5a6-7890-1234-567890abcdea",
+            title="A Test Post",
+            community_id=community_id
+        )
 
         # Configurar o current_user mockado
         mock_current_user = Mock(spec=User)
