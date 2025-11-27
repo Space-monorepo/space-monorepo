@@ -30,12 +30,11 @@ class NotificationService:
         notif_type = notification.type
 
         try:
-            # ... (mantenha as variáveis actor_name, post_title, etc como estão) ...
             actor_name = data.get('actor_name', 'Alguém')
             post_title = data.get('post_title', 'sua publicação')
             comment_content = data.get('comment_content', 'um comentário')
             community_name = data.get('community_name', 'uma comunidade')
-            campaign_title = data.get('campaign_title', 'Campanha')  # Extrai o título
+            campaign_title = data.get('campaign_title', 'Campanha')
             truncated_comment = NotificationService._get_truncated_content(
                 comment_content, NOTIFICATION_CONTENT_TRUNCATE_LENGTH
             )
@@ -53,13 +52,12 @@ class NotificationService:
                     'follow_accepted': f'{actor_name} aceitou sua solicitação de conexão.',
                     'request_received': f'{actor_name} quer se conectar com você.',
                 },
-                # ALTERAÇÃO AQUI: Adicionamos as mensagens específicas para cada status
                 NotificationTypeEnum.CAMPAIGN: {
                     'default': f'Nova campanha em {community_name}: {campaign_title}',
                     'approved': f'Sua campanha "{campaign_title}" foi aprovada!',
                     'rejected': f'Sua campanha "{campaign_title}" não foi aprovada.',
                     'finished': f'A campanha "{campaign_title}" foi finalizada.',
-                    'canceled': f'A campanha "{campaign_title}" foi cancelada.',  # <--- ADICIONE AQUI
+                    'canceled': f'A campanha "{campaign_title}" foi cancelada.',
                     'target_reached': f'A campanha "{campaign_title}" atingiu a meta!',
                 },
                 NotificationTypeEnum.OFFICIAL_NOTICE: {
@@ -73,11 +71,9 @@ class NotificationService:
 
             subtype_key = 'default'
             if notif_type == NotificationTypeEnum.INTERACTION:
-                subtype_key = data.get('interaction_type')
+                subtype_key = data.get('interaction_type', 'like')
             elif notif_type == NotificationTypeEnum.CONNECTION:
-                subtype_key = data.get('connection_type')
-
-            # ALTERAÇÃO AQUI: Ler a chave que o seu listener envia ('campaign_status_type')
+                subtype_key = data.get('connection_type', 'default')
             elif notif_type == NotificationTypeEnum.CAMPAIGN:
                 subtype_key = data.get('campaign_status_type', 'default')
 
@@ -99,23 +95,46 @@ class NotificationService:
         notification_data = {'user_id': str(user_id), 'type': type, 'data': data}
         return self.notification_repo.create(obj_in=notification_data)
 
-    def create_interaction_notification(
+    def create_interaction_notification(  # noqa: PLR0913
         self,
         *,
         recipient: User,
         actor: User,
         interaction_type: str,
         post_title: str,
+        community_id: Optional[uuid.UUID | str] = None,
+        community_name: Optional[str] = None,
+        post_id: Optional[uuid.UUID | str] = None,
+        comment_id: Optional[uuid.UUID | str] = None,
         comment_content: Optional[str] = None,
     ):
+        # SEGURANÇA: Se vier sem post_id, ignora para deixar o Listener criar a certa.
+        # Correção PLR6201: Usando set {} em vez de list []
+        if interaction_type in {'like', 'comment'} and not post_id:
+            return None
+
+        actor_username = getattr(actor, 'username', 'user')
+        actor_picture = getattr(actor, 'profile_image_url', None)
+
         data = {
             'interaction_type': interaction_type,
             'actor_id': str(actor.id),
             'actor_name': actor.name,
+            'actor_username': actor_username,
+            'actor_picture': actor_picture,
             'post_title': post_title,
         }
+
+        if community_id:
+            data['community_id'] = str(community_id)
+        if community_name:
+            data['community_name'] = community_name
+        if post_id:
+            data['post_id'] = str(post_id)
         if comment_content:
             data['comment_content'] = comment_content
+        if comment_id:
+            data['comment_id'] = str(comment_id)
 
         return self.create_notification(
             user_id=recipient.id, type=NotificationTypeEnum.INTERACTION, data=data
@@ -132,6 +151,8 @@ class NotificationService:
             'connection_type': connection_type,
             'actor_id': str(actor.id),
             'actor_name': actor.name,
+            'actor_username': getattr(actor, 'username', ''),
+            'actor_picture': getattr(actor, 'profile_image_url', None),
         }
 
         return self.create_notification(
@@ -155,7 +176,6 @@ class NotificationService:
         return response_notifications
 
     def get_unread_count(self, *, user: User) -> dict:
-        """Retorna a contagem de notificações não lidas."""
         count = self.notification_repo.count_unread(user_id=user.id)
         return {'count': count}
 
