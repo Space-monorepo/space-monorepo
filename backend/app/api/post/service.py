@@ -8,6 +8,7 @@ from app.api.post.exceptions import (
     ComplaintNotFoundError,
     PollOptionNotFoundError,
     PollVoteAlreadyExistsError,
+    PollVoteNotFoundError,
     PostLikesNotFoundError,
     PostNotFoundError,
     PostSuspendedError,
@@ -533,3 +534,31 @@ class PostService:
             raise
         except Exception as e:
             raise UnexpectedPostError('Unexpected error voting poll') from e
+
+    def unvote_poll(self, poll_option_id: UUID, member_id: UUID) -> dict:
+        try:
+            poll_option = self.poll_options_repo.get_by_id(poll_option_id)
+            if not poll_option:
+                raise PollOptionNotFoundError('Poll option not found')
+
+            vote = self.poll_votes_repo.member_has_voted(member_id, poll_option.post_id)
+
+            if not vote:
+                raise PollVoteNotFoundError('Poll vote not found')
+
+            # Verificar se o voto é na opção correta
+            if str(vote.poll_option_id) != str(poll_option_id):
+                raise PollVoteNotFoundError('Poll vote not found for this option')
+
+            # Decrementar contagem da opção
+            poll_option.votes_count = max(0, poll_option.votes_count - 1)
+            self.poll_options_repo.save(poll_option)
+
+            # Deletar o voto
+            self.poll_votes_repo.delete(vote)
+
+            return {'message': 'Vote removed successfully'}
+        except (PollVoteNotFoundError, PollOptionNotFoundError):
+            raise
+        except Exception as e:
+            raise UnexpectedPostError('Unexpected error removing poll vote') from e
