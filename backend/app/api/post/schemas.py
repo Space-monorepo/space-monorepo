@@ -5,6 +5,7 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.communities.schema import CommunityMemberRoleEnum
+from app.api.reports.schema import ReportReasonEnum
 
 
 class CommunityRelated(BaseModel):
@@ -117,6 +118,17 @@ class PostUpdate(BaseModel):
         json_schema_extra={
             'examples': [{'content': 'Conteúdo do post', 'status': 'active'}]
         },
+    )
+
+
+class PostReportPayload(BaseModel):
+    reason: ReportReasonEnum = Field(
+        ReportReasonEnum.OTHER, description='Reason provided when reporting a post'
+    )
+    description: str | None = Field(
+        None,
+        max_length=500,
+        description='Optional description provided by the reporter',
     )
 
 

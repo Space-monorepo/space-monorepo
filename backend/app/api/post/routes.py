@@ -12,6 +12,7 @@ from app.api.post.schemas import (
     PollVoteResponse,
     PostCreate,
     PostFeedResponse,
+    PostReportPayload,
     PostResponse,
     PostUpdate,
 )
@@ -180,12 +181,20 @@ def list_likes_post(
     status_code=status.HTTP_200_OK,
 )
 def report_post(
+    community_id: str,
     post_id: str,
+    payload: PostReportPayload | None = None,
     session: Session = Depends(get_db),
-    _: CommunityMember = Depends(require_roles(['member'])),
+    current_member: CommunityMember = Depends(require_roles(['member'])),
 ) -> PostFeedResponse:
     with TransactionManager(session) as tm:
-        return PostService(tm).report_post(post_id)
+        return PostService(tm).report_post(
+            post_id=post_id,
+            reporter_id=current_member.id,
+            community_id=community_id,
+            reason=payload.reason if payload else None,
+            description=payload.description if payload else None,
+        )
 
 
 @router.post(

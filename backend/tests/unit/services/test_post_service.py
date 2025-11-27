@@ -27,6 +27,7 @@ from app.api.post.schemas import (
     PostTypeEnum,
     PostUpdate,
 )
+from app.api.reports.schema import ReportReasonEnum
 from app.api.post.service import PostService
 from app.utils.schema import PaginationSearchParams
 
@@ -2027,6 +2028,7 @@ def test_report_post_service_success():
     fake_post_id = uuid4()
     fake_user_id = uuid4()
     fake_community_id = uuid4()
+    fake_member_id = uuid4()
 
     fake_existing_post = Mock(spec=Post)
     fake_existing_post.id = fake_post_id
@@ -2076,14 +2078,35 @@ def test_report_post_service_success():
     mock_post_repo.get_by_id.return_value = fake_existing_post
     mock_post_repo.save.return_value = fake_saved_post
 
+    mock_report_repo = Mock()
+    fake_report_saved = Mock()
+    fake_report_saved.id = uuid4()
+    mock_report_repo.save.return_value = fake_report_saved
+
+    mock_report_post_repo = Mock()
+    mock_report_post_repo.get_by_reporter_post_reason.return_value = None
+
     service = PostService(mock_tm)
     service.post_repo = mock_post_repo
+    service.report_repo = mock_report_repo
+    service.report_post_repo = mock_report_post_repo
 
     # Act
-    result = service.report_post(fake_post_id)
+    result = service.report_post(
+        fake_post_id,
+        fake_member_id,
+        fake_community_id,
+        ReportReasonEnum.SPAM,
+        'Spam content',
+    )
 
     # Assert
     mock_post_repo.get_by_id.assert_called_once_with(str(fake_post_id))
+    mock_report_post_repo.get_by_reporter_post_reason.assert_called_once_with(
+        fake_member_id, fake_post_id, ReportReasonEnum.SPAM.value
+    )
+    mock_report_repo.save.assert_called_once()
+    mock_report_post_repo.save.assert_called_once()
     mock_post_repo.save.assert_called_once_with(fake_existing_post)
     assert fake_existing_post.report_count == 1  # Verificar que foi incrementado
     assert result is not None
@@ -2106,6 +2129,7 @@ def test_report_post_service_suspended_error():
     fake_post_id = uuid4()
     fake_user_id = uuid4()
     fake_community_id = uuid4()
+    fake_member_id = uuid4()
 
     fake_suspended_post = Mock(spec=Post)
     fake_suspended_post.id = fake_post_id
@@ -2142,7 +2166,7 @@ def test_report_post_service_suspended_error():
 
     # Act & Assert
     with pytest.raises(PostSuspendedError) as exc_info:
-        service.report_post(fake_post_id)
+        service.report_post(fake_post_id, fake_member_id, fake_community_id, None, None)
     assert 'Post is already suspended' in str(exc_info.value)
 
 
@@ -2160,6 +2184,7 @@ def test_report_post_service_reports_threshold():
     fake_post_id = uuid4()
     fake_user_id = uuid4()
     fake_community_id = uuid4()
+    fake_member_id = uuid4()
 
     fake_existing_post = Mock(spec=Post)
     fake_existing_post.id = fake_post_id
@@ -2209,14 +2234,35 @@ def test_report_post_service_reports_threshold():
     mock_post_repo.get_by_id.return_value = fake_existing_post
     mock_post_repo.save.return_value = fake_saved_post
 
+    mock_report_repo = Mock()
+    fake_report_saved = Mock()
+    fake_report_saved.id = uuid4()
+    mock_report_repo.save.return_value = fake_report_saved
+
+    mock_report_post_repo = Mock()
+    mock_report_post_repo.get_by_reporter_post_reason.return_value = None
+
     service = PostService(mock_tm)
     service.post_repo = mock_post_repo
+    service.report_repo = mock_report_repo
+    service.report_post_repo = mock_report_post_repo
 
     # Act
-    result = service.report_post(fake_post_id)
+    result = service.report_post(
+        fake_post_id,
+        fake_member_id,
+        fake_community_id,
+        ReportReasonEnum.HARASSMENT,
+        'Harassment content',
+    )
 
     # Assert
     mock_post_repo.get_by_id.assert_called_once_with(str(fake_post_id))
+    mock_report_post_repo.get_by_reporter_post_reason.assert_called_once_with(
+        fake_member_id, fake_post_id, ReportReasonEnum.HARASSMENT.value
+    )
+    mock_report_repo.save.assert_called_once()
+    mock_report_post_repo.save.assert_called_once()
     mock_post_repo.save.assert_called_once_with(fake_existing_post)
     assert fake_existing_post.report_count == 30  # Verificar que foi incrementado
     assert fake_existing_post.status == PostStatusEnum.REPORTED  # Status mudou
@@ -2225,6 +2271,68 @@ def test_report_post_service_reports_threshold():
     assert result.report_count == 30
     assert result.status == PostStatusEnum.REPORTED
 
+
+@pytest.mark.unit
+def test_report_post_service_duplicate_report_returns_current_state():
+    """
+    Ensure reporting the same post twice by the same member does not create new entries.
+    """
+    fake_post_id = uuid4()
+    fake_user_id = uuid4()
+    fake_community_id = uuid4()
+    fake_member_id = uuid4()
+
+    fake_existing_post = Mock(spec=Post)
+    fake_existing_post.id = fake_post_id
+    fake_existing_post.user_id = fake_user_id
+    fake_existing_post.community_id = fake_community_id
+    fake_existing_post.title = 'Post already reported'
+    fake_existing_post.content = 'Duplicate content'
+    fake_existing_post.type_post = PostTypeEnum.ANNOUNCEMENT
+    fake_existing_post.image_url = None
+    fake_existing_post.status = PostStatusEnum.ACTIVE
+    fake_existing_post.user_role_in_community = CommunityMemberRoleEnum.MEMBER
+    fake_existing_post.likes_count = 3
+    fake_existing_post.comments_count = 1
+    fake_existing_post.report_count = 1
+    fake_existing_post.created_at = '2024-01-01T00:00:00Z'
+    fake_existing_post.updated_at = '2024-01-01T00:00:00Z'
+
+    fake_existing_post.community = Mock()
+    fake_existing_post.community.name = 'Test Community'
+    fake_existing_post.user = Mock()
+    fake_existing_post.user.name = 'Test User'
+    fake_existing_post.user.profile_image_url = 'https://example.com/profile.jpg'
+
+    mock_tm = Mock()
+    mock_post_repo = Mock()
+    mock_post_repo.get_by_id.return_value = fake_existing_post
+
+    mock_report_repo = Mock()
+    mock_report_post_repo = Mock()
+    mock_report_post_repo.get_by_reporter_post_reason.return_value = Mock()
+
+    service = PostService(mock_tm)
+    service.post_repo = mock_post_repo
+    service.report_repo = mock_report_repo
+    service.report_post_repo = mock_report_post_repo
+
+    result = service.report_post(
+        fake_post_id,
+        fake_member_id,
+        fake_community_id,
+        ReportReasonEnum.SPAM,
+        'Already flagged as spam',
+    )
+
+    mock_report_post_repo.get_by_reporter_post_reason.assert_called_once_with(
+        fake_member_id, fake_post_id, ReportReasonEnum.SPAM.value
+    )
+    mock_report_repo.save.assert_not_called()
+    mock_report_post_repo.save.assert_not_called()
+    mock_post_repo.save.assert_not_called()
+    assert isinstance(result, PostFeedResponse)
+    assert result.report_count == fake_existing_post.report_count
 
 @pytest.mark.unit
 def test_confirm_complaint_service_success():

@@ -41,6 +41,8 @@ from app.api.post.schemas import (
     PostTypeEnum,
     PostUpdate,
 )
+from app.api.reports.model import Report, ReportPost
+from app.api.reports.schema import ReportReasonEnum, ReportTypeEnum
 from app.api.reputation.schema import (
     POPULARITY_POINTS,
     PopularityActionEnum,
@@ -68,6 +70,8 @@ class PostService:
         self.poll_options_repo = tm.get_poll_options_repository()
         self.post_likes_repo = tm.get_post_likes_repository()
         self.poll_votes_repo = tm.get_poll_votes_repository()
+        self.report_repo = tm.get_report_repository()
+        self.report_post_repo = tm.get_report_post_repository()
         self.community_service = CommunityService(tm)
         self.reputation_service = ReputationService(tm)
 
@@ -296,15 +300,48 @@ class PostService:
             )
         return members_response
 
-    def report_post(self, post_id: UUID) -> PostFeedResponse:
+    def report_post(
+        self,
+        post_id: UUID,
+        reporter_id: UUID,
+        community_id: UUID,
+        reason: ReportReasonEnum | None = None,
+        description: str | None = None,
+    ) -> PostFeedResponse:
         post = self._get_post(post_id)
         if post.status == PostStatusEnum.SUSPENDED:
             raise PostSuspendedError('Post is already suspended')
-        # TODO: add report service to create a report in the report table
-        post.report_count += 1
-        if post.report_count >= self.REPORT_THRESHOLD:
-            post.status = PostStatusEnum.REPORTED
+
+        normalized_reason = reason or ReportReasonEnum.OTHER
+        report_description = (
+            description or 'Report submitted via quick action on the feed'
+        )
+
+        existing_report = self.report_post_repo.get_by_reporter_post_reason(
+            reporter_id, post_id, normalized_reason.value
+        )
+        if existing_report:
+            return self.__map_post_to_feed_response(post)
+
         try:
+            report_model = Report(
+                reporter_id=str(reporter_id),
+                type=ReportTypeEnum.POST_REPORT.value,
+                reason=normalized_reason.value,
+                description=report_description,
+            )
+            report_saved = self.report_repo.save(report_model)
+            report_post_model = ReportPost(
+                report_id=str(report_saved.id),
+                post_id=str(post_id),
+                community_id=str(community_id or post.community_id),
+            )
+            self.report_post_repo.save(report_post_model)
+
+            post.report_count += 1
+            if post.report_count >= self.REPORT_THRESHOLD:
+                post.status = PostStatusEnum.REPORTED
+
             post = self.post_repo.save(post)
             return self.__map_post_to_feed_response(post)
         except Exception as e:
