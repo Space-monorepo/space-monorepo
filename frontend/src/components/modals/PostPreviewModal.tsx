@@ -509,7 +509,7 @@ const PostPreviewModal: React.FC<PostPreviewModalProps> = ({ post, isOpen, onClo
                                         <div className="flex gap-2 items-center w-full h-[23px]">
                                             <div className="flex overflow-hidden gap-2.5 justify-center items-center self-stretch px-3 my-auto">
                                                 <Link
-                                                    href={`/profile/${localPost.username || localPost.user?.id}`}
+                                                    href={`/profile/${localPost.user?.id || localPost.username}`}
                                                     className="self-stretch my-auto text-sm text-neutral-800 hover:text-blue-600 whitespace-nowrap transition-colors hover:underline"
                                                 >
                                                     {localPost.author}
