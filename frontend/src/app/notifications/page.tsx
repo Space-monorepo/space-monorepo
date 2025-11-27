@@ -14,8 +14,6 @@ import {
 } from "@carbon/icons-react";
 
 import { useState, useEffect } from "react";
-// ADICIONADO: Importação do useRouter para navegação
-import { useRouter } from "next/navigation";
 import { ArrowLeft, Eye } from "lucide-react";
 import Sidebar from "@/components/ui/sidebar";
 import { toast } from "react-toastify";
@@ -24,11 +22,13 @@ import { Notification } from "@/app/api/src/types/notifications/Notification";
 import getCheckmarkColorClass from "@/components/badges/users/CheckmarkColorClasses";
 import getRoleBadgeClasses from "@/components/badges/users/RoleBadgesClasses";
 import { translateUserRole } from "@/lib/roleTranslations";
+import { translatePostType } from "@/lib/postTypeTranslations";
 import usePostActions from "@/app/api/src/hooks/post/usePostActions";
 import { getRelativeTime } from "@/lib/relativeTime";
 import { API_URL } from "@/config";
 import { likeCommentFromNotification } from "@/app/api/src/services/notifications/notificationService";
 import getTokenFromCookies from "@/app/api/src/controllers/getTokenFromCookies";
+import PostPreviewModal from "@/components/modals/PostPreviewModal";
 
 import {
   PendenteBadge,
@@ -565,7 +565,6 @@ type NotificationType =
 
 export default function NotificacoesPage() {
   // ADICIONADO: Hook de roteamento
-  const router = useRouter();
 
   const mapApiStatusToFrontendStatus = (
     apiStatus: string
@@ -627,6 +626,13 @@ export default function NotificacoesPage() {
   const [selectedNotification, setSelectedNotification] =
     useState<Notification | null>(null);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [interactionPreviewPost, setInteractionPreviewPost] = useState<
+    any | null
+  >(null);
+  const [showInteractionPreview, setShowInteractionPreview] = useState(false);
+  const [interactionLoadingId, setInteractionLoadingId] = useState<
+    string | null
+  >(null);
   const {
     notifications,
     loading,
@@ -831,16 +837,111 @@ export default function NotificacoesPage() {
     }
   };
 
-  // ADICIONADO: Função para redirecionar para o comentário
-  const handleInteractionClick = (interaction: any) => {
-    // Verifica se tem community_id e post_id
-    if (interaction.community?.id && interaction.post_id) {
-      let url = `/communities/${interaction.community.id}?post=${interaction.post_id}`;
-      // Se tiver comment_id, adiciona na URL para o front rolar até ele
-      if (interaction.comment_id) {
-        url += `&comment=${interaction.comment_id}`;
+  const mapPostToPreview = (postData: any, interaction: any) => {
+    const userData = postData.user || {};
+    const communityData = postData.community || interaction.community || {};
+
+    const baseType = translatePostType(postData.type_post || postData.type || "post");
+    const displayType =
+      interaction.interaction_type === "comment" && baseType === "Campanha"
+        ? "Interação"
+        : baseType;
+
+    return {
+      id: postData.id,
+      title: postData.title || interaction.title || "Publicação",
+      content: postData.content || "",
+      author: userData.name || interaction.author?.name || "Usuário",
+      avatar:
+        userData.profile_picture ||
+        userData.profile_image_url ||
+        interaction.author?.profile_picture ||
+        "/no-profile-pic.png",
+      role: translateUserRole(
+        userData.role || interaction.author?.role || "member"
+      ),
+      location: communityData.name || interaction.community?.name || "",
+      type: displayType,
+      time: getRelativeTime(postData.created_at || interaction.created_at),
+      imageUrl: postData.image_url || "",
+      likes: postData.likes_count ?? 0,
+      comments: postData.comments_count ?? 0,
+      shares: postData.report_count ?? 0,
+      liked: Boolean(postData.user_liked),
+      alreadyParticipating: Boolean(postData.alreadyParticipating),
+      community: {
+        id:
+          communityData.id ||
+          interaction.community?.id ||
+          "default-community-id",
+      },
+      user: {
+        id: userData.id,
+        profile_picture: userData.profile_picture,
+        profile_image_url: userData.profile_image_url,
+      },
+      username: userData.username,
+      poll_question: postData.poll_question,
+      poll_options: postData.poll_options,
+      userVotedOptionId: postData.user_voted_option_id,
+      confirmations_count: postData.confirmations_count,
+      status_complaint: postData.status_complaint,
+      level_complaint: postData.level_complaint,
+      tags: postData.tags,
+    };
+  };
+
+  // ADICIONADO: Função para exibir a publicação em um modal
+  const handleInteractionClick = async (interaction: any) => {
+    if (!interaction.post_id || !interaction.community?.id) {
+      toast.error("Não foi possível localizar esta publicação.");
+      return;
+    }
+
+    const token = getTokenFromCookies();
+    if (!token) {
+      toast.error("Você precisa estar logado para abrir a publicação.");
+      return;
+    }
+
+    try {
+      setInteractionLoadingId(interaction.id);
+      const response = await fetch(
+        `${API_URL}/posts/${interaction.community.id}/post/${interaction.post_id}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(
+          errorBody?.message || "Erro ao carregar a publicação selecionada."
+        );
       }
-      router.push(url);
+
+      const payload = await response.json();
+      const postData = payload?.post || payload?.data || payload;
+
+      if (!postData || !postData.id) {
+        throw new Error("Publicação não encontrada.");
+      }
+
+      setInteractionPreviewPost(mapPostToPreview(postData, interaction));
+      setShowInteractionPreview(true);
+    } catch (error) {
+      console.error("Erro ao abrir interação", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erro ao abrir a publicação. Tente novamente."
+      );
+    } finally {
+      setInteractionLoadingId(null);
     }
   };
 
@@ -1538,63 +1639,71 @@ export default function NotificacoesPage() {
                     </span>
                   </div>
                 ) : (
-                  interactions.map((interaction) => (
-                    <article
-                      key={interaction.id}
-                      // ADICIONADO: Estilos e evento de clique para redirecionar
-                      className="flex flex-wrap gap-4 items-center px-6 py-4 w-full max-md:px-5 max-md:max-w-full cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => handleInteractionClick(interaction)}
-                    >
-                      <img
-                        src={
-                          interaction.author.profile_picture ||
-                          "/no-profile-pic.png"
-                        }
-                        alt={`Avatar de ${interaction.author.name}`}
-                        className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]"
-                      />
-                      <div className="flex-1 shrink self-stretch my-auto text-xs basis-8 min-w-60 text-neutral-600 max-md:max-w-full">
-                        <div className="w-full max-md:max-w-full">
-                          <div className="flex gap-6 items-start w-full text-base text-black max-md:max-w-full">
-                            <p className="flex-1 shrink basis-0 max-md:max-w-full">
-                              {interaction.title}
+                  interactions.map((interaction) => {
+                    const isOpening = interactionLoadingId === interaction.id;
+                    return (
+                      <article
+                        key={interaction.id}
+                        className={`flex flex-wrap gap-4 items-center px-6 py-4 w-full max-md:px-5 max-md:max-w-full cursor-pointer hover:bg-gray-50 transition-colors ${
+                          isOpening ? "opacity-70 pointer-events-none" : ""
+                        }`}
+                        onClick={() => handleInteractionClick(interaction)}
+                      >
+                        <img
+                          src={
+                            interaction.author.profile_picture ||
+                            "/no-profile-pic.png"
+                          }
+                          alt={`Avatar de ${interaction.author.name}`}
+                          className="object-contain shrink-0 self-stretch my-auto w-11 aspect-square rounded-[32px]"
+                        />
+                        <div className="flex-1 shrink self-stretch my-auto text-xs basis-8 min-w-60 text-neutral-600 max-md:max-w-full">
+                          <div className="w-full max-md:max-w-full">
+                            <div className="flex gap-6 items-start w-full text-base text-black max-md:max-w-full">
+                              <p className="flex-1 shrink basis-0 max-md:max-w-full">
+                                {interaction.title}
+                              </p>
+                            </div>
+                            <p className="mt-1 leading-loose text-neutral-600 max-md:max-w-full">
+                              @{interaction.author.username}
+                            </p>
+                            <p className="mt-1 leading-loose text-neutral-600 max-md:max-w-full">
+                              Comunidade: {interaction.community.name}
                             </p>
                           </div>
-                          <p className="mt-1 leading-loose text-neutral-600 max-md:max-w-full">
-                            @{interaction.author.username}
-                          </p>
-                          <p className="mt-1 leading-loose text-neutral-600 max-md:max-w-full">
-                            Comunidade: {interaction.community.name}
-                          </p>
+                          <time className="mt-2 leading-loose text-neutral-600 max-md:max-w-full">
+                            {interaction.created_at
+                              ? new Date(interaction.created_at).toLocaleString(
+                                  "pt-BR"
+                                )
+                              : interaction.date}
+                          </time>
                         </div>
-                        <time className="mt-2 leading-loose text-neutral-600 max-md:max-w-full">
-                          {interaction.created_at
-                            ? new Date(interaction.created_at).toLocaleString(
-                                "pt-BR"
-                              )
-                            : interaction.date}
-                        </time>
-                      </div>
-                      {interaction.interaction_type === "comment" && (
-                        <button
-                          // ADICIONADO: Stop propagation para não disparar o redirecionamento ao curtir
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLikeInteraction(
-                              interaction.id,
-                              interaction.community.id,
-                              (interaction as any).comment_id
-                            );
-                          }}
-                          className="flex gap-8 items-center self-stretch px-4 py-2 my-auto text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100 hover:bg-neutral-700 transition-colors"
-                        >
-                          <span className="self-stretch my-auto text-zinc-100">
-                            Curtir
+                        {interaction.interaction_type === "comment" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleLikeInteraction(
+                                interaction.id,
+                                interaction.community.id,
+                                (interaction as any).comment_id
+                              );
+                            }}
+                            className="flex gap-8 items-center self-stretch px-4 py-2 my-auto text-sm leading-6 whitespace-nowrap bg-neutral-800 text-zinc-100 hover:bg-neutral-700 transition-colors"
+                          >
+                            <span className="self-stretch my-auto text-zinc-100">
+                              Curtir
+                            </span>
+                          </button>
+                        )}
+                        {isOpening && (
+                          <span className="ml-auto text-xs text-neutral-500">
+                            Abrindo...
                           </span>
-                        </button>
-                      )}
-                    </article>
-                  ))
+                        )}
+                      </article>
+                    );
+                  })
                 )}
               </main>
             </section>
@@ -1609,6 +1718,16 @@ export default function NotificacoesPage() {
             communityId={
               selectedNotification.community?.id || "default-community-id"
             }
+          />
+        )}
+        {showInteractionPreview && interactionPreviewPost && (
+          <PostPreviewModal
+            post={interactionPreviewPost}
+            isOpen={showInteractionPreview}
+            onClose={() => {
+              setShowInteractionPreview(false);
+              setInteractionPreviewPost(null);
+            }}
           />
         )}
       </div>
