@@ -1,50 +1,69 @@
-from unittest.mock import MagicMock
 import uuid
+from unittest.mock import MagicMock, Mock
+from uuid import uuid4
+
 import pytest
+from fastapi import WebSocket
 from fastapi.testclient import TestClient
 from pymongo import MongoClient
-from sqlalchemy import create_engine, text
+from sqlalchemy import StaticPool, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.communities.model import Community, CommunityMember
-from app.communities.schema import CommunityMemberRoleEnum, CommunityTypeEnum
-from app.core.config import settings
-from app.core.database import Base, get_db, get_mongo_db
-from app.core.transaction import TransactionManager
-from app.main import app
-from app.post.model import (
+from app.api.badges.model import Badge as BadgeModel
+from app.api.badges.model import MemberBadge as MemberBadgeModel
+from app.api.chat.model import Conversation, Message, MessageAttachment
+from app.api.chat.websocket.handlers import ChatEventHandler
+from app.api.comment.model import Comment, CommentLikes
+from app.api.comment.schema import CommentStatusEnum
+from app.api.communities.model import Community, CommunityMember
+from app.api.communities.schema import CommunityMemberRoleEnum, CommunityTypeEnum
+from app.api.notifications.model import Notification, NotificationTypeEnum
+from app.api.notifications.service import NotificationService
+from app.api.post.model import (
+    CampaignParticipants,
     CampaignPost,
     ComplaintPost,
     PollOptions,
     PollPosts,
     Post,
     PostFeedback,
-    CampaignParticipants
 )
-from app.post.repository import PostRepository
-from app.post.schemas import (
+from app.api.post.repository import PostRepository
+from app.api.post.schemas import (
     CampaignStatusEnum,
     PostTypeEnum,
 )
-from app.users.schema import UserCreate
-from app.users.service import UserService
-from app.badges.model import Badge as BadgeModel
-from app.badges.model import MemberBadge as MemberBadgeModel
-from app.rating.model import Rating
-from app.comment.model import Comment, CommentLikes
-from app.comment.schema import CommentStatusEnum
-
-
-@pytest.fixture(scope='session', autouse=True)
-def test_mode():
-    settings.TEST_MODE = True
-    yield
-    settings.TEST_MODE = False
+from app.api.rating.model import Rating
+from app.api.reports.model import (
+    Report,
+    ReportComment,
+    ReportMember,
+    ReportPost,
+)
+from app.api.reports.schema import ReportReasonEnum, ReportTypeEnum
+from app.api.users.model import User, UserConnection
+from app.api.users.schema import UserCreate
+from app.api.users.service import UserService
+from app.core.config import settings
+from app.core.database import Base, get_db, get_mongo_db
+from app.core.transaction import TransactionManager
+from app.core.websocket.auth import WebSocketAuth
+from app.core.websocket.auth import websocket_auth as global_websocket_auth
+from app.main import app
 
 
 @pytest.fixture(scope='session')
 def setup_sql_db():
-    engine = create_engine(settings.active_database_url)
+    if settings.ENVIRONMENT == 'test':
+        engine = create_engine(
+            settings.DATABASE_URL,
+            connect_args={'check_same_thread': False, 'timeout': 20},
+            poolclass=StaticPool,
+            echo=False,
+        )
+    else:
+        engine = create_engine(settings.DATABASE_URL)
+
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
     session = TestSessionLocal()
@@ -58,8 +77,14 @@ def session_sql(setup_sql_db):
     session: Session = setup_sql_db
     session.rollback()
     session.connection()
-    for table in reversed(Base.metadata.sorted_tables):
-        session.execute(text(f'TRUNCATE TABLE {table.name} RESTART IDENTITY CASCADE'))
+    if settings.ENVIRONMENT == 'test':
+        for table in Base.metadata.sorted_tables:
+            session.execute(text(f'DELETE FROM {table.name}'))
+    else:
+        for table in reversed(Base.metadata.sorted_tables):
+            session.execute(
+                text(f'TRUNCATE TABLE {table.name} RESTART IDENTITY CASCADE')
+            )
 
     session.commit()
     try:
@@ -104,25 +129,37 @@ def client_mongo(mongo_db):
 
 
 @pytest.fixture
-def authenticate_client(client_sql, user_on_db):
-    response = client_sql.post(
-        '/users/login',
-        data={'username': user_on_db.email, 'password': 'hashed_password'},
-    )
-    token = response.json().get('access_token')
-    client_sql.headers.update({'Authorization': f'Bearer {token}'})
-    return client_sql
+def authenticate_client(session_sql, user_on_db):
+    def get_db_override():
+        return session_sql
+
+    with TestClient(app) as client:
+        app.dependency_overrides[get_db] = get_db_override
+        response = client.post(
+            '/users/login',
+            data={'username': user_on_db.email, 'password': 'hashed_password'},
+        )
+        token = response.json().get('access_token')
+        client.headers.update({'Authorization': f'Bearer {token}'})
+        yield client
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def authenticate_member_client(client_sql, secondary_user_on_db):
-    response = client_sql.post(
-        '/users/login',
-        data={'username': secondary_user_on_db.email, 'password': 'hashed_password'},
-    )
-    token = response.json().get('access_token')
-    client_sql.headers.update({'Authorization': f'Bearer {token}'})
-    return client_sql
+def authenticate_member_client(session_sql, secondary_user_on_db):
+    def get_db_override():
+        return session_sql
+
+    with TestClient(app) as client:
+        app.dependency_overrides[get_db] = get_db_override
+        response = client.post(
+            '/users/login',
+            data={'username': secondary_user_on_db.email, 'password': 'hashed_password'},
+        )
+        token = response.json().get('access_token')
+        client.headers.update({'Authorization': f'Bearer {token}'})
+        yield client
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -133,11 +170,12 @@ def transaction_manager(session_sql):
 @pytest.fixture
 def user_on_db(transaction_manager):
     user = UserCreate(
+        username='johndoe',
         email='johndoe@example.com',
         name='John Doe',
         hashed_password='hashed_password',
         profile_image_url=None,
-        reputation_level=1,
+        bio='I am a software engineer',
         status='active',
     )
 
@@ -148,11 +186,12 @@ def user_on_db(transaction_manager):
 @pytest.fixture
 def secondary_user_on_db(transaction_manager):
     user = UserCreate(
+        username='ana',
         email='ana@example.com',
         name='Ana Doe',
         hashed_password='hashed_password',
         profile_image_url=None,
-        reputation_level=1,
+        bio='I am a software engineer',
         status='active',
     )
 
@@ -235,6 +274,24 @@ def post_on_db(session_sql, community_on_db, user_on_db, community_member_on_db)
 
 
 @pytest.fixture
+def post_to_poll_on_db(session_sql, community_on_db, user_on_db, community_member_on_db):
+    poll_post = Post(
+        community_id=community_on_db.id,
+        user_id=user_on_db.id,
+        user_role_in_community=community_member_on_db.role,
+        type_post=PostTypeEnum.POLL,
+        title='Test Poll',
+        content='Test Poll Content',
+        image_url=None,
+    )
+
+    session_sql.add(poll_post)
+    session_sql.flush()
+    session_sql.refresh(poll_post)
+    return poll_post
+
+
+@pytest.fixture
 def posts_on_db(session_sql, community_on_db, user_on_db, community_member_on_db):
     posts = [
         Post(
@@ -289,10 +346,13 @@ def campaign_post_on_db(session_sql, post_on_db):
 
 
 @pytest.fixture
-def campaign_participants_on_db(session_sql, campaign_post_on_db, user_on_db):
+def campaign_participants_on_db(
+    session_sql, campaign_post_on_db, community_member_on_db
+):
     campaign_participants = CampaignParticipants(
         campaign_id=campaign_post_on_db.post_id,
-        user_id=user_on_db.id,
+        user_id=community_member_on_db.user_id,
+        member_id=community_member_on_db.id,
     )
 
     session_sql.add(campaign_participants)
@@ -314,9 +374,9 @@ def complaint_post_on_db(session_sql, post_on_db):
 
 
 @pytest.fixture
-def poll_post_on_db(session_sql, post_on_db):
+def poll_post_on_db(session_sql, post_to_poll_on_db):
     poll_post = PollPosts(
-        post_id=post_on_db.id,
+        post_id=post_to_poll_on_db.id,
         question='Test Poll',
     )
 
@@ -341,6 +401,26 @@ def poll_option_on_db(session_sql, poll_post_on_db):
     for poll_option in poll_options:
         session_sql.refresh(poll_option)
     return poll_options
+
+
+@pytest.fixture
+def announcement_post_on_db(
+    session_sql, community_on_db, user_on_db, community_member_on_db
+):
+    announcement_post = Post(
+        community_id=community_on_db.id,
+        user_id=user_on_db.id,
+        user_role_in_community=community_member_on_db.role,
+        type_post=PostTypeEnum.ANNOUNCEMENT,
+        title='Test Announcement',
+        content='Test Announcement Content',
+        image_url=None,
+    )
+
+    session_sql.add(announcement_post)
+    session_sql.flush()
+    session_sql.refresh(announcement_post)
+    return announcement_post
 
 
 @pytest.fixture
@@ -374,24 +454,24 @@ def mock_post_repository(mock_db_session):
     mock_repo = MagicMock(spec=PostRepository)
     return mock_repo
 
+
 @pytest.fixture
 def badge_on_db(session_sql, community_on_db):
-
     badge = BadgeModel(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         name='Test Badge',
         description='Test Description',
-        community_id=community_on_db.id, 
-        image_url='http://example.com/fixture_badge.png'
+        community_id=str(community_on_db.id),
+        image_url='http://example.com/fixture_badge.png',
     )
-    session_sql.add(badge) 
-    session_sql.flush()
-    session_sql.refresh(badge)
+    session_sql.add(badge)
+    session_sql.flush()  # Mudança de flush para commit pode ser necessária se a sessão não persistir
+    session_sql.commit()  # Adicionado para garantir que o dado persista para o cliente de teste
     return badge
+
 
 @pytest.fixture
 def secondary_badge_on_db(session_sql, community_on_db):
-
     badge = BadgeModel(
         id=uuid.uuid4(),
         name='Secondary Badge',
@@ -410,7 +490,6 @@ def member_badge_assignment_on_db(
     community_member_on_db,
     badge_on_db,
 ):
-
     assignment = MemberBadgeModel(
         member_id=community_member_on_db.id,
         badge_id=badge_on_db.id,
@@ -438,51 +517,9 @@ def rating_on_db(session_sql, community_member_on_db):
 
 
 @pytest.fixture
-def multiple_ratings_on_db(session_sql, community_on_db, user_on_db, secondary_user_on_db):
-    secondary_member = CommunityMember(
-        community_id=community_on_db.id,
-        user_id=secondary_user_on_db.id,
-        role=CommunityMemberRoleEnum.MEMBER,
-    )
-    session_sql.add(secondary_member)
-    session_sql.flush()
-
-    ratings = [
-        Rating(
-            user_id=user_on_db.id,
-            community_id=community_on_db.id,
-            rating=5,
-            title='Excellent Community!',
-            description='Great experience',
-        ),
-        Rating(
-            user_id=secondary_user_on_db.id,
-            role=CommunityMemberRoleEnum.MEMBER,
-        )
-        session_sql.add(member)
-    session_sql.commit()
-    session_sql.refresh(member)
-    return member
-    
-    
-@pytest.fixture
-def rating_on_db(session_sql, community_member_on_db):
-    rating = Rating(
-        user_id=community_member_on_db.user_id,
-        community_id=community_member_on_db.community_id,
-        rating=5,
-        title='Test Rating',
-        description='Test rating description',
-    )
-
-    session_sql.add(rating)
-    session_sql.flush()
-    session_sql.refresh(rating)
-    return rating
-
-
-@pytest.fixture
-def multiple_ratings_on_db(session_sql, community_on_db, user_on_db, secondary_user_on_db):
+def multiple_ratings_on_db(
+    session_sql, community_on_db, user_on_db, secondary_user_on_db
+):
     # Create additional community member for secondary user
     secondary_member = CommunityMember(
         community_id=community_on_db.id,
@@ -514,13 +551,13 @@ def multiple_ratings_on_db(session_sql, community_on_db, user_on_db, secondary_u
     for rating in ratings:
         session_sql.refresh(rating)
     return ratings
-    
-    
+
+
 @pytest.fixture
-def comment_on_db(session_sql, post_on_db, user_on_db):    
+def comment_on_db(session_sql, post_on_db, community_member_on_db):
     comment = Comment(
         post_id=post_on_db.id,
-        user_id=user_on_db.id,
+        member_id=community_member_on_db.id,
         content='Este é um comentário de teste',
         status=CommentStatusEnum.ACTIVE,
         likes_count=0,
@@ -535,10 +572,10 @@ def comment_on_db(session_sql, post_on_db, user_on_db):
 
 
 @pytest.fixture
-def comment_reply_on_db(session_sql, comment_on_db, secondary_user_on_db):
+def comment_reply_on_db(session_sql, comment_on_db, community_member_on_db):
     reply = Comment(
         post_id=comment_on_db.post_id,
-        user_id=secondary_user_on_db.id,
+        member_id=community_member_on_db.id,
         content='Esta é uma resposta ao comentário',
         status=CommentStatusEnum.ACTIVE,
         likes_count=0,
@@ -553,10 +590,10 @@ def comment_reply_on_db(session_sql, comment_on_db, secondary_user_on_db):
 
 
 @pytest.fixture
-def comment_like_on_db(session_sql, comment_on_db, user_on_db):    
+def comment_like_on_db(session_sql, comment_on_db, community_member_on_db):
     comment_like = CommentLikes(
         comment_id=comment_on_db.id,
-        user_id=user_on_db.id,
+        member_id=community_member_on_db.id,
     )
 
     session_sql.add(comment_like)
@@ -564,3 +601,523 @@ def comment_like_on_db(session_sql, comment_on_db, user_on_db):
     session_sql.refresh(comment_like)
     return comment_like
 
+
+@pytest.fixture
+def report_to_member_on_db(session_sql, community_member_on_db):
+    report = Report(
+        reporter_id=community_member_on_db.id,
+        type=ReportTypeEnum.MEMBER_REPORT,
+        reason=ReportReasonEnum.DISCRIMINATION,
+        description='The description of the report',
+    )
+    session_sql.add(report)
+    session_sql.flush()
+    session_sql.refresh(report)
+    return report
+
+
+@pytest.fixture
+def report_to_post_on_db(session_sql, community_member_on_db):
+    report = Report(
+        reporter_id=community_member_on_db.id,
+        type=ReportTypeEnum.POST_REPORT,
+        reason=ReportReasonEnum.DISCRIMINATION,
+        description='The description of the report',
+    )
+    session_sql.add(report)
+    session_sql.flush()
+    session_sql.refresh(report)
+    return report
+
+
+@pytest.fixture
+def report_to_comment_on_db(session_sql, community_member_on_db):
+    report = Report(
+        reporter_id=community_member_on_db.id,
+        type=ReportTypeEnum.COMMENT_REPORT,
+        reason=ReportReasonEnum.DISCRIMINATION,
+        description='The description of the report',
+    )
+    session_sql.add(report)
+    session_sql.flush()
+    session_sql.refresh(report)
+    return report
+
+
+@pytest.fixture
+def report_member_on_db(
+    session_sql, report_to_member_on_db, commun_member_on_db, community_on_db
+):
+    report_member = ReportMember(
+        report_id=report_to_member_on_db.id,
+        member_id=commun_member_on_db.id,
+        community_id=community_on_db.id,
+    )
+    session_sql.add(report_member)
+    session_sql.flush()
+    session_sql.refresh(report_member)
+    return report_member
+
+
+@pytest.fixture
+def report_post_on_db(session_sql, report_to_post_on_db, post_on_db, community_on_db):
+    report_post = ReportPost(
+        report_id=report_to_post_on_db.id,
+        post_id=post_on_db.id,
+        community_id=community_on_db.id,
+    )
+    session_sql.add(report_post)
+    session_sql.flush()
+    session_sql.refresh(report_post)
+    return report_post
+
+
+@pytest.fixture
+def report_comment_on_db(
+    session_sql, report_to_comment_on_db, comment_on_db, community_on_db
+):
+    report_comment = ReportComment(
+        report_id=report_to_comment_on_db.id,
+        comment_id=comment_on_db.id,
+        community_id=community_on_db.id,
+    )
+    session_sql.add(report_comment)
+    session_sql.flush()
+    session_sql.refresh(report_comment)
+    return report_comment
+
+
+@pytest.fixture
+def websocket_client(session_sql):
+    """Create a WebSocket test client for unauthenticated connections."""
+
+    def get_db_override():
+        return session_sql
+
+    app.dependency_overrides[get_db] = get_db_override
+
+    with TestClient(app) as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def authenticated_websocket_client(session_sql, user_on_db):
+    """Create an authenticated WebSocket test client."""
+    global_websocket_auth._connection_limits.clear()
+    global_websocket_auth._active_sessions.clear()
+
+    def get_db_override():
+        return session_sql
+
+    app.dependency_overrides[get_db] = get_db_override
+
+    session_sql.commit()
+
+    original_session_factory = ChatEventHandler.session_factory
+
+    def test_session_factory(*args, **kwargs):
+        session_sql.expire_all()
+        return session_sql
+
+    ChatEventHandler.session_factory = test_session_factory
+
+    with TestClient(app) as client:
+        response = client.post(
+            '/users/login',
+            data={'username': user_on_db.email, 'password': 'hashed_password'},
+        )
+        token = response.json().get('access_token')
+
+        client.token = token
+        yield client
+
+    app.dependency_overrides.clear()
+    ChatEventHandler.session_factory = original_session_factory
+
+
+@pytest.fixture
+def websocket_event_data():
+    """Sample WebSocket event data for testing."""
+    return {
+        'ping': {'type': 'ping', 'request_id': 'ping_123', 'timestamp': 1703001600.0},
+        'join_room': {
+            'type': 'join_conversation',
+            'conversation_id': 'test_room_123',
+            'request_id': 'join_123',
+            'timestamp': 1703001600.0,
+        },
+        'send_message': {
+            'type': 'send_message',
+            'conversation_id': 'conv_123',
+            'content': 'Hello, World!',
+            'request_id': 'msg_123',
+            'timestamp': 1703001600.0,
+        },
+        'invalid_event': {
+            'type': 'invalid_type',
+            'invalid_field': 'invalid_value',
+            'request_id': 'invalid_123',
+        },
+    }
+
+
+@pytest.fixture
+def conversation_on_db(session_sql, user_on_db, secondary_user_on_db):
+    """Create a conversation in the database for testing."""
+    user_ids = sorted([str(user_on_db.id), str(secondary_user_on_db.id)])
+
+    conversation = Conversation(
+        id=str(uuid4()),
+        user1_id=user_ids[0],
+        user2_id=user_ids[1],
+    )
+
+    session_sql.add(conversation)
+    session_sql.commit()
+    session_sql.refresh(conversation)
+    return conversation
+
+
+@pytest.fixture
+def sample_conversation_id(conversation_on_db):
+    """Sample conversation ID for testing."""
+    return conversation_on_db.id
+
+
+@pytest.fixture
+def user_connection_on_db(session_sql, user_on_db, secondary_user_on_db):
+    """Create an accepted connection between users for testing."""
+    connection = UserConnection(
+        requester_id=str(user_on_db.id),
+        addressee_id=str(secondary_user_on_db.id),
+        status='accepted',
+    )
+
+    session_sql.add(connection)
+    session_sql.commit()
+    session_sql.refresh(connection)
+    return connection
+
+
+@pytest.fixture
+def message_on_db(session_sql, conversation_on_db, user_on_db):
+    """Create a message in the database for testing."""
+    message = Message(
+        conversation_id=str(conversation_on_db.id),
+        sender_id=str(user_on_db.id),
+        content='Test message content',
+        message_type='text',
+        is_read=False,
+    )
+
+    session_sql.add(message)
+    session_sql.commit()
+    session_sql.refresh(message)
+    return message
+
+
+@pytest.fixture
+def messages_on_db(session_sql, conversation_on_db, user_on_db, secondary_user_on_db):
+    """Create multiple messages in the database for testing."""
+    messages = []
+    for i in range(3):
+        sender_id = str(user_on_db.id) if i % 2 == 0 else str(secondary_user_on_db.id)
+        message = Message(
+            conversation_id=str(conversation_on_db.id),
+            sender_id=sender_id,
+            content=f'Test message {i}',
+            message_type='text',
+            is_read=False,
+        )
+        session_sql.add(message)
+        messages.append(message)
+
+    session_sql.commit()
+    for message in messages:
+        session_sql.refresh(message)
+    return messages
+
+
+@pytest.fixture
+def message_attachment_on_db(session_sql, message_on_db):
+    """Create a message attachment in the database for testing."""
+    attachment = MessageAttachment(
+        message_id=str(message_on_db.id),
+        file_name='test_file.jpg',
+        file_size=1024,
+        file_type='image/jpeg',
+        file_url='https://example.com/test_file.jpg',
+    )
+
+    session_sql.add(attachment)
+    session_sql.commit()
+    session_sql.refresh(attachment)
+    return attachment
+
+
+@pytest.fixture
+def message_factory(session_sql):
+    """Factory fixture for creating messages with custom parameters."""
+    created_messages = []
+
+    def _create_message(
+        conversation_id,
+        sender_id,
+        content='Test message',
+        message_type='text',
+        is_read=False,
+        reply_to_message_id=None,
+    ):
+        message = Message(
+            conversation_id=str(conversation_id),
+            sender_id=str(sender_id),
+            content=content,
+            message_type=message_type,
+            is_read=is_read,
+            reply_to_message_id=str(reply_to_message_id)
+            if reply_to_message_id
+            else None,
+        )
+        session_sql.add(message)
+        session_sql.commit()
+        session_sql.refresh(message)
+        created_messages.append(message)
+        return message
+
+    yield _create_message
+
+    for message in reversed(created_messages):
+        try:
+            session_sql.refresh(message)
+            session_sql.delete(message)
+        except Exception:
+            pass
+    try:
+        session_sql.commit()
+    except Exception:
+        session_sql.rollback()
+
+
+@pytest.fixture
+def attachment_factory(session_sql):
+    """Factory fixture for creating message attachments with custom parameters."""
+    created_attachments = []
+
+    def _create_attachment(
+        message_id,
+        file_name='test_file.jpg',
+        file_size=1024,
+        file_type='image/jpeg',
+        file_url='https://example.com/test_file.jpg',
+        public_id=None,
+        thumbnail_url=None,
+    ):
+        attachment = MessageAttachment(
+            message_id=str(message_id),
+            file_name=file_name,
+            file_size=file_size,
+            file_type=file_type,
+            file_url=file_url,
+            public_id=public_id,
+            thumbnail_url=thumbnail_url,
+        )
+        session_sql.add(attachment)
+        session_sql.commit()
+        session_sql.refresh(attachment)
+        created_attachments.append(attachment)
+        return attachment
+
+    yield _create_attachment
+
+    for attachment in created_attachments:
+        try:
+            session_sql.refresh(attachment)
+            session_sql.delete(attachment)
+        except Exception:
+            pass
+    try:
+        session_sql.commit()
+    except Exception:
+        session_sql.rollback()
+
+
+@pytest.fixture
+def mock_cloudinary_upload(monkeypatch):
+    """Mock cloudinary upload for testing file attachments without real cloud storage."""
+
+    def mock_upload(file_content, **kwargs):
+        """Mock cloudinary.uploader.upload function."""
+        return {
+            'secure_url': 'https://res.cloudinary.com/test/image/upload/test_image.jpg',
+            'public_id': 'chat_attachments/test_image_123',
+            'format': 'jpg',
+            'bytes': len(file_content) if isinstance(file_content, bytes) else 1024,
+            'eager': [
+                {
+                    'secure_url': 'https://res.cloudinary.com/test/image/upload/c_fill,h_300,w_300/test_image.jpg'
+                }
+            ],
+        }
+
+    monkeypatch.setattr('app.api.chat.service.cloudinary_uploader.upload', mock_upload)
+
+    return mock_upload
+
+
+@pytest.fixture
+def sample_room_data():
+    """Sample room data for testing."""
+    return {
+        'room_id': 'test_room_123',
+        'conversation_id': 'test_conversation_123',
+        'participants': ['user1', 'user2'],
+    }
+
+
+@pytest.fixture
+def mock_websocket():
+    """Create a mock WebSocket connection for testing."""
+    websocket = Mock(spec=WebSocket)
+    websocket.client = Mock()
+    websocket.client.host = '127.0.0.1'
+    websocket.headers = {}
+    websocket.query_params = {}
+    return websocket
+
+
+@pytest.fixture
+def mock_authenticated_websocket(mock_websocket):
+    """Create a mock authenticated WebSocket with token."""
+    mock_websocket.query_params = {'token': 'valid_jwt_token'}
+    mock_websocket.headers = {
+        'authorization': 'Bearer valid_jwt_token',
+        'x-forwarded-for': '192.168.1.1',
+    }
+    return mock_websocket
+
+
+@pytest.fixture
+def mock_user():
+    """Create a mock User object for testing."""
+    user = Mock(spec=User)
+    user.id = uuid4()
+    user.email = 'test@example.com'
+    user.name = 'Test User'
+    user.status = 'active'
+    return user
+
+
+@pytest.fixture
+def mock_session():
+    """Create a mock database session."""
+    session = Mock(spec=Session)
+    return session
+
+
+@pytest.fixture
+def websocket_auth():
+    """Create a WebSocketAuth instance for testing."""
+    auth = WebSocketAuth()
+    auth._connection_limits.clear()
+    auth._active_sessions.clear()
+    auth._started = False
+    return auth
+
+
+@pytest.fixture
+def test_notification(session_sql: Session, user_on_db: User) -> Notification:
+    notification = Notification(
+        user_id=user_on_db.id,
+        type=NotificationTypeEnum.INTERACTION,
+        read=False,
+        data={
+            'interaction_type': 'like',
+            'actor_name': 'Test Actor',
+            'post_title': 'seu post de teste',
+        },
+    )
+    session_sql.add(notification)
+    session_sql.commit()
+    session_sql.refresh(notification)
+    return notification
+
+
+@pytest.fixture
+def test_notification_campaign(session_sql: Session, user_on_db: User) -> Notification:
+    notification = Notification(
+        user_id=user_on_db.id,
+        type=NotificationTypeEnum.CAMPAIGN,
+        read=False,
+        data={'community_name': 'Campanha Teste', 'campaign_title': 'Participe!'},
+    )
+    session_sql.add(notification)
+    session_sql.commit()
+    session_sql.refresh(notification)
+    return notification
+
+
+@pytest.fixture
+def mock_tm():
+    tm = MagicMock()
+    tm.get_notification_repository.return_value = MagicMock()
+    return tm
+
+
+@pytest.fixture
+def notification_service(mock_tm: MagicMock) -> NotificationService:
+    return NotificationService(mock_tm)
+
+
+@pytest.fixture
+def mock_notification_user() -> User:
+    user = User(id=uuid.uuid4(), name='Usuário Receptor')
+    return user
+
+
+@pytest.fixture
+def mock_notification_actor() -> User:
+    actor = User(id=uuid.uuid4(), name='Usuário Ator')
+    return actor
+
+
+@pytest.fixture
+def mock_actor() -> User:
+    actor = User(id=uuid.uuid4(), name='Usuário Ator')
+    return actor
+
+@pytest.fixture
+def test_notification_official(session_sql: Session, user_on_db: User) -> Notification:
+    """Fixture para notificação de Aviso Oficial (OFFICIAL_NOTICE)"""
+    notification = Notification(
+        user_id=user_on_db.id,
+        type=NotificationTypeEnum.OFFICIAL_NOTICE,
+        read=False,
+        data={
+            'notice_title': 'Manutenção do Sistema',
+            'community_name': 'Space Oficial'
+        },
+    )
+    session_sql.add(notification)
+    session_sql.commit()
+    session_sql.refresh(notification)
+    return notification
+
+@pytest.fixture
+def test_notification_canceled(session_sql: Session, user_on_db: User) -> Notification:
+    """Fixture para notificação de Campanha Cancelada (Já lida, para teste de contagem)"""
+    notification = Notification(
+        user_id=user_on_db.id,
+        type=NotificationTypeEnum.CAMPAIGN,
+        read=True, # Marcada como lida propositalmente
+        data={
+            'community_name': 'Comunidade A', 
+            'campaign_title': 'Campanha Cancelada',
+            'campaign_status_type': 'canceled'
+        },
+    )
+    session_sql.add(notification)
+    session_sql.commit()
+    session_sql.refresh(notification)
+    return notification

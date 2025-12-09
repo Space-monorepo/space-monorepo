@@ -14,19 +14,15 @@ services:
     depends_on:
       postgresql-test:
         condition: service_healthy
-      mongodb:
-        condition: service_started
     entrypoint: ["/bin/sh", "-c", "chmod +x /entrypoint.sh && /entrypoint.sh"]
     networks:
       - space-network
-  
+
   postgresql-test:
     image: postgres:14-alpine
     container_name: space-postgresql-test
     env_file:
       - ./.env
-    environment:
-      POSTGRES_DB: ${POSTGRES_TEST_DB}
     ports:
       - "5435:5432"
     volumes:
@@ -55,39 +51,10 @@ services:
     networks:
       - space-network
 
-  mongodb:
-    image: mongo:6.0
-    container_name: space-db
-    ports:
-      - "27017:27017"
-    env_file:
-      - ./.env
-    volumes:
-      - mongodata_test:/data/db
-    command: ["--auth"]
-    networks:
-      - space-network
-  
-  mongo-express:
-    image: mongo-express:1.0.0
-    container_name: space-mongo-express
-    ports:
-      - "8081:8081"
-    env_file:
-      - ./.env
-    depends_on:
-      - mongodb
-    volumes:
-      - mongoexpress:/var/lib/mongo-express
-    networks:
-      - space-network
-
 networks:
   space-network:
     driver: bridge
 
 volumes:
-  mongodata_test:
-  mongoexpress:
   pgdata_test:
   pgadmin_data:

@@ -1,31 +1,31 @@
-# Etapa de build
-FROM node:18-alpine AS builder
+# Dockerfile para desenvolvimento
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Copia apenas os arquivos necessários para o build
+# Copia os arquivos de dependências
 COPY package.json package-lock.json ./
 
-RUN npm install
+RUN npm install --force
 
+
+# Copia o restante do código, exceto arquivos sensíveis ignorados
 COPY . .
 
-# Gera o build de produção
+# Instala googleapis (caso não esteja no package.json)
+RUN npm install googleapis
+
+# Copia arquivos sensíveis necessários para o download do .env
+COPY service_account.json ./
+COPY download-env.js ./
+
+# Baixa o .env do Google Drive
+RUN node download-env.js
+
+# Build de produção (agora com todos os arquivos presentes)
 RUN npm run build
-
-# Etapa de runtime
-FROM node:18-alpine AS runner
-
-WORKDIR /app
-
-ENV NODE_ENV production
-
-# Copia só o necessário do builder
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 
+# Comando para rodar em modo produção
 CMD ["npm", "start"]

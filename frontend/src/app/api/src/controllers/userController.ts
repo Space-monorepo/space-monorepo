@@ -1,6 +1,5 @@
 // src/controllers/userController.ts
 import { fetchUserProfile } from "../services/userService";
-import { toast } from "react-toastify";
 
 export const loadUserProfile = async (token: string) => {
   try {
@@ -8,9 +7,10 @@ export const loadUserProfile = async (token: string) => {
     return data;
   } catch (err) {
     if (err instanceof Error) {
-      toast.warning("Sua sessão expirou. Faça login novamente.");
+      console.error("Erro ao carregar perfil:", err.message);
     } else {
-      toast.error("Erro ao carregar os dados do perfil: Erro desconhecido");
+      console.error("Erro ao carregar os dados do perfil: Erro desconhecido");
     }
+    throw err; // Re-throw para que o chamador possa tratar
   }
 };

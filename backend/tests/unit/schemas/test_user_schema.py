@@ -1,25 +1,41 @@
-from datetime import datetime
 import uuid
+from datetime import datetime
 
-from app.users.schema import LoginSchema, UserCreate, UserResponse, UserUpdate
+import pytest
+from pydantic import ValidationError
+
+from app.api.users.schema import (
+    ConnectionStatusEnum,
+    LoginSchema,
+    UserConnectionCreate,
+    UserConnectionResponse,
+    UserConnectionUpdate,
+    UserCreate,
+    UserResponse,
+    UserUpdate,
+)
 
 
+
+@pytest.mark.unit
 def test_user_input_schema():
     user = UserCreate(
+        username='johndoe',
         email='johndoe@example.com',
         name='John Doe',
+        bio='I am a software engineer',
         hashed_password='hashed_password',
         profile_image_url=None,
-        reputation_level=1,
         status='pending',
     )
 
     assert user.model_dump() == {
+        'username': 'johndoe',
         'email': 'johndoe@example.com',
         'name': 'John Doe',
         'hashed_password': 'hashed_password',
+        'bio': 'I am a software engineer',
         'profile_image_url': None,
-        'reputation_level': 1,
         'status': 'pending',
     }
 
@@ -31,6 +47,7 @@ def test_user_input_schema():
     }
 
 
+@pytest.mark.unit
 def test_user_update_schema():
     user_updated = UserUpdate(email='new_johndoe@example.com')
 
@@ -39,6 +56,7 @@ def test_user_update_schema():
     }
 
 
+@pytest.mark.unit
 def test_user_response_schema():
     user_id = uuid.uuid4()
     created_at = datetime.now()
@@ -46,11 +64,12 @@ def test_user_response_schema():
 
     user_response = UserResponse(
         id=user_id,
+        username='johndoe',
         email='johndoe@example.com',
         name='John Doe',
         hashed_password='hashed_password',
+        bio='I am a software engineer',
         profile_image_url=None,
-        reputation_level=1,
         status='pending',
         created_at=created_at,
         updated_at=updated_at,
@@ -58,12 +77,256 @@ def test_user_response_schema():
 
     assert user_response.model_dump() == {
         'id': user_id,
+        'username': 'johndoe',
         'email': 'johndoe@example.com',
         'name': 'John Doe',
         'hashed_password': 'hashed_password',
         'profile_image_url': None,
-        'reputation_level': 1,
+        'bio': 'I am a software engineer',
         'status': 'pending',
         'created_at': created_at,
         'updated_at': updated_at,
     }
+
+
+@pytest.mark.unit
+def test_connection_status_enum():
+    """Test ConnectionStatusEnum values"""
+    assert ConnectionStatusEnum.PENDING.value == 'pending'
+    assert ConnectionStatusEnum.ACCEPTED.value == 'accepted'
+    assert ConnectionStatusEnum.REJECTED.value == 'rejected'
+    assert ConnectionStatusEnum.BLOCKED.value == 'blocked'
+
+
+@pytest.mark.unit
+def test_user_connection_create_schema():
+    """Test UserConnectionCreate schema validation"""
+    addressee_id = uuid.uuid4()
+
+    connection_create = UserConnectionCreate(addressee_id=addressee_id)
+
+    assert connection_create.model_dump() == {
+        'addressee_id': addressee_id,
+    }
+
+
+@pytest.mark.unit
+def test_user_connection_create_invalid_schema():
+    """Test UserConnectionCreate schema with invalid data"""
+    # Test invalid UUID format
+    with pytest.raises(ValidationError):
+        UserConnectionCreate(addressee_id='invalid-uuid')
+
+    # Test missing required field
+    with pytest.raises(ValidationError):
+        UserConnectionCreate()
+
+
+@pytest.mark.unit
+def test_user_connection_update_schema():
+    """Test UserConnectionUpdate schema validation"""
+    connection_update = UserConnectionUpdate(status=ConnectionStatusEnum.ACCEPTED)
+
+    assert connection_update.model_dump() == {
+        'status': 'accepted',
+    }
+
+    # Test with different statuses
+    update_rejected = UserConnectionUpdate(status=ConnectionStatusEnum.REJECTED)
+    assert update_rejected.model_dump() == {
+        'status': 'rejected',
+    }
+
+    update_blocked = UserConnectionUpdate(status=ConnectionStatusEnum.BLOCKED)
+    assert update_blocked.model_dump() == {
+        'status': 'blocked',
+    }
+
+
+@pytest.mark.unit
+def test_user_connection_update_invalid_schema():
+    """Test UserConnectionUpdate schema with invalid data"""
+    # Test invalid status
+    with pytest.raises(ValidationError):
+        UserConnectionUpdate(status='invalid_status')
+
+    # Test missing required field
+    with pytest.raises(ValidationError):
+        UserConnectionUpdate()
+
+
+@pytest.mark.unit
+def test_user_connection_response_schema():
+    """Test UserConnectionResponse schema validation"""
+    connection_id = uuid.uuid4()
+    requester_id = uuid.uuid4()
+    addressee_id = uuid.uuid4()
+    created_at = datetime.now()
+    updated_at = datetime.now()
+
+    connection_response = UserConnectionResponse(
+        id=connection_id,
+        requester_id=requester_id,
+        addressee_id=addressee_id,
+        status=ConnectionStatusEnum.PENDING,
+        created_at=created_at,
+        updated_at=updated_at,
+        rejected_at=None,
+    )
+
+    assert connection_response.model_dump() == {
+        'id': connection_id,
+        'requester_id': requester_id,
+        'addressee_id': addressee_id,
+        'status': 'pending',
+        'created_at': created_at,
+        'updated_at': updated_at,
+        'rejected_at': None,
+    }
+
+
+@pytest.mark.unit
+def test_user_connection_response_with_rejected_at():
+    """Test UserConnectionResponse schema with rejected_at field"""
+    connection_id = uuid.uuid4()
+    requester_id = uuid.uuid4()
+    addressee_id = uuid.uuid4()
+    created_at = datetime.now()
+    updated_at = datetime.now()
+    rejected_at = datetime.now()
+
+    connection_response = UserConnectionResponse(
+        id=connection_id,
+        requester_id=requester_id,
+        addressee_id=addressee_id,
+        status=ConnectionStatusEnum.REJECTED,
+        created_at=created_at,
+        updated_at=updated_at,
+        rejected_at=rejected_at,
+    )
+
+    assert connection_response.model_dump() == {
+        'id': connection_id,
+        'requester_id': requester_id,
+        'addressee_id': addressee_id,
+        'status': 'rejected',
+        'created_at': created_at,
+        'updated_at': updated_at,
+        'rejected_at': rejected_at,
+    }
+
+
+@pytest.mark.unit
+def test_user_connection_response_all_statuses():
+    """Test UserConnectionResponse schema with all possible statuses"""
+    connection_id = uuid.uuid4()
+    requester_id = uuid.uuid4()
+    addressee_id = uuid.uuid4()
+    created_at = datetime.now()
+    updated_at = datetime.now()
+
+    # Test accepted status
+    accepted_response = UserConnectionResponse(
+        id=connection_id,
+        requester_id=requester_id,
+        addressee_id=addressee_id,
+        status=ConnectionStatusEnum.ACCEPTED,
+        created_at=created_at,
+        updated_at=updated_at,
+        rejected_at=None,
+    )
+    assert accepted_response.status == ConnectionStatusEnum.ACCEPTED
+
+    # Test blocked status
+    blocked_response = UserConnectionResponse(
+        id=connection_id,
+        requester_id=requester_id,
+        addressee_id=addressee_id,
+        status=ConnectionStatusEnum.BLOCKED,
+        created_at=created_at,
+        updated_at=updated_at,
+        rejected_at=None,
+    )
+    assert blocked_response.status == ConnectionStatusEnum.BLOCKED
+
+
+@pytest.mark.unit
+def test_user_connection_response_invalid_schema():
+    """Test UserConnectionResponse schema with invalid data"""
+    connection_id = uuid.uuid4()
+    requester_id = uuid.uuid4()
+    addressee_id = uuid.uuid4()
+    created_at = datetime.now()
+    updated_at = datetime.now()
+
+    # Test invalid status
+    with pytest.raises(ValidationError):
+        UserConnectionResponse(
+            id=connection_id,
+            requester_id=requester_id,
+            addressee_id=addressee_id,
+            status='invalid_status',
+            created_at=created_at,
+            updated_at=updated_at,
+            rejected_at=None,
+        )
+
+    # Test invalid UUID formats
+    with pytest.raises(ValidationError):
+        UserConnectionResponse(
+            id='invalid-uuid',
+            requester_id=requester_id,
+            addressee_id=addressee_id,
+            status=ConnectionStatusEnum.PENDING,
+            created_at=created_at,
+            updated_at=updated_at,
+            rejected_at=None,
+        )
+
+    # Test missing required fields
+    with pytest.raises(ValidationError):
+        UserConnectionResponse(
+            id=connection_id,
+            requester_id=requester_id,
+            addressee_id=addressee_id,
+            # missing status
+            created_at=created_at,
+            updated_at=updated_at,
+            rejected_at=None,
+        )
+
+
+@pytest.mark.unit
+def test_user_connection_model_config():
+    """Test UserConnectionResponse model configuration"""
+    connection_id = uuid.uuid4()
+    requester_id = uuid.uuid4()
+    addressee_id = uuid.uuid4()
+    created_at = datetime.now()
+    updated_at = datetime.now()
+
+    connection_response = UserConnectionResponse(
+        id=connection_id,
+        requester_id=requester_id,
+        addressee_id=addressee_id,
+        status=ConnectionStatusEnum.PENDING,
+        created_at=created_at,
+        updated_at=updated_at,
+        rejected_at=None,
+    )
+
+    # Test that enum values are used (not enum objects)
+    model_dict = connection_response.model_dump()
+    assert isinstance(model_dict['status'], str)
+    assert model_dict['status'] == 'pending'
+
+    # Test model_config keys exist
+    assert 'from_attributes' in connection_response.model_config
+    assert 'use_enum_values' in connection_response.model_config
+    assert 'json_schema_extra' in connection_response.model_config
+
+    # Test from_attributes is True for ORM compatibility
+    assert connection_response.model_config['from_attributes'] is True
+
+    # Test use_enum_values is True for proper enum serialization
+    assert connection_response.model_config['use_enum_values'] is True

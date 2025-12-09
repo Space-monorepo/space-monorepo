@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from app.post.schemas import (
+from app.api.post.schemas import (
     CampaignParticipantsResponse,
     CampaignResponse,
     CampaignStatusEnum,
@@ -15,9 +15,10 @@ from app.post.schemas import (
     ComplaintResponse,
     ComplaintStatusEnum,
     ComplaintUpdate,
-    PollOptionResponse,
     PollCreate,
+    PollOptionResponse,
     PollResponse,
+    PollVoteResponse,
     PostAuthor,
     PostCreate,
     PostFeedbackCreate,
@@ -29,9 +30,10 @@ from app.post.schemas import (
 )
 
 
+@pytest.mark.unit
 def test_post_create_schema():
-    user_id = uuid.uuid4()
-    community_id = uuid.uuid4()
+    user_id = str(uuid.uuid4())
+    community_id = str(uuid.uuid4())
 
     post = PostCreate(
         community_id=community_id,
@@ -54,6 +56,7 @@ def test_post_create_schema():
     }
 
 
+@pytest.mark.unit
 def test_post_update_schema():
     post = PostUpdate(
         content='Updated Content',
@@ -66,6 +69,7 @@ def test_post_update_schema():
     }
 
 
+@pytest.mark.unit
 def test_post_response_schema():
     post_id = uuid.uuid4()
     community_id = uuid.uuid4()
@@ -122,6 +126,7 @@ def test_post_response_schema():
     }
 
 
+@pytest.mark.unit
 def test_post_create_invalid_schema():
     with pytest.raises(ValidationError):
         PostCreate(
@@ -135,6 +140,7 @@ def test_post_create_invalid_schema():
         )
 
 
+@pytest.mark.unit
 def test_post_update_invalid_schema():
     with pytest.raises(ValidationError):
         PostUpdate(
@@ -143,6 +149,7 @@ def test_post_update_invalid_schema():
         )
 
 
+@pytest.mark.unit
 def test_post_author_invalid_schema():
     with pytest.raises(ValidationError):
         PostAuthor(id=uuid.uuid4(), name='', role='admin', profile_picture=None)
@@ -151,11 +158,13 @@ def test_post_author_invalid_schema():
         PostAuthor(id=uuid.uuid4(), name='John Doe', role='', profile_picture=None)
 
 
+@pytest.mark.unit
 def test_post_community_related_invalid_schema():
     with pytest.raises(ValidationError):
         CommunityRelated(id=uuid.uuid4(), name='')
 
 
+@pytest.mark.unit
 def test_post_response_invalid_schema():
     with pytest.raises(ValidationError):
         PostResponse(
@@ -175,6 +184,7 @@ def test_post_response_invalid_schema():
         )
 
 
+@pytest.mark.unit
 def test_campaign_update_schema():
     campaign_update = CampaignUpdate(
         target_participants=200,
@@ -187,6 +197,7 @@ def test_campaign_update_schema():
     }
 
 
+@pytest.mark.unit
 def test_campaign_response_schema():
     post_id = uuid.uuid4()
     community_id = uuid.uuid4()
@@ -255,26 +266,31 @@ def test_campaign_response_schema():
     }
 
 
+@pytest.mark.unit
 def test_campaign_participants_response_schema():
     campaign_id = uuid.uuid4()
     user_id = uuid.uuid4()
+    member_id = uuid.uuid4()
     created_at = datetime.now()
 
     campaign_participants_response = CampaignParticipantsResponse(
         campaign_id=campaign_id,
         user_id=user_id,
+        member_id=member_id,
         joined_at=created_at,
     )
     assert campaign_participants_response.model_dump() == {
         'campaign_id': campaign_id,
         'user_id': user_id,
+        'member_id': member_id,
         'joined_at': created_at,
     }
 
 
+@pytest.mark.unit
 def test_post_feedback_create_schema():
-    post_id = uuid.uuid4()
-    member_id = uuid.uuid4()
+    post_id = str(uuid.uuid4())
+    member_id = str(uuid.uuid4())
     post_feedback_create = PostFeedbackCreate(
         post_id=post_id,
         member_id=member_id,
@@ -289,6 +305,7 @@ def test_post_feedback_create_schema():
     }
 
 
+@pytest.mark.unit
 def test_post_feedback_response_schema():
     id = uuid.uuid4()
     post_id = uuid.uuid4()
@@ -314,6 +331,7 @@ def test_post_feedback_response_schema():
     }
 
 
+@pytest.mark.unit
 def test_complaint_update_schema():
     complaint_update = ComplaintUpdate(
         confirmations_count=1,
@@ -325,6 +343,7 @@ def test_complaint_update_schema():
     }
 
 
+@pytest.mark.unit
 def test_complaint_response_schema():
     post_id = uuid.uuid4()
     user_id = uuid.uuid4()
@@ -394,9 +413,10 @@ def test_complaint_response_schema():
     }
 
 
+@pytest.mark.unit
 def test_poll_create_schema():
-    community_id = uuid.uuid4()
-    user_id = uuid.uuid4()
+    community_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
 
     poll_create = PollCreate(
         post=PostCreate(
@@ -426,6 +446,7 @@ def test_poll_create_schema():
     }
 
 
+@pytest.mark.unit
 def test_poll_response_schema():
     post_id = uuid.uuid4()
     option_id_1 = uuid.uuid4()
@@ -524,4 +545,25 @@ def test_poll_response_schema():
                 'votes_count': 0,
             },
         ],
+    }
+
+
+@pytest.mark.unit
+def test_poll_vote_response_schema():
+    id = uuid.uuid4()
+    poll_option_id = uuid.uuid4()
+    member_id = uuid.uuid4()
+    created_at = datetime.now()
+
+    poll_vote_response = PollVoteResponse(
+        id=id,
+        poll_option_id=poll_option_id,
+        member_id=member_id,
+        created_at=created_at,
+    )
+    assert poll_vote_response.model_dump() == {
+        'id': id,
+        'poll_option_id': poll_option_id,
+        'member_id': member_id,
+        'created_at': created_at,
     }

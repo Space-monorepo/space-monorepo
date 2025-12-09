@@ -15,6 +15,7 @@ bcrypt = "^4.3.0"
 pyjwt = "^2.10.1"
 sqlalchemy = "^2.0.40"
 psycopg2-binary = "^2.9.10"
+cloudinary = "^1.44.1"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -22,11 +23,20 @@ pytest = "^8.3.4"
 pytest-cov = "^6.0.0"
 ruff = "^0.9.7"
 taskipy = "^1.14.1"
+pytest-asyncio = "^0.23.0"
 
 [tool.pytest.ini_options]
 pythonpath = "app"
-tests = "app/tests"
+tests = "tests"
 addopts = '-p no:warnings'
+asyncio_mode = "auto"
+markers = [
+    "unit: unit tests - verify individual components in isolation",
+    "integration: integration tests - verify components working together or with external services",
+    "smoke: smoke tests - verify critical features fastly",
+    "slow: slow tests - flag tests that take a long time to run",
+    "asyncio: mark test as an async test"
+]
 
 [tool.ruff]
 line-length = 89
@@ -35,6 +45,11 @@ extend-exclude = ['migrations']
 [tool.ruff.lint]
 preview = true
 select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+ignore = [
+    'E501',    # line too long
+    'PLR0915', # too many statements
+    'C901',    # too complex
+]
 
 [tool.ruff.format]
 preview = true
@@ -45,8 +60,7 @@ lint = 'ruff check'
 pre_format = 'ruff check --fix'
 format = 'ruff format'
 run = 'fastapi dev fastapi_zero/app.py'
-pre_test = 'task lint'
-test = 'pytest -s -x --cov=fast_zero -vv'
+test = 'pytest -m "unit or integration" -s -x --cov=app -vv'
 post_test = 'coverage html'
 
 [build-system]

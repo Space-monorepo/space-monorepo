@@ -1,23 +1,29 @@
 'use client'
 
-import "../app/globals.css";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader } from "lucide-react";
 import Image from "next/image";
+import { useBypassAuth } from "./api/src/hooks/useBypassAuth";
 
 export default function SplashScreen() {
   const router = useRouter();
   const [visible, setVisible] = useState(true);
+  const bypass = useBypassAuth();
 
   useEffect(() => {
+    if (bypass) {
+      router.push('/login');
+      return;
+    }
+
     const timer = setTimeout(() => {
       setVisible(false);
       router.push("/login");
     }, 2000);
     return () => clearTimeout(timer);
-  }, [router]);
+  }, [router, bypass]);
 
   if (!visible) return null;
 
@@ -34,7 +40,6 @@ export default function SplashScreen() {
           <Loader className="w-6 h-6 text-black" />
         </div>
         <Image src="/space-escrita.svg" alt="Logo" width={128} height={128} className="w-32 h-32" />
-        {/* <h1 className="text-xl font-semibold">Space</h1> */}
       </motion.div>
     </div>
   );

@@ -2,21 +2,35 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app.communities.repository import CommunityMemberRepository, CommunityRepository
-from app.comment.repository import CommentRepository, CommentLikesRepository
-from app.post.repository import (
+from app.api.badges.repository import BadgeRepository, MemberBadgeRepository
+from app.api.chat.repository import (
+    ConversationRepository,
+    MessageAttachmentRepository,
+    MessageRepository,
+)
+from app.api.comment.repository import CommentLikesRepository, CommentRepository
+from app.api.communities.repository import CommunityMemberRepository, CommunityRepository
+from app.api.post.repository import (
     CampaignParticipantsRepository,
     CampaignPostRepository,
     ComplaintPostRepository,
-    PostFeedbackRepository,
-    PostRepository,
-    PollPostsRepository,
     PollOptionsRepository,
-    PostLikesRepository
+    PollPostsRepository,
+    PostFeedbackRepository,
+    PostLikesRepository,
+    PostRepository,
+    PollVotesRepository,
 )
-from app.rating.repository import RatingRepository
-from app.users.repository import UserRepository
-from app.badges.repository import BadgeRepository, MemberBadgeRepository
+from app.api.notifications.repository import NotificationRepository
+from app.api.rating.repository import RatingRepository
+from app.api.reports.repository import (
+    ModerationVotesRepository,
+    ReportCommentRepository,
+    ReportMemberRepository,
+    ReportPostRepository,
+    ReportRepository,
+)
+from app.api.users.repository import UserConnectionRepository, UserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -89,13 +103,45 @@ class TransactionManager:
 
     def get_member_badge_repository(self):
         return MemberBadgeRepository(self._session)
-    
+
     def get_rating_repository(self):
         return RatingRepository(self._session)
-    
+
     def get_comment_repository(self):
         return CommentRepository(self._session)
-    
+
     def get_comment_likes_repository(self):
         return CommentLikesRepository(self._session)
-      
+
+    def get_user_connection_repository(self):
+        return UserConnectionRepository(self._session)
+
+    def get_report_repository(self):
+        return ReportRepository(self._session)
+
+    def get_report_member_repository(self):
+        return ReportMemberRepository(self._session)
+
+    def get_report_post_repository(self):
+        return ReportPostRepository(self._session)
+
+    def get_report_comment_repository(self):
+        return ReportCommentRepository(self._session)
+
+    def get_moderation_votes_repository(self):
+        return ModerationVotesRepository(self._session)
+
+    def get_conversation_repository(self):
+        return ConversationRepository(self._session)
+
+    def get_message_repository(self):
+        return MessageRepository(self._session)
+
+    def get_message_attachment_repository(self):
+        return MessageAttachmentRepository(self._session)
+    
+    def get_poll_votes_repository(self):
+        return PollVotesRepository(self._session)
+    
+    def get_notification_repository(self) -> NotificationRepository:
+        return NotificationRepository(self._session)
